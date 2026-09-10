@@ -1,0 +1,2 @@
+# Normalize text files and use LF line endings in the working tree.
+* text=auto eol=lf
