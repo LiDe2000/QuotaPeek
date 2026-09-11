@@ -1,0 +1,32 @@
+/* Window and toolbar */
+.app-shell { min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: var(--space-section); }
+.quota-window { min-width: 0; width: min(100%, var(--window-width)); padding: var(--space-card); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); box-shadow: var(--shadow-window); }
+.window-header, .brand, .window-actions, .window-footer { display: flex; align-items: center; }
+.window-header { justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
+.brand { gap: var(--space-medium); }
+.brand h1 { font-size: var(--font-size-title); font-weight: 650; letter-spacing: -0.4px; }
+.app-icon { display: grid; place-items: center; width: var(--control-size); height: var(--control-size); padding: 7px; border-radius: var(--radius-control); color: var(--color-codex); background: var(--color-codex-soft); }
+.window-actions { gap: var(--space-small); }
+.refresh-icon { display: block; width: 100%; height: 100%; }
+.is-refreshing { animation: refresh 500ms var(--ease-page); }
+@keyframes refresh { to { transform: rotate(360deg); } }
+
+/* The clipped rail keeps pages at identical heights. */
+.carousel-viewport { overflow: hidden; border-radius: var(--radius-card); touch-action: pan-y; }
+.carousel-track { display: flex; align-items: stretch; transition: transform var(--duration-page) var(--ease-page); }
+/* Centered dots with optional previous/next controls. */
+.pagination { display: flex; justify-content: center; align-items: center; gap: var(--space-section); padding-top: var(--space-medium); }
+.page-dots { display: flex; }
+.page-dot { width: 24px; height: var(--control-size); padding: 0; display: grid; place-items: center; background: transparent; border-radius: var(--radius-control); }
+.page-dot span { width: 6px; height: 6px; border-radius: 50%; background: var(--color-dot); transition: background var(--duration-fast), transform var(--duration-fast); }
+.page-dot.is-active span { background: var(--color-dot-active); }
+.page-dot:hover span { transform: scale(1.2); }
+.page-arrow { width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: transparent; color: var(--color-text-subtle); }
+.page-arrow.previous svg { transform: rotate(180deg); }
+.page-arrow:hover:not(:disabled) { background: var(--color-surface-active); color: var(--color-text); }
+.page-arrow:disabled { opacity: 0.2; }
+.window-footer { justify-content: center; gap: var(--space-small); margin-top: var(--space-medium); font-size: var(--font-size-caption); color: var(--color-text-subtle); flex-wrap: wrap; }
+.demo-label { border: 1px solid var(--color-border); padding: 1px 5px; border-radius: var(--space-xs); font-size: 9px; letter-spacing: 0.3px; }
+
+@media (max-width: 420px) { .app-shell { padding: var(--space-small); } .quota-window { padding: var(--space-large); } }
+@media (max-width: 340px) { .quota-window { padding: var(--space-medium); } }

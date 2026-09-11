@@ -1,42 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent, ReactNode } from "react";
-
-type Theme = "classic" | "dark" | "light";
-type IconName = "gauge" | "refresh" | "settings" | "close" | "chevron";
-const themes: { id: Theme; name: string; description: string }[] = [
-  { id: "classic", name: "Original", description: "原稿深色 · 清晰边框" },
-  { id: "dark", name: "Midnight", description: "精致深色 · 柔和层次" },
-  { id: "light", name: "Pearl", description: "精致浅色 · 干净通透" },
-];
-
-function Icon({ name }: { name: IconName }) {
-  const paths: Record<IconName, ReactNode> = {
-    gauge: <><path d="M4.9 19a9 9 0 1 1 14.2 0" /><path d="m12 13 4-5" /><circle cx="12" cy="13" r="1" /></>,
-    refresh: <><path d="M20 7v5h-5M4 17v-5h5" /><path d="M6.1 7a7 7 0 0 1 11.6-1L20 9M4 15l2.3 3A7 7 0 0 0 17.9 17" /></>,
-    settings: <><path d="m9.5 3-.7 2.4-2 .9-2.4-.6-2 3.5 1.7 1.8v2L2.4 15l2 3.5 2.4-.6 2 .9.7 2.2h5l.7-2.2 2-.9 2.4.6 2-3.5-1.7-2v-2l1.7-1.8-2-3.5-2.4.6-2-.9L14.5 3z" /><circle cx="12" cy="12" r="3" /></>,
-    close: <path d="m6 6 12 12M18 6 6 18" />,
-    chevron: <path d="m9 5 7 7-7 7" />,
-  };
-  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
-}
-
-const accounts = [
-  { id: "codex", provider: "OpenAI Codex", mark: "O", email: "user@example.com", limits: [
-    { label: "5 Hour Limit", remaining: 85, reset: "Resets at 17:08", time: "2h 37m" },
-    { label: "Weekly Limit", remaining: 83, reset: "Resets Sep 15", time: "4d 8h" },
-  ] },
-  { id: "claude", provider: "Claude", mark: "C", email: "personal@sample.dev", limits: [
-    { label: "5 Hour Limit", remaining: 64, reset: "Resets at 16:42", time: "2h 11m" },
-    { label: "Weekly Limit", remaining: 71, reset: "Resets Sep 16", time: "5d 9h" },
-  ] },
-] as const;
-
-function readTheme(): Theme {
-  try {
-    const saved = localStorage.getItem("quotapeek-theme");
-    return saved === "classic" || saved === "light" ? saved : "dark";
-  } catch { return "dark"; }
-}
+import type { KeyboardEvent, PointerEvent } from "react";
+import AccountCard from "./components/AccountCard";
+import AppearanceSettings, { readTheme } from "./components/AppearanceSettings";
+import type { Theme } from "./components/AppearanceSettings";
+import Icon from "./components/Icon";
+import { accounts } from "./mocks/quotas";
+import "./App.css";
 
 function App() {
   const [page, setPage] = useState(0);
@@ -44,7 +13,6 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
   const settingsButton = useRef<HTMLButtonElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const drag = useRef<{ x: number; y: number } | null>(null);
 
@@ -52,8 +20,6 @@ function App() {
     document.documentElement.dataset.theme = theme;
     try { localStorage.setItem("quotapeek-theme", theme); } catch { /* Storage can be unavailable in private sessions. */ }
   }, [theme]);
-
-  useEffect(() => { if (settingsOpen) closeButton.current?.focus(); }, [settingsOpen]);
 
   function closeSettings() {
     setSettingsOpen(false);
@@ -95,13 +61,7 @@ function App() {
           </div>
         </header>
 
-        {settingsOpen && <section id="appearance-settings" className="settings-panel" aria-labelledby="settings-title" onKeyDown={event => { if (event.key === "Escape") closeSettings(); }}>
-          <div className="settings-heading"><h2 id="settings-title">Appearance</h2><button ref={closeButton} className="icon-button" aria-label="Close settings" onClick={closeSettings}><Icon name="close" /></button></div>
-          <fieldset className="theme-options"><legend className="sr-only">Color theme</legend>{themes.map(option => <label key={option.id} title={option.description}>
-            <input type="radio" name="theme" value={option.id} checked={theme === option.id} onChange={() => setTheme(option.id)} />
-            <span className="theme-option"><span className={`theme-swatch swatch-${option.id}`} aria-hidden="true"><span /></span><span>{option.name}</span></span>
-          </label>)}</fieldset>
-        </section>}
+        {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={closeSettings} />}
 
         <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
           <div className="carousel-viewport" onPointerDown={event => {
@@ -109,19 +69,8 @@ function App() {
             drag.current = { x: event.clientX, y: event.clientY };
             event.currentTarget.setPointerCapture(event.pointerId);
           }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>
-            <div className={`carousel-track page-${page}`}>
-              {accounts.map((account, index) => <article key={account.id} id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={page !== index} inert={page !== index} tabIndex={page === index ? 0 : -1} className={`account-card provider-${account.id}`}>
-                <div className="account-header">
-                  <span className="provider-mark" aria-hidden="true">{account.mark}</span>
-                  <div className="account-identity"><h2>{account.provider}</h2><p title={account.email}>{account.email}</p></div>
-                  <span className="connection-status" role="img" aria-label="Connected (demo)" title="Connected (demo)" />
-                </div>
-                <div className="limits">{account.limits.map(limit => <section className="limit" key={limit.label} aria-label={limit.label}>
-                  <div className="limit-summary"><h3>{limit.label}</h3><div className="quota-value"><strong>{limit.remaining}<span>%</span></strong><span className="remaining-label">remaining</span></div></div>
-                  <progress max={100} value={limit.remaining} aria-label={`${account.provider} ${limit.label} remaining`}>{limit.remaining}%</progress>
-                  <div className="reset-details"><span>{limit.reset}</span><span>{limit.time} left</span></div>
-                </section>)}</div>
-              </article>)}
+            <div className="carousel-track" style={{ transform: `translateX(-${page * 100}%)` }}>
+              {accounts.map((account, index) => <AccountCard key={account.id} account={account} active={page === index} />)}
             </div>
           </div>
           <nav className="pagination" aria-label="Account pages">
