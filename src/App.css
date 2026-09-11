@@ -8,7 +8,7 @@
 .app-icon { display: grid; place-items: center; width: var(--control-size); height: var(--control-size); padding: 7px; border-radius: var(--radius-control); color: var(--color-codex); background: var(--color-codex-soft); }
 .window-actions { gap: var(--space-small); }
 .refresh-icon { display: block; width: 100%; height: 100%; }
-.is-refreshing { animation: refresh 500ms var(--ease-page); }
+.is-refreshing { animation: refresh 800ms linear infinite; }
 @keyframes refresh { to { transform: rotate(360deg); } }
 
 /* The clipped rail keeps pages at identical heights. */
@@ -26,7 +26,6 @@
 .page-arrow:hover:not(:disabled) { background: var(--color-surface-active); color: var(--color-text); }
 .page-arrow:disabled { opacity: 0.2; }
 .window-footer { justify-content: center; gap: var(--space-small); margin-top: var(--space-medium); font-size: var(--font-size-caption); color: var(--color-text-subtle); flex-wrap: wrap; }
-.demo-label { border: 1px solid var(--color-border); padding: 1px 5px; border-radius: var(--space-xs); font-size: 9px; letter-spacing: 0.3px; }
 
 @media (max-width: 420px) { .app-shell { padding: var(--space-small); } .quota-window { padding: var(--space-large); } }
 @media (max-width: 340px) { .quota-window { padding: var(--space-medium); } }

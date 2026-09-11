@@ -1,22 +1,20 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import AddAccount from "./components/AddAccount";
-import type { Account, ProviderId } from "./types/quota";
+import { useAccounts } from "./hooks/useAccounts";
 import AccountCard from "./components/AccountCard";
 import AppearanceSettings from "./components/AppearanceSettings";
 import { useAppearance } from "./hooks/useAppearance";
 import Icon from "./components/Icon";
-import { accounts as demoAccounts } from "./mocks/quotas";
 import "./App.css";
 
 function App() {
-  const [accounts, setAccounts] = useState<readonly Account[]>([]);
+  const { accounts, loading, error, notice, refreshCodex } = useAccounts();
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const accountButton = useRef<HTMLButtonElement>(null);
   const [page, setPage] = useState(0);
   const { theme, setTheme } = useAppearance();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [refreshCount, setRefreshCount] = useState(0);
   const settingsButton = useRef<HTMLButtonElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const drag = useRef<{ x: number; y: number } | null>(null);
@@ -26,11 +24,11 @@ function App() {
     accountButton.current?.focus();
   }
 
-  function addAccount(providerId: ProviderId, email: string) {
-    const sample = demoAccounts.find(account => account.providerId === providerId)!;
-    setAccounts(current => [...current, { ...sample, id: crypto.randomUUID(), email }]);
-    setPage(accounts.length);
-    closeAccountPanel();
+  async function connectCodex() {
+    if (await refreshCodex()) {
+      setPage(0);
+      closeAccountPanel();
+    }
   }
 
   function closeSettings() {
@@ -67,15 +65,15 @@ function App() {
         <header className="window-header">
           <div className="brand"><span className="app-icon"><Icon name="gauge" /></span><h1>QuotaPeek</h1></div>
           <div className="window-actions">
-            <button className="icon-button" aria-label="Reload demo data" title="Reload demo data" disabled={accounts.length === 0} onClick={() => setRefreshCount(count => count + 1)}>
-              <span key={refreshCount} className={refreshCount ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
+            <button className="icon-button" aria-label="Refresh Codex quota" title="Refresh Codex quota" disabled={accounts.length === 0 || loading} onClick={() => void refreshCodex()}>
+              <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
             </button>
             <button ref={accountButton} className="icon-button" aria-label="Add account" title="Add account" aria-expanded={accountPanelOpen} aria-controls="add-account" onClick={() => { if (accountPanelOpen) closeAccountPanel(); else { setSettingsOpen(false); setAccountPanelOpen(true); } }}><Icon name="user" /></button>
             <button ref={settingsButton} className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} aria-controls="appearance-settings" title="Appearance" onClick={() => { if (settingsOpen) closeSettings(); else { setAccountPanelOpen(false); setSettingsOpen(true); } }}><Icon name="settings" /></button>
           </div>
         </header>
 
-        {accountPanelOpen && <AddAccount accounts={accounts} onAdd={addAccount} onClose={closeAccountPanel} />}
+        {accountPanelOpen && <AddAccount connected={accounts.length > 0} loading={loading} error={error} onConnect={connectCodex} onClose={closeAccountPanel} />}
         {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={closeSettings} />}
 
         {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
@@ -85,17 +83,17 @@ function App() {
             event.currentTarget.setPointerCapture(event.pointerId);
           }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>
             <div className="carousel-track" style={{ transform: `translateX(-${page * 100}%)` }}>
-              {accounts.map((account, index) => <AccountCard key={account.id} account={account} active={page === index} />)}
+              {accounts.map((account, index) => <AccountCard key={account.id} account={account} active={page === index} stale={!!error} loading={loading} />)}
             </div>
           </div>
           <nav className="pagination" aria-label="Account pages">
             <button className="page-arrow previous" aria-label="Previous account" disabled={page === 0} onClick={() => setPage(page - 1)}><Icon name="chevron" /></button>
-            <div className="page-dots" role="tablist" aria-label="Select account">{accounts.map((account, index) => <button ref={node => { tabs.current[index] = node; }} key={account.id} id={`tab-${account.id}`} role="tab" aria-label={`${account.provider} · ${account.email}`} aria-selected={page === index} aria-controls={`panel-${account.id}`} tabIndex={page === index ? 0 : -1} className={`page-dot${page === index ? " is-active" : ""}`} onClick={() => setPage(index)}><span /></button>)}</div>
+            <div className="page-dots" role="tablist" aria-label="Select account">{accounts.map((account, index) => <button ref={node => { tabs.current[index] = node; }} key={account.id} id={`tab-${account.id}`} role="tab" aria-label={`${account.providerId} · ${account.email ?? "Local account"}`} aria-selected={page === index} aria-controls={`panel-${account.id}`} tabIndex={page === index ? 0 : -1} className={`page-dot${page === index ? " is-active" : ""}`} onClick={() => setPage(index)}><span /></button>)}</div>
             <button className="page-arrow" aria-label="Next account" disabled={page === accounts.length - 1} onClick={() => setPage(page + 1)}><Icon name="chevron" /></button>
           </nav>
         </div>}
 
-        <footer className="window-footer"><span className="demo-label">Demo</span><span role="status" aria-live="polite">{accounts.length === 0 ? "No accounts · Use the user icon to add one" : refreshCount ? `Sample data reloaded · ${refreshCount}` : "Sample data · Preview only"}</span></footer>
+        <footer className="window-footer"><span role="status" aria-live="polite">{loading ? "Reading Codex quota…" : error ?? notice ?? (accounts[0] ? `Updated ${new Date(accounts[0].fetchedAt * 1000).toLocaleTimeString()}` : "No accounts · Use the user icon to connect one")}</span></footer>
       </section>
     </main>
   );

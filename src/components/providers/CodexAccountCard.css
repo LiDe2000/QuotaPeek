@@ -1,0 +1,6 @@
+.codex-plan { color: var(--color-text-subtle); font-size: var(--font-size-caption); margin: calc(-1 * var(--space-medium)) 0 var(--space-large); }
+.codex-bucket + .codex-bucket { border-top: 1px solid var(--color-border); padding-top: var(--space-large); margin-top: var(--space-large); }
+.codex-bucket-title { font-size: var(--font-size-small); color: var(--color-text-muted); margin-bottom: var(--space-medium); }
+.codex-credit { display: flex; justify-content: space-between; gap: var(--space-small); margin-top: var(--space-medium); font-size: var(--font-size-small); color: var(--color-text-muted); }
+.connection-status.is-stale { background: var(--color-text-subtle); }
+.provider-codex .reset-details { flex-wrap: wrap; }

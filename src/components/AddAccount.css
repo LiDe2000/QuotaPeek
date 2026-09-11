@@ -12,9 +12,7 @@
 .selected-platform { padding: 0; margin-bottom: var(--space-large); }
 .selected-platform strong { font-size: var(--font-size-body); }
 .change-platform { margin-left: auto; background: transparent; color: var(--color-accent); padding: var(--space-small) 0; font-size: var(--font-size-small); }
-.account-input-label { display: block; margin-bottom: var(--space-small); font-size: var(--font-size-small); }
-.account-email { width: 100%; min-width: 0; padding: var(--space-medium); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-window); color: var(--color-text); }
-.account-email::placeholder { color: var(--color-text-subtle); }
 .account-error { margin-top: var(--space-small); color: var(--color-text); font-size: var(--font-size-small); }
 .add-account-submit { width: 100%; padding: var(--space-medium); border-radius: var(--radius-control); background: var(--color-surface-active); color: var(--color-text); border: 1px solid var(--color-accent); font-weight: 600; }
 .add-account-submit:hover { background: var(--color-window); }
+.platform-option:disabled, .add-account-submit:disabled { opacity: 0.5; cursor: not-allowed; }

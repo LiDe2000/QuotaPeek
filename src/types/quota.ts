@@ -1,18 +1,4 @@
-export type ProviderId = "codex" | "claude";
-
-export interface QuotaLimit {
-  label: string;
-  remaining: number;
-  reset: string;
-  time: string;
-}
-
-export interface Account {
-  /** Unique account identity, including when accounts share a provider. */
-  id: string;
-  providerId: ProviderId;
-  provider: string;
-  mark: string;
-  email: string;
-  limits: readonly QuotaLimit[];
-}
+import type { CodexAccount } from "./codex";
+// Extend this discriminated union when another provider is implemented.
+// Provider-specific quota fields belong to that provider's own type.
+export type Account = CodexAccount;

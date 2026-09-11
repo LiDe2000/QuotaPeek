@@ -2,6 +2,9 @@
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .manage(codex::QueryState::default())
+        .invoke_handler(tauri::generate_handler![codex::query_codex_quota])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+mod codex;

@@ -1,57 +1,80 @@
 # QuotaPeek
+
 All your AI limits at a glance.
 
-## 前端项目结构
+React + TypeScript + Vite 界面，Tauri 2 + Rust 桌面后端。
 
-前端使用 React + TypeScript + Vite，由 Tauri 承载为桌面应用。目前展示模拟账户额度，支持账户翻页与主题切换，尚未接入真实额度查询。
+## 本地运行
+
+安装 Node.js、Rust 和对应平台的 Tauri 开发依赖后：
+
+```sh
+npm install
+npm run tauri dev
+```
+
+## Codex 真实额度查询
+
+1. 本机安装 Codex，并使用 ChatGPT 账户登录。API key 登录不支持订阅额度查询。
+2. 确保 `codex` 原生可执行文件在 PATH 中，安装后重启 QuotaPeek / 编辑器。
+3. 点击用户图标 → OpenAI Codex → Connect local Codex。
+4. 点击刷新按钮重新查询；页脚显示最近成功查询时间。
+
+查询通过官方 Codex app-server 的 stdio JSON-RPC 协议完成：`initialize` → `initialized` → `account/read` → `account/rateLimits/read` → `account/read`。不启动模型任务，不消耗重置券，也不读取或复制登录令牌。Codex 自行管理原有登录状态及其本地状态文件。
+
+官方协议参考：https://developers.openai.com/codex/app-server
+
+### 当前边界
+
+- 当前连接跟随本机 Codex 登录，一次支持一个本地账户。`id: codex-local` 是连接标识，`accountId` 是后端提供的可选平台账户标识，两者用途不同。
+- 切换本机登录后刷新，会整体替换账户和额度；不会把新额度归到旧邮箱。
+- 优先使用 `rateLimitsByLimitId`，缺失或为空时回退到 `rateLimits`。保留 Codex 的多个额度分组、可选主次窗口、窗口时长、重置时间、余额及消费限制字段。
+- 缺少窗口不生成 0% 假数据；没有重置时间则明确显示未知。倒计时只在前端计算，到期后需要刷新确认，不自动将额度设为 100%。
+- 查询失败保留上次成功结果并标记 Stale data；查询超时为 45 秒，同一时间只允许一个请求，结束或超时会清理子进程。
+- 账户和额度暂存内存，重启后需重新连接。自动刷新、多账户独立认证、持久化和 Claude 查询尚未接入。
+- 本实现依赖本机 Codex 可执行文件。发布 ZIP 暂未捆绑 Codex；单纯运行 `npm run dev` 的浏览器页面无法访问本机查询功能。
+- 已在 Windows 验证；macOS 的代码路径尚需实机测试。
+
+### 找不到 Codex 时
+
+可以设置 `QUOTAPEEK_CODEX_PATH` 为 Codex 原生可执行文件的绝对路径，然后重新启动应用。Windows 使用 `codex.exe`，不要指向 npm 的 `.cmd` / `.ps1` 包装脚本。macOS 从 Finder 启动时 PATH 可能不同，也可以使用此设置。
+
+应用遵循已有 `CODEX_HOME`；未设置时使用用户主目录下的 `.codex`。网络或代理问题、失效登录需要在 Codex 中修复后重试。QuotaPeek 不把上游原始错误或凭据写入界面和日志。
+
+## 代码结构
 
 ```text
 src/
-├─ components/
-│  ├─ AddAccount.tsx           # 选择平台、输入邮箱与添加演示账户
-│  ├─ AddAccount.css           # 添加账户面板样式
-│  ├─ AccountCard.tsx          # 账户信息、额度进度条和重置时间展示
-│  ├─ AccountCard.css          # 账户卡片样式
-│  ├─ AppearanceSettings.tsx   # 主题选择交互和面板焦点管理
-│  ├─ AppearanceSettings.css   # 外观设置面板样式
-│  └─ Icon.tsx                 # 共用 SVG 图标
-├─ hooks/
-│  └─ useAppearance.ts         # 主题状态、读取、保存和应用，以及 Theme 类型
-├─ mocks/
-│  └─ quotas.ts                # Codex、Claude 模拟账户及额度数据
-├─ styles/
-│  ├─ tokens.css               # 字体、字号、间距、尺寸、圆角和动画变量
-│  ├─ themes.css               # 三套主题配色、平台配色和主题预览色
-│  └─ global.css               # 样式入口、全局基础规则和共用按钮样式
-├─ types/
-│  └─ quota.ts                 # Account、QuotaLimit 和 ProviderId 共享类型
-├─ App.tsx                     # 页面组装、账户轮播、设置开关及外观 hook 调用
-├─ App.css                     # 窗口、工具栏、轮播、分页和页脚样式
-├─ main.tsx                    # React 挂载入口，引入全局样式
-└─ vite-env.d.ts               # Vite 环境类型声明
+  types/quota.ts                       # 供应商判别联合类型 Account
+  types/codex.ts                       # Codex 专属账户、额度分组及窗口
+  services/codex.ts                    # query_codex_quota 的 invoke 封装
+  hooks/useAccounts.ts                 # 连接、刷新、错误、账户切换状态
+  hooks/useAppearance.ts               # 主题状态与 localStorage 持久化
+  components/AccountCard.tsx           # 根据 providerId 分派卡片
+  components/providers/CodexAccountCard.tsx
+  components/providers/CodexAccountCard.css
+  components/AddAccount.tsx            # 本地账户连接入口
+  components/AppearanceSettings.tsx    # 主题设置
+  styles/                             # 通用变量、三套主题和全局样式
+  App.tsx                             # 页面、轮播、设置和刷新入口
+src-tauri/src/
+  lib.rs                              # 注册 Tauri 命令及查询互斥状态
+  codex.rs                            # Codex 协议、类型、进程生命周期及测试
+tests/codex-card.test.cjs              # 实际卡片的渲染与额度语义测试
 ```
 
-### 组件与数据
+每个供应商使用独立数据类型和卡片。新增供应商时扩展 `Account` 联合类型及 `providerId` 分派，并新增专属 service、Rust provider 和卡片布局；无需为每个供应商定义五小时或每周窗口。
 
-- `App.tsx` 读取 `mocks/quotas.ts` 中的模拟数据，通过 props 传给 `AccountCard`，并管理按钮、键盘和滑动翻页。
-- `types/quota.ts` 定义共享的 `Account`、`QuotaLimit` 和 `ProviderId` 类型，卡片组件与模拟数据共同引用，数据层无需依赖展示组件。
-- `AccountCard.tsx` 负责展示账户和额度。账户的 `id` 是唯一标识，用于 React key、分页标签和面板关联；`providerId` 标识平台，用于选择平台配色。同一平台的多个账户应使用不同的 `id`，并共享同一个 `providerId`。
-- `AppearanceSettings.tsx` 通过 props 接收当前主题，通过回调通知主题变更和面板关闭。
-- `App.tsx` 调用 `useAppearance()` 获取 `theme` 和 `setTheme`。该 hook 统一读取 `localStorage` 中的 `quotapeek-theme`，将主题应用到根元素的 `data-theme` 属性，并保存选择。未保存、值无效或读取失败时默认使用 `dark`；保存失败时仍可切换主题。
-- 轮播根据当前页码动态计算位移，通过用户图标添加账户即可增加页面，无需新增每一页的位移样式。
-- 刷新按钮目前仅触发演示动画与计数，不会请求真实账户数据；重置时间和倒计时文字也是模拟值。
+## 验证
 
-### 添加账户（前端演示）
+```sh
+npm run build
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml
+```
 
-初始账户列表为空，不显示账户卡片或分页，刷新按钮禁用。点击顶部用户图标，选择 OpenAI Codex 或 Claude，再输入邮箱并点击 `Add demo account`。新增账户会使用所选平台的模拟额度，并自动切换到对应卡片。同平台重复邮箱会提示，不同平台可使用相同邮箱。
+真实集成测试会启动本机 Codex 并访问额度服务，需要已登录且网络可用；默认测试跳过此项：
 
-此流程不执行真实登录或查询，也不收集密码；新增账户仅保存在当前页面内存中，重新加载应用后恢复空账户列表。添加面板支持 Escape 关闭，关闭后焦点返回用户图标；账户面板与外观面板互斥显示。
-
-### 样式约定
-
-- `main.tsx` 引入 `global.css`，后者统一引入 `tokens.css` 和 `themes.css`。
-- 字体、字号及通用尺寸优先在 `tokens.css` 调整；各级字号使用 `rem`，可通过根字号统一缩放。
-- 主题颜色在 `themes.css` 中维护，通过 `data-theme="classic"`、`"dark"` 或 `"light"` 切换，默认使用深色主题。
-- 页面布局写在 `App.css`，组件专属样式放在同名 CSS 文件中，并由对应组件引入。这些是普通 CSS，选择器仍具有全局作用域。
-
-以上记录当前已实现的结构。接入真实额度时可复用共享类型，按需添加接口与查询状态管理；新增平台时需同步扩展 `ProviderId` 和 `themes.css` 中的平台配色。字体、字号目前通过 CSS 变量配置，尚未提供设置面板交互或持久化逻辑。
+```sh
+cargo test --manifest-path src-tauri/Cargo.toml live_codex_query -- --ignored --nocapture
+```
