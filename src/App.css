@@ -2,7 +2,7 @@
 .app-shell { min-height: 100svh; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; padding: var(--space-section); }
 .quota-window { min-width: 0; width: min(100%, var(--window-width)); padding: var(--space-card); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); box-shadow: var(--shadow-window); }
 .window-header, .brand, .window-actions, .window-footer { display: flex; align-items: center; }
-.window-header { justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
+.window-header { flex-wrap: wrap; justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
 .brand { gap: var(--space-medium); }
 .brand h1 { font-size: var(--font-size-title); font-weight: 650; letter-spacing: -0.4px; }
 .app-icon { display: grid; place-items: center; width: var(--control-size); height: var(--control-size); padding: 7px; border-radius: var(--radius-control); color: var(--color-codex); background: var(--color-codex-soft); }
@@ -16,12 +16,12 @@
 .carousel-track { display: flex; align-items: stretch; transition: transform var(--duration-page) var(--ease-page); }
 /* Centered dots with optional previous/next controls. */
 .pagination { display: flex; justify-content: center; align-items: center; gap: var(--space-section); padding-top: var(--space-medium); }
-.page-dots { display: flex; }
+.page-dots { display: flex; flex-wrap: wrap; justify-content: center; min-width: 0; }
 .page-dot { width: 24px; height: var(--control-size); padding: 0; display: grid; place-items: center; background: transparent; border-radius: var(--radius-control); }
 .page-dot span { width: 6px; height: 6px; border-radius: 50%; background: var(--color-dot); transition: background var(--duration-fast), transform var(--duration-fast); }
 .page-dot.is-active span { background: var(--color-dot-active); }
 .page-dot:hover span { transform: scale(1.2); }
-.page-arrow { width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: transparent; color: var(--color-text-subtle); }
+.page-arrow { flex-shrink: 0; width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: transparent; color: var(--color-text-subtle); }
 .page-arrow.previous svg { transform: rotate(180deg); }
 .page-arrow:hover:not(:disabled) { background: var(--color-surface-active); color: var(--color-text); }
 .page-arrow:disabled { opacity: 0.2; }

@@ -1,17 +1,5 @@
+import type { Account } from "../types/quota";
 import "./AccountCard.css";
-
-export interface Account {
-  id: string;
-  provider: string;
-  mark: string;
-  email: string;
-  limits: readonly {
-    label: string;
-    remaining: number;
-    reset: string;
-    time: string;
-  }[];
-}
 
 interface AccountCardProps {
   account: Account;
@@ -20,7 +8,7 @@ interface AccountCardProps {
 
 export default function AccountCard({ account, active }: AccountCardProps) {
   return (
-    <article id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className={`account-card provider-${account.id}`}>
+    <article id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className={`account-card provider-${account.providerId}`}>
       <div className="account-header">
         <span className="provider-mark" aria-hidden="true">{account.mark}</span>
         <div className="account-identity"><h2>{account.provider}</h2><p title={account.email}>{account.email}</p></div>

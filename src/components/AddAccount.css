@@ -1,0 +1,20 @@
+.add-account-panel { padding: var(--space-medium); margin-bottom: var(--space-large); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+.add-account-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-medium); }
+.add-account-heading h2 { font-size: var(--font-size-body); font-weight: 600; }
+.account-step { color: var(--color-text-subtle); font-size: var(--font-size-caption); letter-spacing: 1px; margin-bottom: var(--space-xs); }
+.account-hint { color: var(--color-text-muted); font-size: var(--font-size-small); line-height: 1.6; margin: var(--space-small) 0 var(--space-medium); }
+.platform-options { display: grid; gap: var(--space-small); }
+.platform-option, .selected-platform { display: flex; align-items: center; gap: var(--space-small); padding: var(--space-small); border-radius: var(--radius-control); }
+.platform-option { width: 100%; text-align: left; background: var(--color-control); border: 1px solid var(--color-border); }
+.platform-option:hover { background: var(--color-surface-active); border-color: var(--color-accent); }
+.platform-mark { display: grid; place-items: center; flex-shrink: 0; width: var(--control-size); height: var(--control-size); border-radius: var(--radius-control); background: var(--provider-soft); color: var(--provider-color); font-weight: 650; }
+.platform-chevron { width: 16px; height: 16px; margin-left: auto; color: var(--color-text-subtle); }
+.selected-platform { padding: 0; margin-bottom: var(--space-large); }
+.selected-platform strong { font-size: var(--font-size-body); }
+.change-platform { margin-left: auto; background: transparent; color: var(--color-accent); padding: var(--space-small) 0; font-size: var(--font-size-small); }
+.account-input-label { display: block; margin-bottom: var(--space-small); font-size: var(--font-size-small); }
+.account-email { width: 100%; min-width: 0; padding: var(--space-medium); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-window); color: var(--color-text); }
+.account-email::placeholder { color: var(--color-text-subtle); }
+.account-error { margin-top: var(--space-small); color: var(--color-text); font-size: var(--font-size-small); }
+.add-account-submit { width: 100%; padding: var(--space-medium); border-radius: var(--radius-control); background: var(--color-surface-active); color: var(--color-text); border: 1px solid var(--color-accent); font-weight: 600; }
+.add-account-submit:hover { background: var(--color-window); }

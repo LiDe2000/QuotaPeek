@@ -1,21 +1,13 @@
 import { useEffect, useRef } from "react";
+import type { Theme } from "../hooks/useAppearance";
 import Icon from "./Icon";
 import "./AppearanceSettings.css";
-
-export type Theme = "classic" | "dark" | "light";
 
 const themes: { id: Theme; name: string; description: string }[] = [
   { id: "classic", name: "Original", description: "原稿深色 · 清晰边框" },
   { id: "dark", name: "Midnight", description: "精致深色 · 柔和层次" },
   { id: "light", name: "Pearl", description: "精致浅色 · 干净通透" },
 ];
-
-export function readTheme(): Theme {
-  try {
-    const saved = localStorage.getItem("quotapeek-theme");
-    return saved === "classic" || saved === "light" ? saved : "dark";
-  } catch { return "dark"; }
-}
 
 interface AppearanceSettingsProps {
   theme: Theme;
