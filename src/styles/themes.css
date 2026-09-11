@@ -1,0 +1,83 @@
+/* Three themes. Dark is the default; data-theme on <html> selects a theme. */
+:root,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-background: #111215;
+  --color-window: #1b1d22;
+  --color-surface: #23252a;
+  --color-surface-active: #34373e;
+  --color-control: #ffffff06;
+  --color-control-border: transparent;
+  --color-text: #f4f4f6;
+  --color-text-muted: #a1a4af;
+  --color-text-subtle: #90949f;
+  --color-border: #ffffff12;
+  --color-window-border: #ffffff1c;
+  --color-track: #ffffff0d;
+  --color-accent: #8aa4ff;
+  --color-codex: #88a0ff;
+  --color-codex-soft: #283351;
+  --color-claude: #dfa982;
+  --color-claude-soft: #41352f;
+  --color-status: #62d6a0;
+  --color-dot-active: #ffffff;
+  --color-dot: #ffffff3d;
+  --shadow-window: 0 24px 64px #00000050, 0 3px 10px #00000030, inset 0 1px 0 #ffffff05;
+}
+
+:root[data-theme="classic"] {
+  color-scheme: dark;
+  --color-background: #202020;
+  --color-window: #0c0d0f;
+  --color-surface: #12151a;
+  --color-surface-active: #252a34;
+  --color-control: #191d24;
+  --color-control-border: #2b3039;
+  --color-text: #f0f1f4;
+  --color-text-muted: #a7adb8;
+  --color-text-subtle: #929baa;
+  --color-border: #272c35;
+  --color-window-border: #303641;
+  --color-track: #272c35;
+  --color-accent: #819fff;
+  --color-codex: #809dff;
+  --color-codex-soft: #243253;
+  --color-claude: #dda077;
+  --color-claude-soft: #402c23;
+  --color-status: #5fd5a0;
+  --color-dot-active: #ffffff;
+  --color-dot: #ffffff3d;
+  --shadow-window: 0 20px 48px #00000045;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-background: #e9ebef;
+  --color-window: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-active: #e4e6ec;
+  --color-control: #00000004;
+  --color-control-border: transparent;
+  --color-text: #21232a;
+  --color-text-muted: #626672;
+  --color-text-subtle: #696e7a;
+  --color-border: #171d2f0e;
+  --color-window-border: #ffffffc0;
+  --color-track: #1a23400c;
+  --color-accent: #4e65c9;
+  --color-codex: #607bdc;
+  --color-codex-soft: #e9edfd;
+  --color-claude: #a5653c;
+  --color-claude-soft: #f7ece3;
+  --color-status: #27835c;
+  --color-dot-active: #303747;
+  --color-dot: #30374738;
+  --shadow-window: 0 24px 64px #25304b18, 0 3px 10px #25304b0a, inset 0 1px 0 #ffffff;
+}
+
+.provider-codex { --provider-color: var(--color-codex); --provider-soft: var(--color-codex-soft); }
+.provider-claude { --provider-color: var(--color-claude); --provider-soft: var(--color-claude-soft); }
+.swatch-classic { --swatch-bg: #0c0d0f; --swatch-card: #12151a; --swatch-border: #303641; --swatch-bar: #809dff; }
+.swatch-dark { --swatch-bg: #1b1d22; --swatch-card: #282a30; --swatch-border: #ffffff12; --swatch-bar: #88a0ff; }
+.swatch-light { --swatch-bg: #f6f7f9; --swatch-card: #ffffff; --swatch-border: #dfe2ea; --swatch-bar: #607bdc; }
+

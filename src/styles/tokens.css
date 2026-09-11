@@ -1,0 +1,28 @@
+/* Typography, spacing, shape, and motion. Theme colors live in themes.css. */
+:root {
+  --font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "Microsoft YaHei", sans-serif;
+  --font-size-root: 16px;
+  --font-size-caption: 0.625rem;
+  --font-size-small: 0.6875rem;
+  --font-size-body: 0.8125rem;
+  --font-size-title: 1rem;
+  --font-size-quota: 1.875rem;
+  --line-height-body: 1.5;
+  --space-xs: 0.25rem;
+  --space-small: 0.5rem;
+  --space-medium: 0.75rem;
+  --space-large: 1rem;
+  --space-card: 1.25rem;
+  --space-section: 1.5rem;
+  --radius-control: 0.625rem;
+  --radius-card: 1.125rem;
+  --radius-window: 1.5rem;
+  --window-width: 380px;
+  --control-size: 32px;
+  --provider-size: 36px;
+  --progress-height: 5px;
+  --duration-fast: 160ms;
+  --duration-page: 360ms;
+  --ease-page: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
