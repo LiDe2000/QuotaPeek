@@ -8,3 +8,4 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 mod codex;
+mod codex_executable;

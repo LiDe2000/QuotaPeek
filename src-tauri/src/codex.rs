@@ -195,29 +195,7 @@ async fn rpc(
 }
 
 fn executable() -> Result<PathBuf, QueryError> {
-    if let Some(path) = std::env::var_os("QUOTAPEEK_CODEX_PATH") {
-        let path = PathBuf::from(path);
-        if path.is_absolute() && path.is_file() {
-            return Ok(path);
-        }
-        return Err(error(
-            "codex_not_found",
-            "QUOTAPEEK_CODEX_PATH must point to the Codex executable.",
-        ));
-    }
-    let name = if cfg!(windows) { "codex.exe" } else { "codex" };
-    if let Some(paths) = std::env::var_os("PATH") {
-        for path in std::env::split_paths(&paths) {
-            if !path.is_absolute() {
-                continue;
-            }
-            let candidate = path.join(name);
-            if candidate.is_file() {
-                return Ok(candidate);
-            }
-        }
-    }
-    Err(error("codex_not_found", "Codex executable not found. Add it to PATH or set QUOTAPEEK_CODEX_PATH, then restart QuotaPeek."))
+    crate::codex_executable::find().map_err(|message| error("codex_not_found", message))
 }
 
 async fn query() -> Result<CodexAccount, QueryError> {

@@ -16,7 +16,7 @@ npm run tauri dev
 ## Codex 真实额度查询
 
 1. 本机安装 Codex，并使用 ChatGPT 账户登录。API key 登录不支持订阅额度查询。
-2. 确保 `codex` 原生可执行文件在 PATH 中，安装后重启 QuotaPeek / 编辑器。
+2. Windows 会自动查找本机 Codex 桌面应用的安装目录，也支持 PATH 中的原生可执行文件。
 3. 点击用户图标 → OpenAI Codex → Connect local Codex。
 4. 点击刷新按钮重新查询；页脚显示最近成功查询时间。
 
@@ -36,6 +36,8 @@ npm run tauri dev
 - 已在 Windows 验证；macOS 的代码路径尚需实机测试。
 
 ### 找不到 Codex 时
+
+查找顺序为：`QUOTAPEEK_CODEX_PATH` → PATH → Windows 的 `%LOCALAPPDATA%/OpenAI/Codex/bin`（包括其版本子目录）。版本目录按可执行文件修改时间选择最新项，忽略不完整目录；无需把版本路径写入系统环境变量。若显式配置的路径无效，会提示修正而不自动切换到另一安装。
 
 可以设置 `QUOTAPEEK_CODEX_PATH` 为 Codex 原生可执行文件的绝对路径，然后重新启动应用。Windows 使用 `codex.exe`，不要指向 npm 的 `.cmd` / `.ps1` 包装脚本。macOS 从 Finder 启动时 PATH 可能不同，也可以使用此设置。
 
