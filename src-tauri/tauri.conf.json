@@ -13,8 +13,14 @@
     "windows": [
       {
         "title": "QuotaPeek",
-        "width": 800,
-        "height": 600
+        "width": 420,
+        "height": 600,
+        "minWidth": 420,
+        "minHeight": 600,
+        "decorations": false,
+        "transparent": true,
+        "shadow": false,
+        "resizable": false
       }
     ],
     "security": {

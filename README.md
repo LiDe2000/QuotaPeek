@@ -4,14 +4,26 @@ All your AI limits at a glance.
 
 React + TypeScript + Vite 界面，Tauri 2 + Rust 桌面后端。
 
-## 本地运行
+## 本地运行与构建（Windows）
 
-安装 Node.js、Rust 和对应平台的 Tauri 开发依赖后：
+安装 Node.js、Rust 和 Tauri 所需的 Windows 开发依赖后，在项目根目录首次执行 `npm install`。
 
-```sh
-npm install
+开发时运行桌面应用，修改代码后会自动更新：
+
+```powershell
 npm run tauri dev
 ```
+
+只需要自己运行程序时，构建可执行文件并跳过安装包制作：
+
+```powershell
+npm run tauri -- build --no-bundle
+.\src-tauri\target\release\quotapeek.exe
+```
+
+可执行文件位于 `src-tauri/target/release/quotapeek.exe`。它包含应用界面，但不会创建安装向导、快捷方式或卸载入口。
+
+需要安装包时运行 `npm run tauri -- build`。当前配置的 `bundle.targets` 为 `all`，Windows 会尝试制作 MSI，并可能首次下载 WiX。如果遇到 `wix314-binaries.zip` 下载时的 `Peer disconnected`，失败的是安装包制作；先检查上述可执行文件，或用 `--no-bundle` 重新构建。首次编译 Rust 依赖通常较慢，后续构建会复用已编译的依赖。
 
 ## Codex 真实额度查询
 

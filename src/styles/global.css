@@ -3,7 +3,7 @@
 
 :root { font-size: var(--font-size-root); font-synthesis: none; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 * { box-sizing: border-box; }
-body { margin: 0; font-family: var(--font-family); font-size: var(--font-size-body); line-height: var(--line-height-body); color: var(--color-text); background: var(--color-background); }
+body { margin: 0; font-family: var(--font-family); font-size: var(--font-size-body); line-height: var(--line-height-body); color: var(--color-text); background: transparent; }
 button, input, select, textarea { font: inherit; }
 button { color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; border: 0; }
 button:disabled { cursor: default; }

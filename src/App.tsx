@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
+import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import AddAccount from "./components/AddAccount";
 import { useAccounts } from "./hooks/useAccounts";
 import AccountCard from "./components/AccountCard";
@@ -9,6 +11,7 @@ import Icon from "./components/Icon";
 import "./App.css";
 
 function App() {
+  const desktop = isTauri();
   const { accounts, loading, error, notice, refreshCodex } = useAccounts();
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const accountButton = useRef<HTMLButtonElement>(null);
@@ -63,13 +66,17 @@ function App() {
     <main className="app-shell">
       <section className="quota-window" aria-label="QuotaPeek AI usage">
         <header className="window-header">
-          <div className="brand"><span className="app-icon"><Icon name="gauge" /></span><h1>QuotaPeek</h1></div>
+          <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><span className="app-icon"><Icon name="gauge" /></span><h1>QuotaPeek</h1></div>
           <div className="window-actions">
             <button className="icon-button" aria-label="Refresh Codex quota" title="Refresh Codex quota" disabled={accounts.length === 0 || loading} onClick={() => void refreshCodex()}>
               <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
             </button>
             <button ref={accountButton} className="icon-button" aria-label="Add account" title="Add account" aria-expanded={accountPanelOpen} aria-controls="add-account" onClick={() => { if (accountPanelOpen) closeAccountPanel(); else { setSettingsOpen(false); setAccountPanelOpen(true); } }}><Icon name="user" /></button>
             <button ref={settingsButton} className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} aria-controls="appearance-settings" title="Appearance" onClick={() => { if (settingsOpen) closeSettings(); else { setAccountPanelOpen(false); setSettingsOpen(true); } }}><Icon name="settings" /></button>
+            {desktop && <div className="desktop-window-actions">
+              <button className="window-control" aria-label="Minimize window" title="Minimize" onClick={() => void getCurrentWindow().minimize()}><Icon name="minimize" /></button>
+              <button className="window-control" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}><Icon name="close" /></button>
+            </div>}
           </div>
         </header>
 
