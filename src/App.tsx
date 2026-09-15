@@ -66,9 +66,9 @@ function App() {
     <main className="app-shell">
       <section className="quota-window" aria-label="QuotaPeek AI usage">
         <header className="window-header">
-          <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><span className="app-icon"><Icon name="gauge" /></span><h1>QuotaPeek</h1></div>
+          <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><img className="app-icon" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} /><h1>QuotaPeek</h1></div>
           <div className="window-actions">
-            <button className="icon-button" aria-label="Refresh Codex quota" title="Refresh Codex quota" disabled={accounts.length === 0 || loading} onClick={() => void refreshCodex()}>
+            <button className="icon-button refresh-button" aria-label="Refresh Codex quota" title="Refresh Codex quota" disabled={accounts.length === 0 || loading} onClick={() => void refreshCodex()}>
               <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
             </button>
             <button ref={accountButton} className="icon-button" aria-label="Add account" title="Add account" aria-expanded={accountPanelOpen} aria-controls="add-account" onClick={() => { if (accountPanelOpen) closeAccountPanel(); else { setSettingsOpen(false); setAccountPanelOpen(true); } }}><Icon name="user" /></button>

@@ -10,6 +10,7 @@ button:disabled { cursor: default; }
 button, fieldset { margin: 0; }
 h1, h2, h3, p { margin: 0; }
 svg { display: block; width: 100%; height: 100%; }
+.ui-icon { display: block; width: 100%; height: 100%; background: currentColor; mask-repeat: no-repeat; mask-position: center; mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; -webkit-mask-size: contain; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
