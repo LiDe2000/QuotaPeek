@@ -14,6 +14,7 @@
   --color-border: #ffffff12;
   --color-window-border: #ffffff1c;
   --color-track: #ffffff0d;
+  --color-token-surface: #ffffff06;
   --color-accent: #8aa4ff;
   --color-codex: #88a0ff;
   --color-codex-soft: #283351;
@@ -39,6 +40,7 @@
   --color-border: #272c35;
   --color-window-border: #303641;
   --color-track: #272c35;
+  --color-token-surface: #1a1d23;
   --color-accent: #819fff;
   --color-codex: #809dff;
   --color-codex-soft: #243253;
@@ -64,6 +66,7 @@
   --color-border: #171d2f0e;
   --color-window-border: #ffffffc0;
   --color-track: #1a23400c;
+  --color-token-surface: #f6f7fa;
   --color-accent: #4e65c9;
   --color-codex: #607bdc;
   --color-codex-soft: #e9edfd;

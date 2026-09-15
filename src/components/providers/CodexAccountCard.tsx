@@ -28,6 +28,22 @@ function QuotaWindow({ value, fallback, now }: { value: CodexRateLimitWindow; fa
     <div className="reset-details"><span>{reset}</span><span>{time}</span></div>
   </section>;
 }
+function TokenStats({ usage }: { usage: CodexAccount["tokenUsage"] }) {
+  const number = (value: number | null | undefined) => value === null || value === undefined ? "—" : new Intl.NumberFormat().format(value);
+  const latestDate = usage?.latestDailyDate ?? null;
+  const showingLatest = usage?.todayTokens == null && usage?.latestDailyTokens != null && latestDate !== null;
+  const dailyLabel = showingLatest && latestDate ? `Latest · ${latestDate.slice(5).replace("-", "/")}` : "Today";
+  const dailyTokens = showingLatest ? usage?.latestDailyTokens : usage?.todayTokens;
+  return <section className="codex-tokens" aria-label="Codex account token usage" title="Reported by Codex account/usage/read. Today matches the calendar date in US Pacific time.">
+    <div className="codex-tokens-heading"><h3>TOKEN USAGE</h3><span>US Pacific day</span></div>
+    <div className="codex-tokens-values">
+      <div><span>Total</span><strong>{number(usage?.lifetimeTokens)}</strong></div>
+      <div title={showingLatest ? `Latest daily usage: ${latestDate}` : undefined}><span>{dailyLabel}</span><strong>{number(dailyTokens)}</strong></div>
+    </div>
+    {usage?.todayTokens === null && <p className="codex-tokens-unavailable">{showingLatest ? `Today's usage pending · Showing ${latestDate}` : "Today's daily usage has not been reported"}</p>}
+    {!usage && <p className="codex-tokens-unavailable">Token usage unavailable from Codex</p>}
+  </section>;
+}
 export default function CodexAccountCard({ account, active, stale, loading }: { account: CodexAccount; active: boolean; stale: boolean; loading: boolean }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
@@ -50,5 +66,6 @@ export default function CodexAccountCard({ account, active, stale, loading }: { 
       {bucket.credits && (bucket.credits.unlimited || bucket.credits.hasCredits) && <div className="codex-credit"><span>Credits</span><span>{bucket.credits.unlimited ? "Unlimited" : bucket.credits.balance ?? "Balance unavailable"}</span></div>}
       {(bucket.spendControlReached || bucket.rateLimitReachedType) && <p className="account-hint">{bucket.rateLimitReachedType?.replace(/_/g, " ") ?? "Spending limit reached"}</p>}
     </div>)}
+    <TokenStats usage={account.tokenUsage} />
   </article>;
 }

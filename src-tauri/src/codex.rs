@@ -84,6 +84,50 @@ pub struct CodexAccount {
     plan_type: Option<String>,
     fetched_at: u64,
     rate_limits: BTreeMap<String, Bucket>,
+    token_usage: Option<TokenUsage>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TokenUsage {
+    lifetime_tokens: Option<u64>,
+    today_tokens: Option<u64>,
+    latest_daily_date: Option<String>,
+    latest_daily_tokens: Option<u64>,
+}
+
+fn token_usage(value: Value, usage_date: &str) -> Option<TokenUsage> {
+    let summary = &value["summary"];
+    let lifetime_tokens = summary["lifetimeTokens"].as_u64();
+    let latest_daily = value["dailyUsageBuckets"].as_array().and_then(|buckets| {
+        buckets
+            .iter()
+            .filter_map(|bucket| Some((bucket["startDate"].as_str()?, bucket["tokens"].as_u64()?)))
+            .max_by_key(|(date, _)| *date)
+    });
+    let (latest_daily_date, latest_daily_tokens) = match latest_daily {
+        Some((date, tokens)) => (Some(date.to_owned()), Some(tokens)),
+        None => (None, None),
+    };
+    let today_tokens = value["dailyUsageBuckets"].as_array().and_then(|buckets| {
+        match buckets
+            .iter()
+            .find(|bucket| bucket["startDate"] == usage_date)
+        {
+            Some(bucket) => bucket["tokens"].as_u64(),
+            None => None,
+        }
+    });
+    if lifetime_tokens.is_none() && today_tokens.is_none() && latest_daily_date.is_none() {
+        None
+    } else {
+        Some(TokenUsage {
+            lifetime_tokens,
+            today_tokens,
+            latest_daily_date,
+            latest_daily_tokens,
+        })
+    }
 }
 
 fn identity(value: &Value) -> Result<(Option<String>, Option<String>), QueryError> {
@@ -130,6 +174,7 @@ fn snapshot(account: &Value, limits: Value) -> Result<CodexAccount, QueryError> 
             .unwrap_or_default()
             .as_secs(),
         rate_limits: buckets,
+        token_usage: None,
     })
 }
 
@@ -198,7 +243,7 @@ fn executable() -> Result<PathBuf, QueryError> {
     crate::codex_executable::find().map_err(|message| error("codex_not_found", message))
 }
 
-async fn query() -> Result<CodexAccount, QueryError> {
+async fn query(usage_date: &str) -> Result<CodexAccount, QueryError> {
     let mut command = Command::new(executable()?);
     command
         .arg("app-server")
@@ -251,10 +296,20 @@ async fn query() -> Result<CodexAccount, QueryError> {
             Value::Null,
         )
         .await?;
-        let after = rpc(
+        let usage = rpc(
             &mut input,
             &mut output,
             4,
+            "account/usage/read",
+            Value::Null,
+        )
+        .await
+        .ok()
+        .and_then(|value| token_usage(value, usage_date));
+        let after = rpc(
+            &mut input,
+            &mut output,
+            5,
             "account/read",
             json!({"refreshToken":false}),
         )
@@ -265,7 +320,9 @@ async fn query() -> Result<CodexAccount, QueryError> {
                 "Codex account changed during the query. Retry to load the current account.",
             ));
         }
-        snapshot(&after, limits)
+        let mut result = snapshot(&after, limits)?;
+        result.token_usage = usage;
+        Ok(result)
     })
     .await;
     let _ = child.kill().await;
@@ -280,12 +337,16 @@ async fn query() -> Result<CodexAccount, QueryError> {
 #[tauri::command]
 pub async fn query_codex_quota(
     state: tauri::State<'_, QueryState>,
+    usage_date: String,
 ) -> Result<CodexAccount, QueryError> {
+    if chrono::NaiveDate::parse_from_str(&usage_date, "%Y-%m-%d").is_err() {
+        return Err(protocol_error());
+    }
     let _guard = state
         .0
         .try_lock()
         .map_err(|_| error("busy", "A Codex query is already running."))?;
-    query().await
+    query(&usage_date).await
 }
 
 #[cfg(test)]
@@ -342,15 +403,53 @@ mod tests {
             "unsupported_auth"
         );
     }
+    #[test]
+    fn usage_summary_reads_lifetime_and_current_date_bucket() {
+        let today = "2026-09-15";
+        let usage = token_usage(json!({"summary":{"lifetimeTokens":1234567},"dailyUsageBuckets":[{"startDate":today,"tokens":34567}]}), today).unwrap();
+        assert_eq!(usage.lifetime_tokens, Some(1_234_567));
+        assert_eq!(usage.today_tokens, Some(34_567));
+        let empty_today = token_usage(
+            json!({"summary":{"lifetimeTokens":10},"dailyUsageBuckets":[]}),
+            today,
+        )
+        .unwrap();
+        assert_eq!(empty_today.today_tokens, None);
+        let latest_yesterday = token_usage(json!({"summary":{"lifetimeTokens":10},"dailyUsageBuckets":[{"startDate":"2026-09-14","tokens":9}]}), today).unwrap();
+        assert_eq!(latest_yesterday.today_tokens, None);
+        assert_eq!(
+            latest_yesterday.latest_daily_date.as_deref(),
+            Some("2026-09-14")
+        );
+        assert_eq!(latest_yesterday.latest_daily_tokens, Some(9));
+        let dates_without_summary = token_usage(json!({"summary":{"lifetimeTokens":null},"dailyUsageBuckets":[{"startDate":"2026-09-14","tokens":9}]}), today).unwrap();
+        assert_eq!(
+            dates_without_summary.latest_daily_date.as_deref(),
+            Some("2026-09-14")
+        );
+        let missing_daily = token_usage(
+            json!({"summary":{"lifetimeTokens":10},"dailyUsageBuckets":null}),
+            today,
+        )
+        .unwrap();
+        assert_eq!(missing_daily.today_tokens, None);
+        assert!(token_usage(
+            json!({"summary":{"lifetimeTokens":null},"dailyUsageBuckets":null}),
+            today
+        )
+        .is_none());
+    }
     #[tokio::test]
     #[ignore = "requires a signed-in local Codex installation and network"]
     async fn live_codex_query() {
-        let result = query().await.unwrap();
+        let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
+        let result = query(&date).await.unwrap();
         assert_eq!(result.provider_id, "codex");
         assert!(!result.rate_limits.is_empty());
         println!(
-            "Codex query succeeded; {} quota buckets",
-            result.rate_limits.len()
+            "Codex query succeeded; {} quota buckets; token activity available: {}",
+            result.rate_limits.len(),
+            result.token_usage.is_some()
         );
     }
 }

@@ -23,4 +23,12 @@ export interface CodexAccount {
   planType: string | null;
   fetchedAt: number;
   rateLimits: Record<string, CodexRateLimitBucket>;
+  tokenUsage: CodexTokenUsage | null;
+}
+
+export interface CodexTokenUsage {
+  lifetimeTokens: number | null;
+  todayTokens: number | null;
+  latestDailyDate: string | null;
+  latestDailyTokens: number | null;
 }
