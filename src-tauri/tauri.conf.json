@@ -14,9 +14,9 @@
       {
         "title": "QuotaPeek",
         "width": 420,
-        "height": 600,
+        "height": 125,
         "minWidth": 420,
-        "minHeight": 600,
+        "minHeight": 120,
         "decorations": false,
         "transparent": true,
         "shadow": false,

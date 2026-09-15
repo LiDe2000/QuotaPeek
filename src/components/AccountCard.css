@@ -13,7 +13,6 @@
 .quota-value { text-align: right; }
 .quota-value strong { display: block; font-size: var(--font-size-quota); font-weight: 600; letter-spacing: -1px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .quota-value strong span { font-size: 0.7em; padding-left: 2px; }
-.remaining-label { display: block; color: var(--color-text-subtle); font-size: var(--font-size-caption); margin-top: var(--space-xs); }
 .account-card progress { display: block; appearance: none; border: 0; width: 100%; height: var(--progress-height); border-radius: var(--progress-height); overflow: hidden; background: var(--color-track); color: var(--provider-color); }
 .account-card progress::-webkit-progress-bar { border-radius: var(--progress-height); background: var(--color-track); }
 .account-card progress::-webkit-progress-value { border-radius: var(--progress-height); background: var(--provider-color); }

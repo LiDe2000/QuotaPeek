@@ -79,6 +79,18 @@ tests/codex-card.test.cjs              # 实际卡片的渲染与额度语义测
 
 每个供应商使用独立数据类型和卡片。新增供应商时扩展 `Account` 联合类型及 `providerId` 分派，并新增专属 service、Rust provider 和卡片布局；无需为每个供应商定义五小时或每周窗口。
 
+## 窗口布局约定
+
+窗口外壳 `.quota-window` 高度固定、永不滚动，圆角与边框因此始终完整；`.window-body` 是唯一的滚动区。外壳通过 `--window-padding`（内边距）和 `--panel-top`（浮层上边界）向组件暴露定位基准，两者都在 `.quota-window` 上定义。
+
+`AddAccount` 与 `AppearanceSettings` 是绝对定位浮层，共用 `global.css` 里的 `.panel` 基类，不参与文档流，因此不会把卡片挤下去。两个面板共用同一条 `--panel-top` 上边界，并各自左右留出 `--window-padding`，所以落点和宽度完全一致——不做靠边停靠的窄浮层。按下面板与工具栏以外的任意位置即关闭。
+
+窗口高度等于「内容 + 外壳开销 + 外壳外留白」。`useFittedWindowHeight` 测量 `.window-body` 的子元素高度，以及打开中的面板所占的纵向跨度，取两者较大值，加上外壳开销（header、footer、内边距）后交给 `lib/windowHeight.ts` 的 `fittedWindowHeight` 换算，再用 `setSize` 应用。测量必须取子元素而不是 `.window-body` 自身——flex 会把 body 拉伸到窗口高度，测它会让效果追自己的尾巴；面板是绝对定位的，所以要把它的 offsetTop 从 body 的 offsetTop 里扣掉，并且读 scrollHeight 以免被窗口自身的限高回灌。结果下限就是外壳开销本身，即没有卡片也没有面板时窗口只剩头和尾；上限为屏幕可用高度减 80px（超出时回落到 `.window-body` 的内滚），并带 4px 余量与 2px 死区来吸收取整误差、避免抖动。
+
+`tauri.conf.json` 里的 `height` 只是初始值，取空窗口的高度以免启动时先高后缩；`minHeight` 必须放开到最小高度，否则窗口无法收缩。当前实测（380px 宽窗口、单账户 Codex）：内容约 486px（卡片 + 40px 翻页行），外壳开销约 105px（header、footer、内边距），外壳外留白 24px（`.app-shell` 的 `--space-section` 下边距），拟合高度约 619px 且不滚动；空窗口约 133px。
+
+自适应依赖 `getCurrentWindow().setSize()`，而 Tauri 2 的 ACL 默认不放行这条命令：`src-tauri/capabilities/default.json` 必须显式包含 `core:window:allow-set-size`。缺它不会在任何界面上报错，只会静默拒绝，窗口就停在初始高度不变——加卡片、开面板都不会长高。`setSize` 的失败在 hook 里 `console.warn` 出来，便于下次一眼定位。capability 与 `tauri.conf.json` 都参与 Rust 端编译，改完必须重启 `npm run tauri dev`（会重新编译），前端热更新不生效。
+
 ## 验证
 
 ```sh

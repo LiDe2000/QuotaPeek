@@ -21,7 +21,7 @@ export default function AppearanceSettings({ theme, onThemeChange, onClose }: Ap
   useEffect(() => { closeButton.current?.focus(); }, []);
 
   return (
-    <section id="appearance-settings" className="settings-panel" aria-labelledby="settings-title" onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
+    <section id="appearance-settings" className="panel settings-panel" aria-labelledby="settings-title" onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
       <div className="settings-heading"><h2 id="settings-title">Appearance</h2><button ref={closeButton} className="icon-button" aria-label="Close settings" onClick={onClose}><Icon name="close" /></button></div>
       <fieldset className="theme-options"><legend className="sr-only">Color theme</legend>{themes.map(option => <label key={option.id} title={option.description}>
         <input type="radio" name="theme" value={option.id} checked={theme === option.id} onChange={() => onThemeChange(option.id)} />

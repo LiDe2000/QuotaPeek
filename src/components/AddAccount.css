@@ -1,4 +1,5 @@
-.add-account-panel { padding: var(--space-medium); margin-bottom: var(--space-large); border: 1px solid var(--color-border); border-radius: var(--radius-card); background: var(--color-surface); }
+/* Flow panel sharing the same overlay layer as the appearance popover. */
+.add-account-panel { left: var(--window-padding); right: var(--window-padding); padding: var(--space-medium); }
 .add-account-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-medium); }
 .add-account-heading h2 { font-size: var(--font-size-body); font-weight: 600; }
 .account-step { color: var(--color-text-subtle); font-size: var(--font-size-caption); letter-spacing: 1px; margin-bottom: var(--space-xs); }

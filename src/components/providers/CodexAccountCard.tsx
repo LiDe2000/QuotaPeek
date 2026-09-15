@@ -15,15 +15,17 @@ function resetTime(timestamp: number | null, now: number) {
   const date = new Date(timestamp * 1000);
   if (!Number.isFinite(date.getTime())) return ["Reset time unavailable", ""];
   const minutes = Math.ceil((timestamp * 1000 - now) / 60000);
-  const remaining = minutes <= 0 ? "Refresh to check reset" : minutes >= 1440 ? `${Math.floor(minutes / 1440)}d ${Math.floor(minutes % 1440 / 60)}h left` : `${Math.floor(minutes / 60)}h ${minutes % 60}m left`;
-  return [`Resets ${date.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`, remaining];
+  const remaining = minutes <= 0 ? "Refresh to check reset" : minutes >= 1440 ? `${Math.floor(minutes / 1440)}d ${Math.floor(minutes % 1440 / 60)}h remaining` : `${Math.floor(minutes / 60)}h ${minutes % 60}m remaining`;
+  // Fixed MM-DD HH:MM in local time, so the stamp never depends on the system locale.
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return [`Resets ${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`, remaining];
 }
 function QuotaWindow({ value, fallback, now }: { value: CodexRateLimitWindow; fallback: string; now: number }) {
   const label = windowLabel(value.windowDurationMins, fallback);
   const remaining = Math.max(0, Math.min(100, 100 - value.usedPercent));
   const [reset, time] = resetTime(value.resetsAt, now);
   return <section className="limit" aria-label={label}>
-    <div className="limit-summary"><h3>{label}</h3><div className="quota-value"><strong>{Number(remaining.toFixed(1))}<span>%</span></strong><span className="remaining-label">remaining</span></div></div>
+    <div className="limit-summary"><h3>{label}</h3><div className="quota-value"><strong>{Number(remaining.toFixed(1))}<span>%</span></strong></div></div>
     <progress max={100} value={remaining} aria-label={`Codex ${label} remaining`}>{remaining}%</progress>
     <div className="reset-details"><span>{reset}</span><span>{time}</span></div>
   </section>;
@@ -32,7 +34,7 @@ function TokenStats({ usage }: { usage: CodexAccount["tokenUsage"] }) {
   const number = (value: number | null | undefined) => value === null || value === undefined ? "—" : new Intl.NumberFormat().format(value);
   const latestDate = usage?.latestDailyDate ?? null;
   const showingLatest = usage?.todayTokens == null && usage?.latestDailyTokens != null && latestDate !== null;
-  const dailyLabel = showingLatest && latestDate ? `Latest · ${latestDate.slice(5).replace("-", "/")}` : "Today";
+  const dailyLabel = showingLatest && latestDate ? `Latest · ${latestDate.slice(5)}` : "Today";
   const dailyTokens = showingLatest ? usage?.latestDailyTokens : usage?.todayTokens;
   return <section className="codex-tokens" aria-label="Codex account token usage" title="Reported by Codex account/usage/read. Today matches the calendar date in US Pacific time.">
     <div className="codex-tokens-heading"><h3>TOKEN USAGE</h3><span>US Pacific day</span></div>
@@ -64,7 +66,6 @@ export default function CodexAccountCard({ account, active, stale, loading }: { 
       </div>
       {bucket.individualLimit && <div className="codex-credit"><span>Individual spending limit</span><span>{bucket.individualLimit.remainingPercent}% remaining</span></div>}
       {bucket.credits && (bucket.credits.unlimited || bucket.credits.hasCredits) && <div className="codex-credit"><span>Credits</span><span>{bucket.credits.unlimited ? "Unlimited" : bucket.credits.balance ?? "Balance unavailable"}</span></div>}
-      {(bucket.spendControlReached || bucket.rateLimitReachedType) && <p className="account-hint">{bucket.rateLimitReachedType?.replace(/_/g, " ") ?? "Spending limit reached"}</p>}
     </div>)}
     <TokenStats usage={account.tokenUsage} />
   </article>;

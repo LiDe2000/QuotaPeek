@@ -1,9 +1,8 @@
-/* Window and toolbar */
-.app-shell { height: 100svh; overflow-y: auto; scrollbar-width: none; display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; justify-items: center; padding: 0 var(--space-card) var(--space-section); }
-.app-shell::-webkit-scrollbar { display: none; }
-.quota-window { min-width: 0; width: min(100%, var(--window-width)); padding: var(--space-card); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); }
+/* Window and toolbar. The shell never scrolls, so its radii and border stay intact. */
+.app-shell { height: 100svh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); justify-items: center; padding: 0 var(--space-card) var(--space-section); }
+.quota-window { --window-padding: var(--space-card); --panel-top: calc(var(--window-padding) + var(--control-size) + var(--space-medium)); position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; width: min(100%, var(--window-width)); padding: var(--window-padding); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); }
 .window-header, .brand, .window-actions, .window-footer { display: flex; align-items: center; }
-.window-header { flex-wrap: wrap; justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
+.window-header { flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
 .brand { gap: var(--space-medium); }
 .brand h1 { font-size: var(--font-size-title); font-weight: 650; letter-spacing: -0.4px; }
 .app-icon { display: block; width: var(--control-size); height: var(--control-size); pointer-events: none; }
@@ -22,7 +21,7 @@
 .carousel-viewport { overflow: hidden; border-radius: var(--radius-card); touch-action: pan-y; }
 .carousel-track { display: flex; align-items: stretch; transition: transform var(--duration-page) var(--ease-page); }
 /* Centered dots with optional previous/next controls. */
-.pagination { display: flex; justify-content: center; align-items: center; gap: var(--space-section); padding-top: var(--space-medium); }
+.pagination { display: flex; justify-content: center; align-items: center; gap: var(--space-section); padding-top: var(--space-small); }
 .page-dots { display: flex; flex-wrap: wrap; justify-content: center; min-width: 0; }
 .page-dot { width: 24px; height: var(--control-size); padding: 0; display: grid; place-items: center; background: transparent; border-radius: var(--radius-control); }
 .page-dot span { width: 6px; height: 6px; border-radius: 50%; background: var(--color-dot); transition: background var(--duration-fast), transform var(--duration-fast); }
@@ -32,7 +31,12 @@
 .page-arrow.previous .ui-icon { transform: rotate(180deg); }
 .page-arrow:hover:not(:disabled) { background: var(--color-surface-active); color: var(--color-text); }
 .page-arrow:disabled { opacity: 0.2; }
-.window-footer { justify-content: center; gap: var(--space-small); margin-top: var(--space-medium); font-size: var(--font-size-caption); color: var(--color-text-subtle); flex-wrap: wrap; }
+.window-footer { flex: 0 0 auto; justify-content: center; gap: var(--space-small); font-size: var(--font-size-caption); color: var(--color-text-subtle); flex-wrap: wrap; }
 
-@media (max-width: 420px) { .app-shell { padding: 0 var(--space-small) var(--space-small); } .quota-window { padding: var(--space-large); } }
-@media (max-width: 340px) { .quota-window { padding: var(--space-medium); } }
+/* The only scroll region: overflow stays inside the shell instead of clipping its corners. */
+.window-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.window-body::-webkit-scrollbar { display: none; }
+.window-body:focus-visible { outline-offset: -3px; }
+
+@media (max-width: 420px) { .app-shell { padding: 0 var(--space-small) var(--space-small); } .quota-window { --window-padding: var(--space-large); } }
+@media (max-width: 340px) { .quota-window { --window-padding: var(--space-medium); } }

@@ -13,7 +13,7 @@ export default function AddAccount({ connected, loading, error, onConnect, onClo
   const firstButton = useRef<HTMLButtonElement>(null);
   useEffect(() => { firstButton.current?.focus(); }, [selected]);
   return (
-    <section id="add-account" className="add-account-panel" aria-labelledby="add-account-title" aria-busy={loading} onKeyDown={event => {
+    <section id="add-account" className="panel add-account-panel" aria-labelledby="add-account-title" aria-busy={loading} onKeyDown={event => {
       if (event.key === "Escape") { event.stopPropagation(); onClose(); }
     }}>
       <div className="add-account-heading">

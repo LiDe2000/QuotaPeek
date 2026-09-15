@@ -14,10 +14,15 @@ svg { display: block; width: 100%; height: 100%; }
 :focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 
-/* Shared controls used by the toolbar and settings. */
+/* Shared controls used by the toolbar and the overlay panels. */
 .icon-button { width: var(--control-size); height: var(--control-size); padding: 7px; border: 1px solid var(--color-control-border); border-radius: 50%; background: var(--color-control); color: var(--color-text-muted); transition: background var(--duration-fast), color var(--duration-fast); }
 .icon-button:hover, .icon-button[aria-expanded="true"] { background: var(--color-surface-active); color: var(--color-text); }
 :root[data-theme="classic"] .icon-button { border-radius: var(--radius-control); }
+
+/* Overlay panels sit outside the flow: the window measures the open one itself
+   instead of letting the panel push the card below it. */
+.panel { position: absolute; z-index: 2; top: var(--panel-top); max-height: calc(100% - var(--panel-top) - var(--window-padding)); overflow-y: auto; scrollbar-width: none; border-radius: var(--radius-card); background: var(--color-surface); border: 1px solid var(--color-panel-border); }
+.panel::-webkit-scrollbar { display: none; }
 
 /* Codex token summary below the quota windows. */
 .codex-tokens { margin-top: var(--space-section); padding-top: var(--space-large); border-top: 1px solid var(--color-border); }

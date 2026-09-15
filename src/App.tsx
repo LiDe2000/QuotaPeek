@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -7,6 +7,7 @@ import { useAccounts } from "./hooks/useAccounts";
 import AccountCard from "./components/AccountCard";
 import AppearanceSettings from "./components/AppearanceSettings";
 import { useAppearance } from "./hooks/useAppearance";
+import { useFittedWindowHeight } from "./hooks/useFittedWindowHeight";
 import Icon from "./components/Icon";
 import "./App.css";
 
@@ -21,6 +22,10 @@ function App() {
   const settingsButton = useRef<HTMLButtonElement>(null);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const drag = useRef<{ x: number; y: number } | null>(null);
+  const body = useRef<HTMLDivElement>(null);
+
+  // The desktop window follows its card; the browser preview keeps its viewport.
+  useFittedWindowHeight(body, desktop);
 
   function closeAccountPanel() {
     setAccountPanelOpen(false);
@@ -38,6 +43,19 @@ function App() {
     setSettingsOpen(false);
     settingsButton.current?.focus();
   }
+
+  // Panels are overlays, so a press anywhere but the panel or the toolbar dismisses them.
+  const panelOpen = accountPanelOpen || settingsOpen;
+  useEffect(() => {
+    if (!panelOpen) return;
+    function dismiss(event: Event) {
+      if ((event.target as Element | null)?.closest(".panel, .icon-button")) return;
+      setAccountPanelOpen(false);
+      setSettingsOpen(false);
+    }
+    window.addEventListener("pointerdown", dismiss);
+    return () => window.removeEventListener("pointerdown", dismiss);
+  }, [panelOpen]);
 
   function navigate(event: KeyboardEvent<HTMLElement>) {
     if (!accounts.length) return;
@@ -83,22 +101,24 @@ function App() {
         {accountPanelOpen && <AddAccount connected={accounts.length > 0} loading={loading} error={error} onConnect={connectCodex} onClose={closeAccountPanel} />}
         {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={closeSettings} />}
 
-        {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
-          <div className="carousel-viewport" onPointerDown={event => {
-            if (!event.isPrimary || event.button !== 0) return;
-            drag.current = { x: event.clientX, y: event.clientY };
-            event.currentTarget.setPointerCapture(event.pointerId);
-          }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>
-            <div className="carousel-track" style={{ transform: `translateX(-${page * 100}%)` }}>
-              {accounts.map((account, index) => <AccountCard key={account.id} account={account} active={page === index} stale={!!error} loading={loading} />)}
+        <div className="window-body" ref={body} role="region" aria-label="AI account quota details" tabIndex={0}>
+          {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
+            <div className="carousel-viewport" onPointerDown={event => {
+              if (!event.isPrimary || event.button !== 0) return;
+              drag.current = { x: event.clientX, y: event.clientY };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>
+              <div className="carousel-track" style={{ transform: `translateX(-${page * 100}%)` }}>
+                {accounts.map((account, index) => <AccountCard key={account.id} account={account} active={page === index} stale={!!error} loading={loading} />)}
+              </div>
             </div>
-          </div>
-          <nav className="pagination" aria-label="Account pages">
-            <button className="page-arrow previous" aria-label="Previous account" disabled={page === 0} onClick={() => setPage(page - 1)}><Icon name="chevron" /></button>
-            <div className="page-dots" role="tablist" aria-label="Select account">{accounts.map((account, index) => <button ref={node => { tabs.current[index] = node; }} key={account.id} id={`tab-${account.id}`} role="tab" aria-label={`${account.providerId} · ${account.email ?? "Local account"}`} aria-selected={page === index} aria-controls={`panel-${account.id}`} tabIndex={page === index ? 0 : -1} className={`page-dot${page === index ? " is-active" : ""}`} onClick={() => setPage(index)}><span /></button>)}</div>
-            <button className="page-arrow" aria-label="Next account" disabled={page === accounts.length - 1} onClick={() => setPage(page + 1)}><Icon name="chevron" /></button>
-          </nav>
-        </div>}
+            <nav className="pagination" aria-label="Account pages">
+              <button className="page-arrow previous" aria-label="Previous account" disabled={page === 0} onClick={() => setPage(page - 1)}><Icon name="chevron" /></button>
+              <div className="page-dots" role="tablist" aria-label="Select account">{accounts.map((account, index) => <button ref={node => { tabs.current[index] = node; }} key={account.id} id={`tab-${account.id}`} role="tab" aria-label={`${account.providerId} · ${account.email ?? "Local account"}`} aria-selected={page === index} aria-controls={`panel-${account.id}`} tabIndex={page === index ? 0 : -1} className={`page-dot${page === index ? " is-active" : ""}`} onClick={() => setPage(index)}><span /></button>)}</div>
+              <button className="page-arrow" aria-label="Next account" disabled={page === accounts.length - 1} onClick={() => setPage(page + 1)}><Icon name="chevron" /></button>
+            </nav>
+          </div>}
+        </div>
 
         <footer className="window-footer"><span role="status" aria-live="polite">{loading ? "Reading Codex quota…" : error ?? notice ?? (accounts[0] ? `Updated ${new Date(accounts[0].fetchedAt * 1000).toLocaleTimeString()}` : "No accounts · Use the user icon to connect one")}</span></footer>
       </section>

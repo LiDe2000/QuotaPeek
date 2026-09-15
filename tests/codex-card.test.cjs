@@ -38,3 +38,27 @@ test('expired reset keeps measured usage and asks for refresh', () => {
   assert.match(html, /value="0"/);
   assert.match(html, /Refresh to check reset/);
 });
+test('the reset row reads as a remaining duration next to the percent', () => {
+  // 156.5 minutes lands mid-minute, so the ceiling is stable at 157 even with a slow render.
+  const html = render({ primary: { usedPercent: 15, windowDurationMins: 300, resetsAt: Math.floor(Date.now() / 1000) + 156.5 * 60 } });
+  assert.match(html, /2h 37m remaining/);
+  assert.doesNotMatch(html, /h \d+m left/);
+});
+test('the percent stands alone instead of carrying its own label', () => {
+  const html = render({ primary: { usedPercent: 15, windowDurationMins: 300, resetsAt: null } });
+  assert.match(html, /<strong>85<span>%<\/span><\/strong>/);
+  assert.doesNotMatch(html, /remaining-label/);
+});
+test('the reset stamp is a locale-independent MM-DD HH:MM with padded fields', () => {
+  const html = render({ primary: { usedPercent: 15, windowDurationMins: 300, resetsAt: Math.floor(Date.now() / 1000) + 90 * 60 } });
+  assert.match(html, /Resets \d{2}-\d{2} \d{2}:\d{2}/);
+  assert.doesNotMatch(html, /Resets [0-9]+月|\d{2}\/\d{2}/);
+});
+test('the latest daily label keeps the dashed month-day', () => {
+  const html = renderToStaticMarkup(React.createElement(Card, {
+    account: { ...account, rateLimits: {}, tokenUsage: { lifetimeTokens: 1, todayTokens: null, latestDailyDate: '2026-09-14', latestDailyTokens: 2200 } },
+    active: true, stale: false, loading: false,
+  }));
+  assert.match(html, /Latest · 09-14/);
+  assert.doesNotMatch(html, /Latest · 09\/14/);
+});

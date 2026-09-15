@@ -1,5 +1,5 @@
-/* Appearance panel stays in the document flow and does not trap focus. */
-.settings-panel { padding: var(--space-medium); margin-bottom: var(--space-large); border-radius: var(--radius-card); background: var(--color-surface); border: 1px solid var(--color-border); }
+/* Full-width overlay, placed exactly like the account panel instead of docking to the edge. */
+.settings-panel { left: var(--window-padding); right: var(--window-padding); padding: var(--space-medium); }
 .settings-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-small); }
 .settings-heading h2 { font-size: var(--font-size-body); font-weight: 600; }
 .theme-options { display: flex; gap: var(--space-xs); padding: 0; border: 0; }

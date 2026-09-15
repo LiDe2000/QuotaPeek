@@ -13,6 +13,7 @@
   --color-text-subtle: #90949f;
   --color-border: #ffffff12;
   --color-window-border: #ffffff1c;
+  --color-panel-border: #ffffff29;
   --color-track: #ffffff0d;
   --color-token-surface: #ffffff06;
   --color-accent: #8aa4ff;
@@ -39,6 +40,7 @@
   --color-text-subtle: #929baa;
   --color-border: #272c35;
   --color-window-border: #303641;
+  --color-panel-border: #3d4553;
   --color-track: #272c35;
   --color-token-surface: #1a1d23;
   --color-accent: #819fff;
@@ -65,6 +67,7 @@
   --color-text-subtle: #696e7a;
   --color-border: #171d2f0e;
   --color-window-border: #ffffffc0;
+  --color-panel-border: #171d2f29;
   --color-track: #1a23400c;
   --color-token-surface: #f6f7fa;
   --color-accent: #4e65c9;
