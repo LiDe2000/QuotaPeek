@@ -21,6 +21,8 @@
   --color-codex-soft: #283351;
   --color-claude: #dfa982;
   --color-claude-soft: #41352f;
+  --color-workbuddy: #58b7ff;
+  --color-workbuddy-soft: #1d3550;
   --color-status: #62d6a0;
   --color-dot-active: #ffffff;
   --color-dot: #ffffff3d;
@@ -48,6 +50,8 @@
   --color-codex-soft: #243253;
   --color-claude: #dda077;
   --color-claude-soft: #402c23;
+  --color-workbuddy: #55a8f0;
+  --color-workbuddy-soft: #20364e;
   --color-status: #5fd5a0;
   --color-dot-active: #ffffff;
   --color-dot: #ffffff3d;
@@ -75,6 +79,8 @@
   --color-codex-soft: #e9edfd;
   --color-claude: #a5653c;
   --color-claude-soft: #f7ece3;
+  --color-workbuddy: #2b7cd3;
+  --color-workbuddy-soft: #e7f1fc;
   --color-status: #27835c;
   --color-dot-active: #303747;
   --color-dot: #30374738;
@@ -83,6 +89,7 @@
 
 .provider-codex { --provider-color: var(--color-codex); --provider-soft: var(--color-codex-soft); }
 .provider-claude { --provider-color: var(--color-claude); --provider-soft: var(--color-claude-soft); }
+.provider-workbuddy { --provider-color: var(--color-workbuddy); --provider-soft: var(--color-workbuddy-soft); }
 .swatch-classic { --swatch-bg: #0c0d0f; --swatch-card: #12151a; --swatch-border: #303641; --swatch-bar: #809dff; }
 .swatch-dark { --swatch-bg: #1b1d22; --swatch-card: #282a30; --swatch-border: #ffffff12; --swatch-bar: #88a0ff; }
 .swatch-light { --swatch-bg: #f6f7f9; --swatch-card: #ffffff; --swatch-border: #dfe2ea; --swatch-bar: #607bdc; }

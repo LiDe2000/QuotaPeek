@@ -1,0 +1,26 @@
+/* Credits balance hero with a light sweep; clicking it expands the breakdown below. */
+.wb-deck { position: relative; margin: var(--space-small) 0 var(--space-medium); }
+.wb-balance { position: relative; z-index: 1; display: block; width: 100%; text-align: left; padding: var(--space-large); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-control); overflow: hidden; }
+.wb-balance:hover { background: var(--color-surface-active); }
+.wb-balance:focus-visible { outline-offset: 2px; }
+/* One soft light sweep across the balance to make the number feel alive. */
+.wb-balance-shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, var(--provider-soft) 50%, transparent 65%); background-size: 240% 100%; background-position: 120% 0; opacity: 0.55; animation: wb-shine 3.6s var(--ease-page) infinite; }
+@keyframes wb-shine { 0% { background-position: 120% 0; } 55%, 100% { background-position: -60% 0; } }
+@media (prefers-reduced-motion: reduce) { .wb-balance-shine { animation: none; opacity: 0; } }
+.wb-balance-label { display: block; color: var(--color-text-muted); font-size: var(--font-size-small); letter-spacing: 0.6px; }
+.wb-balance-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--provider-color); font-variant-numeric: tabular-nums; }
+.wb-balance-value span { font-size: 0.45em; font-weight: 600; letter-spacing: 0; color: var(--color-text-subtle); padding-left: 3px; }
+.wb-balance-sub { display: block; margin-top: 2px; color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
+.wb-balance-hint { position: absolute; top: var(--space-large); right: var(--space-large); color: var(--color-text-subtle); font-size: var(--font-size-caption); }
+.wb-deck.is-expanded .wb-balance-hint { color: var(--provider-color); }
+/* Expanded breakdown: one row per credit package, kept clear of the totals bar.
+   Every row gets the top rule — including the first — so the list reads as one table. */
+.wb-packages { list-style: none; margin: var(--space-medium) 0 var(--space-small); padding: 0; display: grid; gap: var(--space-medium); }
+.wb-package { border-top: 1px solid var(--color-border); padding-top: var(--space-medium); }
+.wb-package-summary { display: flex; align-items: baseline; gap: var(--space-small); margin-bottom: var(--space-small); }
+.wb-package-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-body); font-weight: 550; }
+.wb-package-badge { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: var(--color-claude-soft); color: var(--color-claude); font-size: var(--font-size-caption); white-space: nowrap; }
+.wb-package-badge.is-expired { background: var(--color-control); color: var(--color-text-muted); }
+.wb-package-usage { margin-left: auto; color: var(--color-text-muted); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
+.wb-package-expiry { margin-top: var(--space-xs); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
+.wb-packages-empty { color: var(--color-text-muted); font-size: var(--font-size-small); }
