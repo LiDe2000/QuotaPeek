@@ -1,15 +1,35 @@
-/* ZCode quota: one hero figure for the session window, then a row per bucket. */
+/* ZCode quota, built like the WorkBuddy deck: the remaining figure and the overall bar share
+   one framed card, and the per-model rows wait behind a click. */
 .zc-plan { color: var(--color-text-subtle); font-size: var(--font-size-caption); margin: calc(-1 * var(--space-medium)) 0 0; }
-.zc-hero { margin: var(--space-small) 0 var(--space-medium); }
-.zc-hero-label { display: block; color: var(--color-text-muted); font-size: var(--font-size-small); letter-spacing: 0.6px; }
-.zc-hero-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--provider-color); font-variant-numeric: tabular-nums; }
-.zc-hero-value span { font-size: 0.45em; font-weight: 600; letter-spacing: 0; color: var(--color-text-subtle); padding-left: 3px; }
-.zc-hero-sub { display: block; margin-top: 2px; color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
-/* One row per quota bucket, each separated by the same rule. */
-.zc-windows { display: grid; gap: var(--space-medium); margin: var(--space-medium) 0 0; }
-.zc-window { border-top: 1px solid var(--color-border); padding-top: var(--space-medium); }
-.zc-window-summary { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-small); margin-bottom: var(--space-small); }
-.zc-window h3 { font-size: var(--font-size-body); font-weight: 550; }
-.zc-window-usage { color: var(--color-text-muted); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* The deck takes the chrome and the click so the whole card stays the toggle; the button inside
+   keeps it reachable by keyboard and assistive tech. */
+.zc-deck { position: relative; cursor: pointer; margin: var(--space-small) 0 var(--space-medium); padding: var(--space-large); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-control); overflow: hidden; }
+.zc-deck:hover { background: var(--color-surface-active); }
+.zc-deck.is-static, .zc-deck.is-static:hover { cursor: default; background: var(--color-control); }
+/* Chrome-free: the deck draws the card, so the button stays a bare hit area inside it. */
+.zc-balance { position: relative; z-index: 1; display: block; width: 100%; padding: 0; text-align: left; background: none; }
+.zc-balance:focus-visible { outline-offset: 2px; }
+/* One soft light sweep across the balance to make the number feel alive. */
+.zc-balance-shine { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, var(--provider-soft) 50%, transparent 65%); background-size: 240% 100%; background-position: 120% 0; opacity: 0.55; animation: zc-shine 3.6s var(--ease-page) infinite; }
+@keyframes zc-shine { 0% { background-position: 120% 0; } 55%, 100% { background-position: -60% 0; } }
+@media (prefers-reduced-motion: reduce) { .zc-balance-shine { animation: none; opacity: 0; } }
+.zc-balance-label { display: block; color: var(--color-text-muted); font-size: var(--font-size-small); letter-spacing: 0.6px; }
+.zc-balance-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--provider-color); font-variant-numeric: tabular-nums; }
+.zc-balance-value span { font-size: 0.45em; font-weight: 600; letter-spacing: 0; color: var(--color-text-subtle); padding-left: 3px; }
+.zc-balance-hint { position: absolute; top: 0; right: 0; color: var(--color-text-subtle); font-size: var(--font-size-caption); }
+.zc-deck.is-expanded .zc-balance-hint { color: var(--provider-color); }
+/* The bar's captions sit tight to it: the used/total split above, the used share below. */
+.zc-total { display: flex; justify-content: flex-end; gap: var(--space-small); margin: var(--space-medium) 0 var(--space-small); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
+.zc-remaining { margin-top: var(--space-xs); text-align: right; color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
+.zc-deck-sub { display: block; margin-top: var(--space-small); color: var(--color-text-muted); font-size: var(--font-size-small); }
+
+/* Expanded breakdown: one row per quota bucket, each separated by the same rule.
+   The model name is the only shrinkable cell: a long label ellipsizes instead of pushing
+   the usage out of the card. */
+.zc-windows { list-style: none; margin: var(--space-medium) 0 var(--space-small); padding: 0; display: grid; gap: var(--space-medium); }
+.zc-window { min-width: 0; border-top: 1px solid var(--color-border); padding-top: var(--space-medium); }
+.zc-window-summary { display: flex; align-items: baseline; gap: var(--space-small); min-width: 0; margin-bottom: var(--space-small); }
+.zc-window-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-body); font-weight: 550; }
+.zc-window-usage { flex-shrink: 0; margin-left: auto; color: var(--color-text-muted); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .zc-window-reset { display: flex; justify-content: space-between; gap: var(--space-small); margin-top: var(--space-xs); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
-.zc-empty { margin-top: var(--space-medium); color: var(--color-text-muted); font-size: var(--font-size-small); }

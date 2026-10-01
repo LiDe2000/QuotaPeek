@@ -46,21 +46,16 @@ export function resetText(resetsAt: number | null, now: number, oneTime: boolean
   const stamp = `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   return [`${oneTime ? "Expires" : "Resets"} ${stamp}`, remaining];
 }
-function QuotaWindow({ window: quota, unit, now }: { window: ZcodeWindow; unit: string; now: number }) {
-  const [reset, time] = resetText(quota.resetsAt, now, quota.oneTime);
-  return <section className="zc-window" aria-label={quota.label}>
-    <div className="zc-window-summary"><h3>{quota.label}</h3><span className="zc-window-usage">{count(quota.used)} / {count(quota.total)} {unit}</span></div>
-    <progress max={100} value={quota.usedPercent} aria-label={`${quota.label} used`}>{quota.usedPercent}%</progress>
-    <div className="zc-window-reset"><span>{reset}</span><span>{time}</span></div>
-  </section>;
-}
-export default function ZcodeAccountCard({ account, active, stale, loading }: { account: ZcodeAccount; active: boolean; stale: boolean; loading: boolean }) {
+export default function ZcodeAccountCard({ account, active, stale, loading, defaultExpanded = false }: { account: ZcodeAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean }) {
   const [now, setNow] = useState(Date.now);
+  const [expanded, setExpanded] = useState(defaultExpanded);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed" : "Last query succeeded";
   const unit = unitLabel(account.windows);
   const aggregate = totals(account.windows);
-  const usedPercent = aggregate ? aggregate.used / aggregate.total * 100 : 0;
+  const usedPercent = aggregate ? Math.min(100, aggregate.used / aggregate.total * 100) : 0;
+  // Nothing to break down means the deck stops pretending to be a toggle.
+  const expandable = account.windows.length > 0;
   const identity = account.email ?? "ZCode account";
   const region = account.region === "global" ? "Global" : "CN";
   const plan = [account.planName ?? "Plan unavailable", account.planDescription].filter(Boolean).join(" · ");
@@ -72,15 +67,41 @@ export default function ZcodeAccountCard({ account, active, stale, loading }: { 
     </div>
     <p className="zc-plan">{plan}{stale ? " · Stale data" : ""}</p>
 
-    <div className="zc-hero">
-      <span className="zc-hero-label">{aggregate ? `${unit[0].toUpperCase()}${unit.slice(1)} remaining` : "Quota remaining"}</span>
-      <strong className="zc-hero-value">{count(aggregate?.remain ?? null)}{aggregate && <span> {unit}</span>}</strong>
-      <span className="zc-hero-sub">{aggregate ? `${percent(usedPercent)}% used · ${count(aggregate.used)} of ${count(aggregate.total)} used` : "No quota bucket reported."}</span>
+    {/* Same deck as the WorkBuddy card: the remaining figure and the overall bar share one
+        frame, and a click anywhere on it — mouse on the deck, keyboard on the button — expands
+        the per-model breakdown. */}
+    <div
+      className={`zc-deck${expanded ? " is-expanded" : ""}${expandable ? "" : " is-static"}`}
+      onClick={expandable ? () => setExpanded(open => !open) : undefined}
+    >
+      <button type="button" className="zc-balance" aria-expanded={expandable ? expanded : undefined} aria-controls={expandable ? "zcode-windows" : undefined}>
+        <span className="zc-balance-shine" aria-hidden="true" />
+        <span className="zc-balance-label">{aggregate ? `${unit[0].toUpperCase()}${unit.slice(1)} remaining` : "Quota remaining"}</span>
+        <strong className="zc-balance-value">{count(aggregate?.remain ?? null)}{aggregate && <span> {unit}</span>}</strong>
+        {expandable && <span className="zc-balance-hint">{expanded ? "Hide breakdown" : "View breakdown"}</span>}
+      </button>
+      {/* The bar carries its own caption: the used/total split above it, the share left below. */}
+      {aggregate
+        ? <>
+            <div className="zc-total"><span>{count(aggregate.used)}/{count(aggregate.total)}</span></div>
+            <progress max={100} value={usedPercent} aria-label="ZCode quota used">{usedPercent}%</progress>
+            <div className="zc-remaining">Remaining: {percent(100 - usedPercent)}%</div>
+          </>
+        : <span className="zc-deck-sub">No quota bucket reported.</span>}
     </div>
-    {aggregate && <progress max={100} value={usedPercent} aria-label="ZCode quota used">{usedPercent}%</progress>}
 
-    {account.windows.length > 0
-      ? <div className="zc-windows">{account.windows.map(quota => <QuotaWindow key={quota.key} window={quota} unit={unit} now={now} />)}</div>
-      : <p className="zc-empty">No quota buckets reported for this ZCode account.</p>}
+    {expanded && expandable && <ul id="zcode-windows" className="zc-windows">
+      {account.windows.map(quota => {
+        const [reset, time] = resetText(quota.resetsAt, now, quota.oneTime);
+        return <li className="zc-window" key={quota.key}>
+          <div className="zc-window-summary">
+            <span className="zc-window-name" title={quota.label}>{quota.label}</span>
+            <span className="zc-window-usage">{count(quota.used)}/{count(quota.total)}</span>
+          </div>
+          <progress max={100} value={quota.usedPercent} aria-label={`${quota.label} used`}>{quota.usedPercent}%</progress>
+          <p className="zc-window-reset"><span>{reset}</span><span>{time}</span></p>
+        </li>;
+      })}
+    </ul>}
   </article>;
 }

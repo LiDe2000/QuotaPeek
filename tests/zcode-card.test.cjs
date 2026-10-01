@@ -32,15 +32,27 @@ const account = {
     oneTime: true,
   }],
 };
-const render = (overrides = {}, stale = false) => renderToStaticMarkup(React.createElement(Card, {
-  account: { ...account, ...overrides }, active: true, stale, loading: false,
+const render = (overrides = {}, stale = false, props = {}) => renderToStaticMarkup(React.createElement(Card, {
+  account: { ...account, ...overrides }, active: true, stale, loading: false, ...props,
 }));
 
 test('the hero sums every bucket and names the unit', () => {
   const html = render();
   assert.match(html, /Tokens remaining/);
   assert.match(html, /75M<span> tokens<\/span>/);
-  assert.match(html, /25% used · 25M of 100M used/);
+  // The bar carries its captions: used/total above it, the remaining share below it.
+  assert.match(html, /class="zc-total"><span>25M\/100M<\/span><\/div>/);
+  assert.match(html, /class="zc-remaining">Remaining: 75%</);
+  assert.doesNotMatch(html, /used · /);
+});
+
+test('the breakdown waits behind the deck, like the WorkBuddy card', () => {
+  const collapsed = render();
+  assert.match(collapsed, /View breakdown/);
+  assert.doesNotMatch(collapsed, /GLM-5\.3-Flash/);
+  const expanded = render({}, false, { defaultExpanded: true });
+  assert.match(expanded, /Hide breakdown/);
+  assert.match(expanded, /GLM-5\.3-Flash/);
 });
 
 test('each balance becomes its own row with the model as its label', () => {
@@ -49,23 +61,24 @@ test('each balance becomes its own row with the model as its label', () => {
       account.windows[0],
       { key: 'bucket-2', label: 'GLM-5.3', unit: 'token', usedPercent: 50, used: 50, remain: 50, total: 100, resetsAt: null, oneTime: false },
     ],
-  });
+  }, false, { defaultExpanded: true });
   assert.match(html, /GLM-5\.3-Flash/);
-  assert.match(html, /25M \/ 100M tokens/);
+  assert.match(html, /25M\/100M/);
   assert.equal((html.match(/class="zc-window"/g) || []).length, 2);
   // The hero stays one figure: the buckets are summed before they are shown.
   assert.match(html, /75M<span> tokens<\/span>/);
 });
 
 test('a one-time grant expires while a recurring one resets', () => {
-  assert.match(render(), /Expires \d\d-\d\d \d\d:\d\d/);
-  const recurring = render({ windows: [{ ...account.windows[0], oneTime: false }] });
+  const expanded = render({}, false, { defaultExpanded: true });
+  assert.match(expanded, /Expires \d\d-\d\d \d\d:\d\d/);
+  const recurring = render({ windows: [{ ...account.windows[0], oneTime: false }] }, false, { defaultExpanded: true });
   assert.match(recurring, /Resets \d\d-\d\d \d\d:\d\d/);
   assert.doesNotMatch(recurring, /Expires/);
 });
 
 test('an expired one-time grant reads as expired, not as a stale reset', () => {
-  const html = render({ windows: [{ ...account.windows[0], resetsAt: 1 }] });
+  const html = render({ windows: [{ ...account.windows[0], resetsAt: 1 }] }, false, { defaultExpanded: true });
   assert.match(html, />Expired</);
   assert.match(html, /Expires 01-01 08:00/);
 });
@@ -75,12 +88,12 @@ test('missing buckets never invent a percentage or a zero balance', () => {
   assert.match(html, /Quota remaining/);
   assert.match(html, />—</);
   assert.match(html, /No quota bucket reported\./);
-  assert.match(html, /No quota buckets reported for this ZCode account\./);
   assert.match(html, /Plan unavailable/);
   assert.match(html, /ZCode account/);
-  // No data means no bar and no unit label, rather than a zeroed one.
+  // No data means no bar, no unit label, and no toggle, rather than a zeroed one.
   assert.doesNotMatch(html, /<progress/);
   assert.doesNotMatch(html, /units/);
+  assert.doesNotMatch(html, /View breakdown/);
 });
 
 test('the region follows the account system the sign-in used', () => {
