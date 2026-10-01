@@ -1,22 +1,15 @@
-import userIcon from "../assets/icons/user.svg?url";
+import accountLoginIcon from "../assets/icons/account-login.svg?url";
 import refreshIcon from "../assets/icons/refresh.svg?url";
-import settingsIcon from "../assets/icons/settings.svg?url";
-import minimizeIcon from "../assets/icons/minimize.svg?url";
-import closeIcon from "../assets/icons/close.svg?url";
-import chevronIcon from "../assets/icons/chevron.svg?url";
+import themeIcon from "../assets/icons/theme.svg?url";
 
 const icons = {
-  user: userIcon,
+  "account-login": accountLoginIcon,
   refresh: refreshIcon,
-  settings: settingsIcon,
-  minimize: minimizeIcon,
-  close: closeIcon,
-  chevron: chevronIcon,
+  theme: themeIcon,
 } as const;
 
 type IconName = keyof typeof icons;
 
 export default function Icon({ name }: { name: IconName }) {
-  const image = `url("${icons[name]}")`;
-  return <span className="ui-icon" style={{ maskImage: image, WebkitMaskImage: image }} aria-hidden="true" />;
+  return <img className="ui-icon" src={icons[name]} alt="" aria-hidden="true" draggable={false} />;
 }

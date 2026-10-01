@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="theme-ice" x1="10" y1="9" x2="31" y2="42" gradientUnits="userSpaceOnUse"><stop stop-color="#F4FBFF"/><stop offset="1" stop-color="#82B9F0"/></linearGradient>
+    <linearGradient id="theme-aqua" x1="29" y1="7" x2="39" y2="22" gradientUnits="userSpaceOnUse"><stop stop-color="#A0FFE5"/><stop offset="1" stop-color="#2BC6DF"/></linearGradient>
+  </defs>
+  <path d="M22 7C12 7 5 15 5 25C5 35 13 42 23 42C30 42 36 38 39 32Q40 29 37 30C26 34 16 26 18 16Q19 12 23 9Q25 7 22 7Z" fill="url(#theme-ice)" stroke="#14283F" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M14 12Q8 17 8 24" stroke="#FFF" stroke-opacity=".8" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M34 4V6M34 24V26M23 15H25M43 15H45M26 7L27.5 8.5M40.5 21.5L42 23M26 23L27.5 21.5M40.5 8.5L42 7" stroke="#76EBD9" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="34" cy="15" r="6.5" fill="url(#theme-aqua)" stroke="#14283F" stroke-width="1.8"/>
+  <path d="M31 12Q33 10 36 11" stroke="#E1FFF3" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M40 35L41.5 38.5L45 40L41.5 41.5L40 45L38.5 41.5L35 40L38.5 38.5Z" fill="#BCE4FF" stroke="#14283F" stroke-width="1.4" stroke-linejoin="round"/>
+</svg>

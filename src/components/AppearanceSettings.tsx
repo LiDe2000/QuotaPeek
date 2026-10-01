@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import type { Theme } from "../hooks/useAppearance";
-import Icon from "./Icon";
 import "./AppearanceSettings.css";
 
 const themes: { id: Theme; name: string; description: string }[] = [
@@ -16,14 +15,14 @@ interface AppearanceSettingsProps {
 }
 
 export default function AppearanceSettings({ theme, onThemeChange, onClose }: AppearanceSettingsProps) {
-  const closeButton = useRef<HTMLButtonElement>(null);
+  const themeOptions = useRef<HTMLFieldSetElement>(null);
 
-  useEffect(() => { closeButton.current?.focus(); }, []);
+  useEffect(() => { themeOptions.current?.querySelector<HTMLInputElement>("input:checked")?.focus(); }, []);
 
   return (
     <section id="appearance-settings" className="panel settings-panel" aria-labelledby="settings-title" onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
-      <div className="settings-heading"><h2 id="settings-title">Appearance</h2><button ref={closeButton} className="icon-button" aria-label="Close settings" onClick={onClose}><Icon name="close" /></button></div>
-      <fieldset className="theme-options"><legend className="sr-only">Color theme</legend>{themes.map(option => <label key={option.id} title={option.description}>
+      <div className="settings-heading"><h2 id="settings-title">Appearance</h2></div>
+      <fieldset ref={themeOptions} className="theme-options"><legend className="sr-only">Color theme</legend>{themes.map(option => <label key={option.id} title={option.description}>
         <input type="radio" name="theme" value={option.id} checked={theme === option.id} onChange={() => onThemeChange(option.id)} />
         <span className="theme-option"><span className={`theme-swatch swatch-${option.id}`} aria-hidden="true"><span /></span><span>{option.name}</span></span>
       </label>)}</fieldset>

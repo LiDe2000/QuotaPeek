@@ -1,1 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="9" fill="#283351"/><g fill="none" stroke="#88a0ff" stroke-width="2" stroke-linecap="round"><path d="M8 23a10 10 0 1 1 16 0M16 17l5-6"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 800 800" fill="none" role="img" aria-labelledby="qp-title qp-desc">
+  <title id="qp-title">QuotaPeek</title>
+  <desc id="qp-desc">Ice blue Q ring surrounding a dark navy dial, cyan gauge arc and blue needle. Pure vector artwork on a transparent canvas.</desc>
+  <defs>
+    <linearGradient id="ring" x1="210" y1="46" x2="574" y2="736" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FAFCFD"/><stop offset=".45" stop-color="#E7F3FC"/><stop offset=".72" stop-color="#CDE4FC"/><stop offset="1" stop-color="#79AEE7"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="190" y1="82" x2="690" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF" stop-opacity=".85"/><stop offset=".6" stop-color="#D8F0FF" stop-opacity=".25"/><stop offset="1" stop-color="#5A95D2" stop-opacity=".4"/>
+    </linearGradient>
+    <radialGradient id="dial" cx="0" cy="0" r="1" gradientTransform="translate(300 208) rotate(63) scale(429 361)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#415E7A"/><stop offset=".34" stop-color="#24364C"/><stop offset=".7" stop-color="#121D30"/><stop offset="1" stop-color="#080D1C"/>
+    </radialGradient>
+    <radialGradient id="bezel" cx="0" cy="0" r="1" gradientTransform="translate(373 380) scale(245)" gradientUnits="userSpaceOnUse">
+      <stop offset=".79" stop-color="#050A17" stop-opacity="0"/><stop offset=".95" stop-color="#070D1C" stop-opacity=".28"/><stop offset="1" stop-color="#050915" stop-opacity=".85"/>
+    </radialGradient>
+    <linearGradient id="arc" x1="201" y1="335" x2="548" y2="366" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#49B4F4"/><stop offset=".48" stop-color="#53D5F1"/><stop offset=".79" stop-color="#25E3DA"/><stop offset="1" stop-color="#13C5D3"/>
+    </linearGradient>
+    <linearGradient id="arc-light" x1="294" y1="258" x2="352" y2="451" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D4FFFF" stop-opacity=".9"/><stop offset=".27" stop-color="#A3F5FF" stop-opacity=".2"/><stop offset="1" stop-color="#B1E9FF" stop-opacity=".05"/>
+    </linearGradient>
+    <linearGradient id="needle" x1="389" y1="442" x2="475" y2="337" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1390FA"/><stop offset=".56" stop-color="#40CAFA"/><stop offset="1" stop-color="#8FFFF0"/>
+    </linearGradient>
+    <linearGradient id="pearl" x1="351" y1="410" x2="396" y2="473" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/><stop offset=".42" stop-color="#DCEFFE"/><stop offset="1" stop-color="#80BDF1"/>
+    </linearGradient>
+    <linearGradient id="reflection" x1="234" y1="213" x2="281" y2="273" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FCFEFF"/><stop offset="1" stop-color="#ABC1D7"/>
+    </linearGradient>
+    <linearGradient id="tail" x1="506" y1="531" x2="658" y2="749" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F6FBFD"/><stop offset=".42" stop-color="#DDEFFC"/><stop offset="1" stop-color="#93BEED"/>
+    </linearGradient>
+    <linearGradient id="fold" x1="431" y1="590" x2="536" y2="674" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#BCD8F1"/><stop offset="1" stop-color="#6CA4D9"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(8 19)">
+    <!-- Dark dial and its inset rim. -->
+    <circle cx="373" cy="360" r="246" fill="url(#dial)"/>
+    <circle cx="373" cy="360" r="246" fill="url(#bezel)"/>
+    <!-- Open Q ring, with the lower right opening drawn as actual geometry. -->
+    <path d="M650 552C662 550 724 451 724 360C724 168 567 12 373 12C178 12 18 168 18 360C18 553 175 709 373 709C437 709 499 687 547 651L482 588C465 570 448 559 425 571C408 581 389 588 373 588C239 588 130 486 130 360C130 229 239 122 373 122C506 122 614 228 614 360C614 398 605 433 591 462C581 480 586 490 599 503L640 546Q646 553 650 552Z" fill="url(#ring)"/>
+    <path d="M650 552C662 550 724 451 724 360C724 168 567 12 373 12C178 12 18 168 18 360C18 553 175 709 373 709C437 709 499 687 547 651L482 588C465 570 448 559 425 571C408 581 389 588 373 588C239 588 130 486 130 360C130 229 239 122 373 122C506 122 614 228 614 360C614 398 605 433 591 462C581 480 586 490 599 503L640 546Q646 553 650 552Z" stroke="url(#edge)" stroke-width="1.5"/>
+    <!-- Soft specular reflection on the dial, shaped as a vector ellipse. -->
+    <ellipse cx="252" cy="221" rx="50" ry="24" transform="rotate(-40 252 221)" fill="url(#reflection)"/>
+    <!-- A clean semicircular gauge, matching the reference without ticks. -->
+    <path d="M215 424C209 332 281 255 373 255C465 255 540 331 532 424" stroke="url(#arc)" stroke-width="47" stroke-linecap="round"/>
+    <path d="M215 424C209 332 281 255 373 255C465 255 540 331 532 424" stroke="url(#arc-light)" stroke-width="47" stroke-linecap="round"/>
+    <path d="M192 422C187 320 270 233 373 233C474 233 555 316 555 414" stroke="#C5FBFF" stroke-opacity=".42" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Needle tip has a dark inset surround; all shapes remain vector. -->
+    <path d="M365 405L463 309C476 296 492 306 488 320C480 343 432 395 402 425Z" fill="#092035"/>
+    <path d="M365 405L466 316C475 308 484 312 480 321C462 348 428 386 401 415Z" fill="url(#needle)"/>
+    <path d="M367 405L466 316Q474 309 479 314" stroke="#D6FFFC" stroke-opacity=".75" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="373" cy="416" r="32" fill="#080F22" fill-opacity=".25" transform="translate(0 3)"/>
+    <circle cx="373" cy="416" r="31.5" fill="url(#pearl)"/>
+    <path d="M343 414A31 31 0 0 1 391 390" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="1.6" stroke-linecap="round"/>
+    <!-- Folded join and rounded Q tail, drawn separately for controlled shading. -->
+    <path d="M424 571C449 556 469 574 491 596L548 652L578 621L505 554Z" fill="url(#fold)"/>
+    <path d="M424 571C449 556 470 575 490 595L596 701C624 729 652 734 678 724C711 712 728 684 721 659C718 647 710 635 698 623L592 518C557 483 520 492 493 515L451 554Q436 566 424 571Z" fill="url(#tail)"/>
+    <path d="M425 571Q438 566 451 554L493 515C520 492 557 483 592 518L698 623" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+</svg>

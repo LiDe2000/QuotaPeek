@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="login-ice" x1="9" y1="7" x2="28" y2="37" gradientUnits="userSpaceOnUse"><stop stop-color="#F4FBFF"/><stop offset="1" stop-color="#83BBF2"/></linearGradient>
+    <linearGradient id="login-aqua" x1="30" y1="24" x2="44" y2="38" gradientUnits="userSpaceOnUse"><stop stop-color="#8AFAE3"/><stop offset="1" stop-color="#26B8E8"/></linearGradient>
+  </defs>
+  <path d="M5 37C5 29 10 25 18 25C26 25 31 29 31 37V39Q31 42 28 42H8Q5 42 5 39Z" fill="url(#login-ice)" stroke="#14283F" stroke-width="1.8"/>
+  <circle cx="18" cy="14" r="8" fill="url(#login-ice)" stroke="#14283F" stroke-width="1.8"/>
+  <path d="M13 11Q15 7 20 8M9 34Q10 29 15 29" stroke="#FFF" stroke-opacity=".75" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M27 29H35V24Q35 22 37 24L44 31Q46 33 44 35L37 42Q35 44 35 41V37H27Q25 37 25 35V31Q25 29 27 29Z" fill="url(#login-aqua)" stroke="#14283F" stroke-width="1.8" stroke-linejoin="round"/>
+  <path d="M29 31H36" stroke="#D1FFF4" stroke-opacity=".85" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

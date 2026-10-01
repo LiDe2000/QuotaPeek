@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import Icon from "./Icon";
+
 import { workbuddyErrorMessage, pollWorkbuddyLogin, startWorkbuddyLogin, cancelWorkbuddyLogin } from "../services/workbuddy";
 import { pollZcodeLogin, startZcodeLogin, zcodeErrorMessage, cancelZcodeLogin } from "../services/zcode";
 import type { ZcodeSite } from "../services/zcode";
@@ -197,7 +197,6 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
   }}>
     <div className="add-account-heading">
       <div><p className="account-step">{selected ? "STEP 2 OF 2" : "STEP 1 OF 2"}</p><h2 id="add-account-title">Connect account</h2></div>
-      <button className="icon-button" aria-label="Close add account" title={waiting ? "Hide panel · Sign-in continues" : "Close"} onClick={onClose}><Icon name="close" /></button>
     </div>
     {selected === "codex" ? <>
       <div className="selected-platform provider-codex"><span className="platform-mark" aria-hidden="true">O</span><strong>OpenAI Codex</strong>
@@ -208,9 +207,9 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
     </> : selected === "workbuddy" ? browserPanel("workbuddy") : selected === "zcode" ? browserPanel("zcode") : <>
       <p className="account-hint">Choose a platform to connect an account. WorkBuddy and ZCode support multiple accounts.</p>
       <div className="platform-options">
-        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>OpenAI Codex</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
-        <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><span className="platform-mark">W</span><span>WorkBuddy</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
-        <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><span className="platform-mark">Z</span><span>ZCode</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
+        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>OpenAI Codex</span></button>
+        <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><span className="platform-mark">W</span><span>WorkBuddy</span></button>
+        <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><span className="platform-mark">Z</span><span>ZCode</span></button>
       </div>
     </>}
   </section>;
