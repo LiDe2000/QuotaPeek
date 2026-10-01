@@ -13,6 +13,7 @@
         "noRedirectionBitmap": true,
         "shadow": false,
         "resizable": false,
+        "skipTaskbar": true,
         "additionalBrowserArgs": "--disable-gpu --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
       }
     ]

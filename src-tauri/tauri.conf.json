@@ -21,7 +21,8 @@
         "transparent": true,
         "noRedirectionBitmap": true,
         "shadow": false,
-        "resizable": false
+        "resizable": false,
+        "skipTaskbar": true
       }
     ],
     "security": {

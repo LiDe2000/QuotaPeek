@@ -2,6 +2,20 @@
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            tray::setup(app)?;
+            Ok(())
+        })
+        .on_window_event(|window, event| {
+            #[cfg(not(any(target_os = "android", target_os = "ios")))]
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                api.prevent_close();
+                if let Err(error) = window.hide() {
+                    eprintln!("Failed to hide QuotaPeek: {error}");
+                }
+            }
+        })
         .manage(codex::QueryState::default())
         .manage(workbuddy::WorkbuddyState::default())
         .manage(zcode::ZcodeState::default())
@@ -24,5 +38,9 @@ pub fn run() {
 mod account_store;
 mod codex;
 mod codex_executable;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod desktop_window;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod tray;
 mod workbuddy;
 mod zcode;

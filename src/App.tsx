@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { listen } from "@tauri-apps/api/event";
 import AddAccount from "./components/AddAccount";
 import { useAccounts } from "./hooks/useAccounts";
 import type { Account } from "./types/quota";
@@ -52,6 +53,16 @@ function App() {
   const loading = Object.values(statuses).some(status => status.loading);
   const settingsOpen = popup === "appearance";
   useFittedWindowHeight(body, desktop);
+
+  useEffect(() => {
+    if (!desktop) return;
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listen("desktop-show-main", () => setPopup("home")).then(stop => {
+      if (disposed) stop(); else unlisten = stop;
+    }).catch(error => console.warn("Tray listener was refused", error));
+    return () => { disposed = true; unlisten?.(); };
+  }, [desktop]);
 
   useEffect(() => {
     if (currentAccount) {
@@ -216,10 +227,6 @@ function App() {
                 </button>
                 <button className="icon-button" aria-label="Add account" aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="user" /></button>
                 <button className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} title="Appearance" onClick={() => setPopup(open => open === "appearance" ? "home" : "appearance")}><Icon name="settings" /></button>
-                {desktop && <div className="desktop-window-actions">
-                  <button className="window-control" aria-label="Minimize window" title="Minimize" onClick={() => void getCurrentWindow().minimize()}><Icon name="minimize" /></button>
-                  <button className="window-control" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}><Icon name="close" /></button>
-                </div>}
               </div>
             </header>
             {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={() => setPopup("home")} />}
