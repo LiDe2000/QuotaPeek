@@ -23,3 +23,11 @@ export function horizontalPlacement(input: PlacementInput): { x: number; side: E
   const wantedX = nextSide === "left" ? leftX : rightX;
   return { side: nextSide, x: Math.max(screenLeft, Math.min(wantedX, screenRight - targetWidth)) };
 }
+
+/** Screen coordinates stay physical; only CSS widths use the window's current DPI. */
+export function physicalHorizontalPlacement(input: PlacementInput & { scaleFactor: number }): { x: number; side: ExpandSide } {
+  const { scaleFactor, currentWidth, targetWidth, railWidth, inset } = input;
+  const placement = horizontalPlacement({ ...input, currentWidth: currentWidth * scaleFactor,
+    targetWidth: targetWidth * scaleFactor, railWidth: railWidth * scaleFactor, inset: inset * scaleFactor });
+  return { ...placement, x: Math.round(placement.x) };
+}

@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import type { RefObject } from "react";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
-import { LogicalPosition, LogicalSize } from "@tauri-apps/api/dpi";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { fittedWindowHeight, SCREEN_RESERVE } from "../lib/windowHeight";
-import { horizontalPlacement } from "../lib/windowPlacement";
+import { physicalHorizontalPlacement } from "../lib/windowPlacement";
 import type { ExpandSide } from "../lib/windowPlacement";
 
 /** One serialized resize path owns dimensions and keeps the rail anchored at screen edges. */
@@ -16,13 +17,20 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
     let busy = false;
     let pending = false;
     let disposed = false;
-    let side: ExpandSide = "right";
+    let dragging = false;
+    let geometryRevision = 0;
+    let side: ExpandSide = node.dataset.side === "left" ? "left" : "right";
     let screenHeight = window.screen.availHeight;
     let lastSize = { width: window.innerWidth, height: window.innerHeight };
+    let lastClip = "";
+    let lastContentWidth = window.innerWidth;
+    const stableViewport = navigator.userAgent.includes("Windows");
     let placementDirty = true;
     let expectedPosition: { x: number; y: number } | null = null;
     const observed = new Set<Element>();
     let unlisten: (() => void) | undefined;
+    let unlistenScale: (() => void) | undefined;
+    let unlistenDrag: (() => void) | undefined;
     const observer = new ResizeObserver(schedule);
     const mutations = new MutationObserver(() => { observeTargets(); schedule(); });
 
@@ -47,47 +55,60 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
           current: lastSize.height, screen: screenHeight }) ?? lastSize.height,
         inset: parseFloat(style.paddingLeft),
         railWidth: node.querySelector<HTMLElement>(".orb-rail")?.offsetWidth ?? 62,
+        panelWidth: parseFloat(getComputedStyle(node).getPropertyValue("--main-panel-width")) || 384,
+        gap: parseFloat(getComputedStyle(node).columnGap) || 12,
       };
     }
 
     async function fit() {
       frame = 0;
       if (disposed) return;
+      if (dragging) { placementDirty = true; return; }
       if (busy) { pending = true; return; }
       if (!enabled) { measure(); return; }
       const measured = measure();
-      if (!measured || (!placementDirty && measured.width === lastSize.width && measured.height === lastSize.height)) return;
+      if (!measured || (!placementDirty && measured.width === lastContentWidth && measured.height === lastSize.height)) return;
       busy = true;
       try {
         const appWindow = getCurrentWindow();
+        const revision = geometryRevision;
         placementDirty = false;
-        const [monitor, position] = await Promise.all([currentMonitor(), appWindow.outerPosition()]);
+        const [monitor, position, scaleFactor] = await Promise.all([currentMonitor(), appWindow.outerPosition(), appWindow.scaleFactor()]);
         if (disposed) return;
-        if (monitor) screenHeight = monitor.workArea.size.height / monitor.scaleFactor;
+        if (dragging || revision !== geometryRevision) { placementDirty = true; pending = true; return; }
+        if (monitor) screenHeight = monitor.workArea.size.height / scaleFactor;
         const size = measure();
         if (!size || !node) return;
+        // WebView2 can present its old surface after a leftward native resize.
+        // Reserve the main-panel width; the native region clips unused pixels.
+        const viewportWidth = stableViewport
+          ? Math.max(size.width, size.panelWidth + size.railWidth + size.gap + size.inset * 2) : size.width;
         const previousSize = lastSize;
         expectedPosition = position;
         let nextX: number | null = null;
         if (monitor) {
-          const x = position.x / monitor.scaleFactor;
-          const placement = horizontalPlacement({ x, currentWidth: previousSize.width, targetWidth: size.width,
-            railWidth: size.railWidth, inset: size.inset, screenLeft: monitor.workArea.position.x / monitor.scaleFactor,
-            screenWidth: monitor.workArea.size.width / monitor.scaleFactor, side });
+          const placement = physicalHorizontalPlacement({ x: position.x, currentWidth: previousSize.width, targetWidth: viewportWidth,
+            railWidth: size.railWidth, inset: size.inset, screenLeft: monitor.workArea.position.x,
+            screenWidth: monitor.workArea.size.width, side, scaleFactor });
           side = placement.side;
           if (node.dataset.side !== side) node.dataset.side = side;
-          if (Math.abs(placement.x - x) > 0.5) nextX = placement.x;
+          if (placement.x !== position.x) nextX = placement.x;
         }
-        if (size.width !== previousSize.width || size.height !== previousSize.height) {
-          // The native command can finish before WebView reports its new viewport.
-          // Compare subsequent fits against the requested size, not that old viewport.
-          lastSize = { width: size.width, height: size.height };
-          try { await appWindow.setSize(new LogicalSize(size.width, size.height)); }
+        const clip = `${side}:${size.width}:${scaleFactor}`;
+        if (nextX !== null || viewportWidth !== previousSize.width || size.height !== previousSize.height || clip !== lastClip) {
+          expectedPosition = { x: nextX ?? position.x, y: position.y };
+          // Commit position and size together: separate calls expose a narrow,
+          // displaced window for one frame when expanding to the left.
+          lastSize = { width: viewportWidth, height: size.height };
+          const physicalWidth = Math.round(viewportWidth * scaleFactor);
+          const visibleWidth = Math.min(physicalWidth, Math.round(size.width * scaleFactor));
+          try { const applied = await invoke<boolean>("fit_window_bounds", { x: expectedPosition.x, y: expectedPosition.y,
+            width: physicalWidth, height: Math.round(size.height * scaleFactor),
+            clipLeft: side === "left" ? physicalWidth - visibleWidth : 0,
+            visibleWidth, sourceX: position.x, sourceY: position.y });
+            if (!applied) { lastSize = previousSize; placementDirty = true; pending = true; }
+            else { lastClip = clip; lastContentWidth = size.width; } }
           catch (error) { lastSize = previousSize; throw error; }
-        }
-        if (!disposed && nextX !== null && monitor) {
-          expectedPosition = { x: nextX * monitor.scaleFactor, y: position.y };
-          await appWindow.setPosition(new LogicalPosition(nextX, position.y / monitor.scaleFactor));
         }
       } catch (error) { placementDirty = true; console.warn("Window fit was refused", error); }
       finally {
@@ -120,16 +141,36 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       if (expectedPosition && Math.abs(event.payload.x - expectedPosition.x) < 1
         && Math.abs(event.payload.y - expectedPosition.y) < 1) return;
       placementDirty = true;
-      schedule();
+      geometryRevision++;
+      if (!dragging) schedule();
     }).then(stop => {
       if (disposed) stop(); else unlisten = stop;
     }).catch(error => console.warn("Window movement listener was refused", error));
+    if (enabled) void getCurrentWindow().onScaleChanged(() => {
+      placementDirty = true;
+      geometryRevision++;
+      if (!dragging) schedule();
+    }).then(stop => {
+      if (disposed) stop(); else unlistenScale = stop;
+    }).catch(error => console.warn("Window scale listener was refused", error));
+    if (enabled && stableViewport) void listen<boolean>("desktop-window-dragging", event => {
+      dragging = event.payload;
+      geometryRevision++;
+      placementDirty = true;
+      expectedPosition = null;
+      // Keep the OS pointer-to-window grab offset unchanged until release.
+      if (!dragging) schedule();
+    }).then(stop => {
+      if (disposed) stop(); else unlistenDrag = stop;
+    }).catch(error => console.warn("Window drag listener was refused", error));
     schedule();
     return () => {
       disposed = true;
       observer.disconnect();
       mutations.disconnect();
       unlisten?.();
+      unlistenScale?.();
+      unlistenDrag?.();
       window.removeEventListener("resize", schedule);
       if (frame) cancelAnimationFrame(frame);
     };

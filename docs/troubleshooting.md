@@ -85,6 +85,20 @@ npm run tauri:software
 
 再次排查时记录实际启动命令、是否完全退出旧进程、WebView2/系统/显卡驱动版本、显示器缩放，以及是整窗消失还是只有卡片内容闪动。优先附原始录屏，条件允许时使用 60 fps 或更高帧率。
 
+## 退出时出现 Chrome_WidgetWin_0 / Error 1412
+
+开发模式退出时可能出现：
+
+```text
+Failed to unregister class Chrome_WidgetWin_0. Error = 1412
+```
+
+该日志来自 Chromium/WebView2。Windows 的 `1412` 是 `ERROR_CLASS_HAS_WINDOWS`，表示注销窗口类时仍有该类窗口存在。仅凭这一行不能判定应用崩溃或退出失败。[微软错误码说明](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-)
+
+托盘 `Quit` 使用 Tauri 的 `AppHandle::exit(0)`，由框架触发退出和清理；普通窗口关闭则隐藏到托盘，两者不同。Tauri 维护者说明，同类窗口类注销日志也可能出现在正常退出时，逐个关闭窗口也不保证消除。[Tauri 维护者答复](https://github.com/orgs/tauri-apps/discussions/8503)
+
+如果日志只在主动退出时出现，且应用进程和托盘图标正常消失，可先保留现有退出流程。如果伴随 Rust panic、异常退出码、应用运行期间闪退，或退出后进程一直残留，应保留完整前后日志继续排查；不要仅通过屏蔽 WebView2 日志判断修复成功。
+
 ## 报告问题
 
 提交 Issue 时，请附上系统版本、应用版本、涉及的供应商、复现步骤和截图；开发环境的问题也可附上相关错误输出。

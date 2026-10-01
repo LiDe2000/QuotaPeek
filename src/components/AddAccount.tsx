@@ -211,7 +211,6 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
         <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>OpenAI Codex</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
         <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><span className="platform-mark">W</span><span>WorkBuddy</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
         <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><span className="platform-mark">Z</span><span>ZCode</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
-        <button className="platform-option provider-claude" disabled><span className="platform-mark">C</span><span>Claude · Coming soon</span></button>
       </div>
     </>}
   </section>;

@@ -1,9 +1,13 @@
 /* Only the rail and card paint backgrounds. The fit includes this fixed inset. */
 .app-shell { overflow: hidden; padding: var(--window-inset); }
+/* Keep the rail against the viewport edge while content and native bounds update.
+   max-content may already be wide while WebView still has the collapsed viewport. */
+.app-shell:has(.window-body[data-side="left"]) { display: flex; justify-content: flex-end; }
+.app-shell:has(.window-body[data-side="left"]) > .quota-window { flex-shrink: 0; }
 .quota-window { --window-padding: var(--space-card); --panel-top: calc(var(--window-padding) + var(--control-size) + var(--space-medium)); position: relative; min-width: 0; min-height: 0; width: max-content; display: flex; flex-direction: column; }
 /* Cards participate in layout so their entire bounds can be measured. Only content
    exceeding the screen ceiling scrolls; the ceiling is independent of the current fit. */
-.orb-pop { position: relative; z-index: 6; flex: 0 0 384px; width: 384px; max-height: calc(var(--window-max-height) - 2 * var(--window-inset)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: var(--space-small); padding: var(--window-padding); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); }
+.orb-pop { position: relative; z-index: 6; flex: 0 0 var(--main-panel-width); width: var(--main-panel-width); max-height: calc(var(--window-max-height) - 2 * var(--window-inset)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: var(--space-small); padding: var(--window-padding); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); }
 .orb-pop::-webkit-scrollbar { display: none; }
 .orb-pop > * { flex-shrink: 0; }
 .orb-pop .panel { position: static; max-height: none; overflow: visible; }
@@ -27,7 +31,7 @@
 .window-footer { flex: 0 0 auto; justify-content: center; gap: var(--space-small); font-size: var(--font-size-caption); color: var(--color-text-subtle); flex-wrap: wrap; }
 
 /* Natural row height follows the tallest child; it never clips the adjacent card. */
-.window-body { position: relative; display: flex; width: max-content; gap: var(--space-medium); align-items: flex-start; }
+.window-body { --main-panel-width: 384px; position: relative; display: flex; width: max-content; gap: var(--space-medium); align-items: flex-start; }
 .window-body:focus-visible { outline-offset: -3px; }
 
 /* Fixed-width panels must not change padding while the native viewport expands. */

@@ -3,6 +3,12 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            #[cfg(windows)]
+            {
+                use tauri::Manager;
+                app.manage(window_drag::DragState::default());
+                window_drag::setup(app)?;
+            }
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
             tray::setup(app)?;
             Ok(())
@@ -20,6 +26,7 @@ pub fn run() {
         .manage(workbuddy::WorkbuddyState::default())
         .manage(zcode::ZcodeState::default())
         .invoke_handler(tauri::generate_handler![
+            window_bounds::fit_window_bounds,
             codex::query_codex_quota,
             workbuddy::workbuddy_list_accounts,
             workbuddy::workbuddy_cancel_login,
@@ -36,6 +43,9 @@ pub fn run() {
         .expect("error while running tauri application");
 }
 mod account_store;
+mod window_bounds;
+#[cfg(windows)]
+mod window_drag;
 mod codex;
 mod codex_executable;
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
