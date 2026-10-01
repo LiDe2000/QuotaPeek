@@ -151,11 +151,19 @@ function App() {
         {position + 1}
       </button>)}
     </div>;
-    function step(direction: number) { selectAccount(members[(index + direction + members.length) % members.length].id); }
-    return <div className="account-switcher" role="group" aria-label={label}>
-      <button className="account-step previous" aria-label="Previous account" title="Previous account" onClick={() => step(-1)}><Icon name="chevron" /></button>
-      <div className="account-switcher-identity"><span title={accountLabel(account) || account.id}>{accountLabel(account) || account.id}</span><small>{index + 1} / {members.length}</small></div>
-      <button className="account-step" aria-label="Next account" title="Next account" onClick={() => step(1)}><Icon name="chevron" /></button>
+    return <div className={`account-switcher provider-${account.providerId}`} role="group" aria-label={label}>
+      <div className="account-choices">
+        {members.map((member, position) => {
+          const name = accountLabel(member) || `Account ${position + 1}`;
+          const region = member.providerId === "codex" ? null : member.region === "cn" ? "CN" : "Global";
+          return <button type="button" key={member.id} className="account-choice" aria-pressed={member.id === id}
+            aria-label={`Switch to ${name}${region ? ` · ${region}` : ""}`} title={`${name}${region ? ` · ${region}` : ""}`}
+            onClick={() => selectAccount(member.id)}>
+            <span className="account-choice-name">{name}</span>
+            {region && <span className="account-choice-region">{region}</span>}
+          </button>;
+        })}
+      </div>
     </div>;
   }
 

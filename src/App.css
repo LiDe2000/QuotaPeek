@@ -39,11 +39,12 @@
 .provider-choice img { width: 18px; height: 18px; object-fit: contain; }
 .provider-choice:hover { background: var(--color-surface-active); color: var(--color-text); }
 .provider-choice[aria-pressed="true"] { background: var(--provider-soft); border-color: var(--provider-color); color: var(--color-text); }
-.account-switcher { display: flex; align-items: center; gap: var(--space-small); padding: var(--space-small); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
-.account-switcher-identity { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-small); font-size: var(--font-size-small); color: var(--color-text-muted); }
-.account-switcher-identity > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.account-switcher-identity small { flex-shrink: 0; font-size: var(--font-size-caption); color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
-.account-step { flex-shrink: 0; display: grid; place-items: center; width: 24px; height: 24px; padding: 5px; border: 1px solid var(--color-control-border); border-radius: var(--radius-control); background: var(--color-control); color: var(--color-text-muted); }
-.account-step:hover { background: var(--color-surface-active); color: var(--color-text); }
-.account-step.previous .ui-icon { transform: rotate(180deg); }
+.account-switcher { display: flex; align-items: center; gap: var(--space-medium); min-width: 0; margin-bottom: var(--space-xs); }
+.account-choices { display: flex; align-items: center; gap: var(--space-small); flex: 1; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; scrollbar-color: var(--color-border) transparent; padding: 3px 2px; }
+.account-choice { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; max-width: 220px; min-height: 30px; padding: 5px 12px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text-muted); font-size: var(--font-size-small); line-height: 1.3; transition: background var(--duration-fast), border-color var(--duration-fast), color var(--duration-fast); }
+.account-choice-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-choice-region { flex-shrink: 0; padding-left: 8px; border-left: 1px solid var(--color-border); color: var(--color-text-subtle); font-size: var(--font-size-caption); }
+.account-choice:hover { background: var(--color-surface-active); color: var(--color-text); }
+.account-choice[aria-pressed="true"] { border-color: var(--provider-color); background: var(--provider-soft); color: var(--color-text); }
+.account-choice[aria-pressed="true"] .account-choice-region { color: var(--color-text-muted); }
 
