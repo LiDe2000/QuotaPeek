@@ -2,14 +2,15 @@ import { useRef, useState } from "react";
 import type { Account } from "../types/quota";
 import { queryCodexQuota, queryErrorMessage } from "../services/codex";
 import { workbuddyErrorMessage, queryWorkbuddyQuota } from "../services/workbuddy";
+import { queryZcodeQuota, zcodeErrorMessage } from "../services/zcode";
 export function useAccounts() {
   const [accounts, setAccounts] = useState<readonly Account[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const busy = useRef({ codex: false, workbuddy: false });
+  const busy = useRef({ codex: false, workbuddy: false, zcode: false });
   const codexIdentity = useRef<{ accountId: string | null; email: string | null } | null>(null);
-  function syncLoading() { setLoading(busy.current.codex || busy.current.workbuddy); }
+  function syncLoading() { setLoading(busy.current.codex || busy.current.workbuddy || busy.current.zcode); }
   function merge(next: Account) {
     // One connection per provider; keep Codex first for a stable page order.
     setAccounts(previous => {
@@ -49,5 +50,19 @@ export function useAccounts() {
       return false;
     } finally { busy.current.workbuddy = false; syncLoading(); }
   }
-  return { accounts, loading, error, notice, refreshCodex, refreshWorkbuddy };
+  async function refreshZcode(): Promise<boolean> {
+    if (busy.current.zcode) return false;
+    busy.current.zcode = true;
+    syncLoading();
+    setError(null);
+    setNotice(null);
+    try {
+      merge(await queryZcodeQuota());
+      return true;
+    } catch (failure) {
+      setError(zcodeErrorMessage(failure));
+      return false;
+    } finally { busy.current.zcode = false; syncLoading(); }
+  }
+  return { accounts, loading, error, notice, refreshCodex, refreshWorkbuddy, refreshZcode };
 }

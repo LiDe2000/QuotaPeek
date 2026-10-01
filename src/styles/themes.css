@@ -23,6 +23,9 @@
   --color-claude-soft: #41352f;
   --color-workbuddy: #58b7ff;
   --color-workbuddy-soft: #1d3550;
+  /* Violet keeps ZCode distinct from the Codex indigo and WorkBuddy azure. */
+  --color-zcode: #a78bfa;
+  --color-zcode-soft: #392f5c;
   --color-status: #62d6a0;
   --color-dot-active: #ffffff;
   --color-dot: #ffffff3d;
@@ -52,6 +55,8 @@
   --color-claude-soft: #402c23;
   --color-workbuddy: #55a8f0;
   --color-workbuddy-soft: #20364e;
+  --color-zcode: #9d86e8;
+  --color-zcode-soft: #322a52;
   --color-status: #5fd5a0;
   --color-dot-active: #ffffff;
   --color-dot: #ffffff3d;
@@ -81,6 +86,8 @@
   --color-claude-soft: #f7ece3;
   --color-workbuddy: #2b7cd3;
   --color-workbuddy-soft: #e7f1fc;
+  --color-zcode: #7a4fd0;
+  --color-zcode-soft: #efe9fb;
   --color-status: #27835c;
   --color-dot-active: #303747;
   --color-dot: #30374738;
@@ -90,6 +97,7 @@
 .provider-codex { --provider-color: var(--color-codex); --provider-soft: var(--color-codex-soft); }
 .provider-claude { --provider-color: var(--color-claude); --provider-soft: var(--color-claude-soft); }
 .provider-workbuddy { --provider-color: var(--color-workbuddy); --provider-soft: var(--color-workbuddy-soft); }
+.provider-zcode { --provider-color: var(--color-zcode); --provider-soft: var(--color-zcode-soft); }
 .swatch-classic { --swatch-bg: #0c0d0f; --swatch-card: #12151a; --swatch-border: #303641; --swatch-bar: #809dff; }
 .swatch-dark { --swatch-bg: #1b1d22; --swatch-card: #282a30; --swatch-border: #ffffff12; --swatch-bar: #88a0ff; }
 .swatch-light { --swatch-bg: #f6f7f9; --swatch-card: #ffffff; --swatch-border: #dfe2ea; --swatch-bar: #607bdc; }

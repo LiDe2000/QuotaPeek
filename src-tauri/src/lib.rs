@@ -4,11 +4,15 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(codex::QueryState::default())
         .manage(workbuddy::WorkbuddyState::default())
+        .manage(zcode::ZcodeState::default())
         .invoke_handler(tauri::generate_handler![
             codex::query_codex_quota,
             workbuddy::workbuddy_start_login,
             workbuddy::workbuddy_poll_login,
-            workbuddy::workbuddy_query_quota
+            workbuddy::workbuddy_query_quota,
+            zcode::zcode_start_login,
+            zcode::zcode_poll_login,
+            zcode::zcode_query_quota
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -16,3 +20,4 @@ pub fn run() {
 mod codex;
 mod codex_executable;
 mod workbuddy;
+mod zcode;

@@ -16,4 +16,8 @@
 .account-error { margin-top: var(--space-small); color: var(--color-text); font-size: var(--font-size-small); }
 .add-account-submit { width: 100%; padding: var(--space-medium); border-radius: var(--radius-control); background: var(--color-surface-active); color: var(--color-text); border: 1px solid var(--color-accent); font-weight: 600; }
 .add-account-submit:hover { background: var(--color-window); }
+/* Two account systems to choose from; the alternate one stays visually quieter. */
+.site-choices { display: grid; gap: var(--space-small); }
+.add-account-submit.is-secondary { background: var(--color-control); border-color: var(--color-border); }
+.add-account-submit.is-secondary:hover { background: var(--color-surface-active); border-color: var(--color-accent); }
 .platform-option:disabled, .add-account-submit:disabled { opacity: 0.5; cursor: not-allowed; }

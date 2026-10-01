@@ -14,7 +14,7 @@ import "./App.css";
 
 function App() {
   const desktop = isTauri();
-  const { accounts, loading, error, notice, refreshCodex, refreshWorkbuddy } = useAccounts();
+  const { accounts, loading, error, notice, refreshCodex, refreshWorkbuddy, refreshZcode } = useAccounts();
   const [accountPanelOpen, setAccountPanelOpen] = useState(false);
   const accountButton = useRef<HTMLButtonElement>(null);
   const [page, setPage] = useState(0);
@@ -51,10 +51,20 @@ function App() {
     return connected;
   }
 
+  async function connectZcode(): Promise<boolean> {
+    const connected = await refreshZcode();
+    if (connected) {
+      setPage(0);
+      closeAccountPanel();
+    }
+    return connected;
+  }
+
   // Refresh connected providers one at a time; each call paces its own requests.
   async function refreshAll() {
     if (accounts.some(account => account.providerId === "codex")) await refreshCodex();
     if (accounts.some(account => account.providerId === "workbuddy")) await refreshWorkbuddy();
+    if (accounts.some(account => account.providerId === "zcode")) await refreshZcode();
   }
 
   function closeSettings() {
@@ -116,7 +126,7 @@ function App() {
           </div>
         </header>
 
-        {accountPanelOpen && <AddAccount codexConnected={accounts.some(account => account.providerId === "codex")} workbuddyConnected={accounts.some(account => account.providerId === "workbuddy")} loading={loading} error={error} onConnectCodex={connectCodex} onConnectWorkbuddy={connectWorkbuddy} onClose={closeAccountPanel} />}
+        {accountPanelOpen && <AddAccount codexConnected={accounts.some(account => account.providerId === "codex")} workbuddyConnected={accounts.some(account => account.providerId === "workbuddy")} zcodeConnected={accounts.some(account => account.providerId === "zcode")} loading={loading} error={error} onConnectCodex={connectCodex} onConnectWorkbuddy={connectWorkbuddy} onConnectZcode={connectZcode} onClose={closeAccountPanel} />}
         {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={closeSettings} />}
 
         <div className="window-body" ref={body} role="region" aria-label="AI account quota details" tabIndex={0}>

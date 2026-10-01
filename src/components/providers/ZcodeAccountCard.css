@@ -1,0 +1,15 @@
+/* ZCode quota: one hero figure for the session window, then a row per bucket. */
+.zc-plan { color: var(--color-text-subtle); font-size: var(--font-size-caption); margin: calc(-1 * var(--space-medium)) 0 0; }
+.zc-hero { margin: var(--space-small) 0 var(--space-medium); }
+.zc-hero-label { display: block; color: var(--color-text-muted); font-size: var(--font-size-small); letter-spacing: 0.6px; }
+.zc-hero-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--provider-color); font-variant-numeric: tabular-nums; }
+.zc-hero-value span { font-size: 0.45em; font-weight: 600; letter-spacing: 0; color: var(--color-text-subtle); padding-left: 3px; }
+.zc-hero-sub { display: block; margin-top: 2px; color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
+/* One row per quota bucket, each separated by the same rule. */
+.zc-windows { display: grid; gap: var(--space-medium); margin: var(--space-medium) 0 0; }
+.zc-window { border-top: 1px solid var(--color-border); padding-top: var(--space-medium); }
+.zc-window-summary { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-small); margin-bottom: var(--space-small); }
+.zc-window h3 { font-size: var(--font-size-body); font-weight: 550; }
+.zc-window-usage { color: var(--color-text-muted); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.zc-window-reset { display: flex; justify-content: space-between; gap: var(--space-small); margin-top: var(--space-xs); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.zc-empty { margin-top: var(--space-medium); color: var(--color-text-muted); font-size: var(--font-size-small); }
