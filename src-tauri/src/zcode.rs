@@ -82,13 +82,15 @@ pub struct ZcodeState {
     /// Serializes quota queries so overlapping refreshes cannot race.
     lock: Mutex<()>,
     last_query: Mutex<Option<Instant>>,
+    storage: Mutex<()>,
+    completed: Mutex<HashMap<String, String>>,
     /// flow id -> poll token; each flow authenticates its own polling.
     flows: Mutex<HashMap<String, String>>,
     http: reqwest::Client,
 }
 impl Default for ZcodeState {
     fn default() -> Self {
-        Self { lock: Mutex::default(), last_query: Mutex::default(), flows: Mutex::default(), http: Self::client() }
+        Self { lock: Mutex::default(), last_query: Mutex::default(), storage: Mutex::default(), completed: Mutex::default(), flows: Mutex::default(), http: Self::client() }
     }
 }
 impl ZcodeState {
@@ -114,11 +116,14 @@ pub struct PollOutcome {
     /// "pending" | "success" | "error"
     status: &'static str,
     message: Option<String>,
+    account_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 struct StoredAuth {
+    #[serde(default)]
+    identity: String,
     /// `data.token` from the poll — the credential the billing route accepts.
     #[serde(default)]
     zcode_jwt_token: String,
@@ -170,7 +175,7 @@ pub struct ZcodeWindow {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ZcodeAccount {
-    id: &'static str,
+    id: String,
     provider_id: &'static str,
     source: &'static str,
     /// The display name the poll carried; there is often no email.
@@ -228,20 +233,54 @@ fn write_app_file(path: &Path, body: String, failure: &'static str) -> Result<()
     std::fs::write(path, body).map_err(|_| error("storage", failure))
 }
 
-fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
-    let body = serde_json::to_string_pretty(auth)
-        .map_err(|_| error("storage", "Could not serialize the ZCode login."))?;
-    write_app_file(&app_file(app, AUTH_FILE)?, body, "Could not save the ZCode login.")
+fn account_id(auth: &StoredAuth) -> String {
+    let identity = if auth.identity.is_empty() { auth.who() } else { &auth.identity };
+    crate::account_store::key("zcode", &format!("{}:{}", normalize_site(auth.site()), identity))
 }
 
-fn load_auth(app: &tauri::AppHandle) -> Result<Option<StoredAuth>, QueryError> {
-    let path = app_file(app, AUTH_FILE)?;
-    match std::fs::read(&path) {
-        Ok(bytes) => Ok(Some(serde_json::from_slice(&bytes).map_err(|_| {
-            error("storage", "Stored ZCode login is unreadable. Reconnect the account.")
-        })?)),
-        Err(_) => Ok(None),
+fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, QueryError> { app_file(app, "zcode-accounts.json") }
+
+fn stored_accounts(app: &tauri::AppHandle) -> Result<Vec<crate::account_store::Entry<StoredAuth>>, QueryError> {
+    let path = accounts_path(app)?;
+    if !path.exists() {
+        match std::fs::read(app_file(app, AUTH_FILE)?) {
+            Ok(bytes) => {
+                let auth: StoredAuth = serde_json::from_slice(&bytes).map_err(|_| error("storage", "Stored ZCode login is unreadable."))?;
+                store_auth(app, &auth)?;
+            },
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
+            Err(_) => return Err(error("storage", "Could not read the ZCode login.")),
+        }
     }
+    crate::account_store::read(&path).map_err(|message| error("storage", message))
+}
+
+fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
+    crate::account_store::upsert(&accounts_path(app)?, account_id(auth), auth.clone()).map_err(|message| error("storage", message))
+}
+
+fn load_auth(app: &tauri::AppHandle, requested: Option<&str>) -> Result<Option<StoredAuth>, QueryError> {
+    Ok(stored_accounts(app)?.into_iter().find(|entry| requested.map_or(true, |id| entry.id == id)).map(|entry| entry.auth))
+}
+
+#[tauri::command]
+pub async fn zcode_list_accounts(state: tauri::State<'_, ZcodeState>, app: tauri::AppHandle) -> Result<Vec<ZcodeAccount>, QueryError> {
+    let _storage = state.storage.lock().await;
+    stored_accounts(&app)?.into_iter().map(|entry| {
+        let mut account = parse_account(&serde_json::json!({"code": 0, "data": {}}), &entry.auth)?;
+        account.id = entry.id;
+        account.fetched_at = 0;
+        Ok(account)
+    }).collect()
+}
+
+#[tauri::command]
+pub async fn zcode_cancel_login(state: tauri::State<'_, ZcodeState>, login_state: String) -> Result<Option<String>, QueryError> {
+    // The flow lock also covers credential commit. If commit already won, tell the
+    // frontend which account completed instead of reporting a misleading cancellation.
+    let mut flows = state.flows.lock().await;
+    flows.remove(&login_state);
+    Ok(state.completed.lock().await.remove(&login_state))
 }
 
 fn valid_device_id(candidate: &str) -> bool {
@@ -302,7 +341,11 @@ fn credential_from_poll(data: &Value, site: &str) -> Option<StoredAuth> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or_default();
+    let identity = ["user_id", "id", "email"].into_iter()
+        .find_map(|key| user[key].as_str().filter(|value| !value.trim().is_empty()))
+        .map(str::to_owned).unwrap_or_else(random_id);
     Some(StoredAuth {
+        identity,
         zcode_jwt_token: jwt.to_owned(),
         access_token: access_token.to_owned(),
         provider: site.to_owned(),
@@ -359,7 +402,7 @@ pub async fn zcode_poll_login(
         flows.get(&login_state).cloned()
     };
     let Some(flow_entry) = flow_entry else {
-        return Ok(PollOutcome { status: "error", message: Some("The sign-in session expired. Start again.".into()) });
+        return Ok(PollOutcome { status: "error", message: Some("The sign-in session expired. Start again.".into()), account_id: None });
     };
     // "poll_token|site" as stored by zcode_start_login.
     let (poll_token, site) = flow_entry.split_once('|').unwrap_or((flow_entry.as_str(), SITE_ZAI));
@@ -377,10 +420,10 @@ pub async fn zcode_poll_login(
     {
         Ok(response) => response,
         // A blip is still "keep waiting".
-        Err(_) => return Ok(PollOutcome { status: "pending", message: None }),
+        Err(_) => return Ok(PollOutcome { status: "pending", message: None, account_id: None }),
     };
     if !response.status().is_success() {
-        return Ok(PollOutcome { status: "pending", message: None });
+        return Ok(PollOutcome { status: "pending", message: None, account_id: None });
     }
     let value: Value = response.json().await.map_err(|_| protocol_error())?;
     let data = &value["data"];
@@ -389,19 +432,28 @@ pub async fn zcode_poll_login(
             state.flows.lock().await.remove(&login_state);
             let message = data["message"].as_str().or_else(|| data["reason"].as_str()).unwrap_or_default();
             let message = if message.is_empty() { "Authorization was denied or failed." } else { message };
-            Ok(PollOutcome { status: "error", message: Some(message.to_owned()) })
+            Ok(PollOutcome { status: "error", message: Some(message.to_owned()), account_id: None })
         }
         "ready" => {
-            state.flows.lock().await.remove(&login_state);
+            let mut flows = state.flows.lock().await;
+            if flows.remove(&login_state).is_none() {
+                return Ok(PollOutcome { status: "error", message: Some("Sign-in cancelled.".into()), account_id: None });
+            }
             // The site comes from the stored flow, not the payload: the payload nests the
             // provider token under a key named after the site.
             let Some(auth) = credential_from_poll(data, site) else {
-                return Ok(PollOutcome { status: "error", message: Some("No credentials came back. Start again.".into()) });
+                return Ok(PollOutcome { status: "error", message: Some("No credentials came back. Start again.".into()), account_id: None });
             };
+            let _storage = state.storage.lock().await;
+            stored_accounts(&app)?;
             store_auth(&app, &auth)?;
-            Ok(PollOutcome { status: "success", message: None })
+            let id = account_id(&auth);
+            let mut completed = state.completed.lock().await;
+            if completed.len() >= 16 { completed.clear(); }
+            completed.insert(login_state.clone(), id.clone());
+            Ok(PollOutcome { status: "success", message: None, account_id: Some(id) })
         }
-        _ => Ok(PollOutcome { status: "pending", message: None }),
+        _ => Ok(PollOutcome { status: "pending", message: None, account_id: None }),
     }
 }
 
@@ -488,7 +540,7 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
         .unwrap_or_default();
     let who = auth.who().trim();
     Ok(ZcodeAccount {
-        id: "zcode-oauth",
+        id: account_id(auth),
         provider_id: "zcode",
         source: "zcode-billing",
         email: (!who.is_empty()).then(|| who.to_owned()),
@@ -505,23 +557,20 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
 }
 
 #[tauri::command]
-pub async fn zcode_query_quota(state: tauri::State<'_, ZcodeState>, app: tauri::AppHandle) -> Result<ZcodeAccount, QueryError> {
-    let _guard = state
-        .lock
-        .try_lock()
-        .map_err(|_| error("busy", "A ZCode query is already running."))?;
+pub async fn zcode_query_quota(state: tauri::State<'_, ZcodeState>, app: tauri::AppHandle, account_id: Option<String>) -> Result<ZcodeAccount, QueryError> {
+    let _guard = state.lock.lock().await;
+    let auth = {
+        let _storage = state.storage.lock().await;
+        load_auth(&app, account_id.as_deref())?.ok_or_else(not_connected)?
+    };
+    if auth.jwt().is_empty() { return Err(not_connected()); }
     {
         let mut last = state.last_query.lock().await;
         if let Some(previous) = *last {
-            if previous.elapsed() < MIN_QUERY_INTERVAL {
-                return Err(error("busy", "Quota was just refreshed. Wait a few seconds between queries."));
-            }
+            let remaining = MIN_QUERY_INTERVAL.saturating_sub(previous.elapsed());
+            if !remaining.is_zero() { tokio::time::sleep(remaining).await; }
         }
         *last = Some(Instant::now());
-    }
-    let auth = load_auth(&app)?.ok_or_else(not_connected)?;
-    if auth.jwt().is_empty() {
-        return Err(not_connected());
     }
     let device = match home_dir(&app) {
         Some(home) => device_id(&app, &home),
@@ -595,6 +644,7 @@ mod tests {
 
     fn auth_for(provider: &str) -> StoredAuth {
         StoredAuth {
+            identity: String::new(),
             zcode_jwt_token: "jwt".into(),
             access_token: "access".into(),
             provider: provider.into(),
@@ -602,6 +652,17 @@ mod tests {
             site: String::new(),
             email: String::new(),
         }
+    }
+
+    #[test]
+    fn identity_separates_same_name_accounts_and_survives_token_rotation() {
+        let first = credential_from_poll(&json!({"token": "old", "user": {"name": "Same", "user_id": "one"}}), SITE_ZAI).unwrap();
+        let rotated = credential_from_poll(&json!({"token": "new", "user": {"name": "Renamed", "user_id": "one"}}), SITE_ZAI).unwrap();
+        let other = credential_from_poll(&json!({"token": "old", "user": {"name": "Same", "user_id": "two"}}), SITE_ZAI).unwrap();
+        assert_eq!(account_id(&first), account_id(&rotated));
+        assert_ne!(account_id(&first), account_id(&other));
+        let cn = credential_from_poll(&json!({"token": "old", "user": {"user_id": "one"}}), SITE_BIGMODEL).unwrap();
+        assert_ne!(account_id(&first), account_id(&cn));
     }
 
     fn balance_payload() -> Value {
@@ -737,7 +798,7 @@ mod tests {
     #[test]
     fn balances_become_one_row_each_with_a_derived_percentage() {
         let account = parse_account(&balance_payload(), &auth_for(SITE_BIGMODEL)).unwrap();
-        assert_eq!(account.id, "zcode-oauth");
+        assert_eq!(account.id, account_id(&auth_for(SITE_BIGMODEL)));
         assert_eq!(account.plan_name.as_deref(), Some("ZCode Trust Build"));
         assert_eq!(account.plan_description.as_deref(), Some("ZCode Global Build"));
         assert_eq!(account.region, "cn");

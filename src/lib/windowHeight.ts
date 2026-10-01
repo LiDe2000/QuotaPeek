@@ -4,7 +4,7 @@
  */
 
 /** The window never grows closer than this to the screen edge. */
-const SCREEN_RESERVE = 80;
+export const SCREEN_RESERVE = 80;
 
 /** Rounding slack, in pixels, that already counts as "the right height". */
 const DEAD_ZONE = 2;

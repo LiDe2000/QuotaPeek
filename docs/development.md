@@ -1,0 +1,117 @@
+# 开发文档
+
+[返回 README](../README.md)
+
+本文说明项目的代码组织和实现约定。安装与基本使用请参阅 README。
+
+## 技术栈与代码结构
+
+- 前端：React、TypeScript、Vite。
+- 桌面：Tauri 2、Rust。
+- 测试：Node.js 测试运行器、Rust 单元测试。
+
+```text
+src/
+  components/       # 侧栏、连接面板、主题设置与供应商卡片
+    providers/      # Codex、WorkBuddy、ZCode 的专属卡片
+  hooks/            # 账户状态、悬停预览、主题与窗口尺寸
+  lib/              # 账户合并、供应商分组、额度圆环与窗口定位
+  services/         # Tauri 查询与登录命令的前端封装
+  styles/           # 设计变量、主题与全局样式
+  types/            # Account 联合类型与各供应商数据类型
+  App.tsx           # 面板、供应商与账户切换的组合入口
+src-tauri/src/
+  lib.rs            # Tauri 命令与共享状态注册
+  account_store.rs  # 多账户连接信息的持久化
+  codex.rs           # Codex 协议与查询进程管理
+  codex_executable.rs # 本机 Codex 可执行文件发现
+  workbuddy.rs      # WorkBuddy 授权、账户与额度查询
+  zcode.rs          # ZCode 授权、账户与额度查询
+tests/              # 前端数据逻辑与卡片渲染测试
+```
+
+## 账户与查询状态
+
+`Account` 使用 `providerId` 区分供应商，额度字段保留在各供应商的类型中。每种服务使用自己的卡片，避免把不同服务强行解释成相同的五小时或每周窗口。
+
+账户按稳定 ID 更新，刷新不会改变账户顺序。侧栏每个供应商只有一个图标，该图标的额度和刷新操作对应供应商当前选中的账户。主面板可切换供应商，同一供应商的多个账户在卡片中切换；各供应商的选择独立保存。
+
+`useAccounts` 按账户记录查询进度、错误和最后成功时间，同一账户的并发查询复用已有请求。启动时恢复账户并查询一次额度；悬停只展示缓存数据。手动刷新在请求结束后有 10 秒冷却期，全部刷新逐个处理账户并汇总结果。
+
+失败时保留上次查询数据，并显示错误及上次成功时间。未知额度不生成虚假的 0% 或 100%；重置时间到期也不直接修改额度，需要再次查询确认。
+
+Codex 使用本机已有登录状态，目前只有一个本地连接；WorkBuddy 和 ZCode 的授权信息按账户独立保存。浏览器登录轮询在上一次请求结束后再安排下一次，隐藏面板不会取消登录；取消登录使用独立操作。
+
+## 窗口布局
+
+### 内容布局与滚动
+
+- `.app-shell` 使用固定的 `--window-inset` 留白。
+- `.window-body` 横向排列侧栏和当前展开的卡片。
+- `.orb-pop` 承载主面板；`.orb-float` 承载悬停预览。
+- 连接和主题面板参与正常文档流，保留主面板的标题栏和工具栏。
+- 只有当前选中的账户卡片参与高度计算，隐藏卡片不撑高窗口。
+- 主面板和悬停预览超过限高时各自在内部滚动；文档根节点不滚动。
+
+布局不依赖窗口当前高度撑开内容，避免尺寸测量被已经裁剪的窗口反向限制。
+
+### 原生窗口尺寸
+
+`useFittedWindowHeight` 观察内容尺寸与 DOM 变化，将窗口调整到可见内容需要的宽高。测量使用可见子元素的自然高度及边框、偏移、外层留白；内容高度通过 `scrollHeight` 获取。
+
+最大高度为当前显示器工作区高度减去 80 个逻辑像素。`fittedWindowHeight` 保留 4 像素余量和 2 像素误差容忍，减少取整造成的重复调整。`--window-max-height` 同步提供给 CSS，原生窗口和内部滚动区使用同一个上限。
+
+`horizontalPlacement` 保持侧栏的屏幕位置：右侧空间不足时向左展开，左侧则向右展开。计算使用当前显示器工作区及缩放比例，支持显示器原点为负坐标的情况。当前不根据底部空间自动调整纵向位置。
+
+窗口尺寸与位置调整通过同一条串行路径处理，避免旧请求覆盖新尺寸。`tauri.conf.json` 的初始宽高只用于启动，不能将最小高度设置到妨碍收缩的值。
+
+### 桌面权限
+
+`src-tauri/capabilities/default.json` 显式声明窗口调整权限：
+
+```text
+core:window:allow-set-size
+core:window:allow-set-position
+```
+
+修改 capability 或 Tauri 配置后，需要重启 `npm run tauri dev`。这些修改不会通过前端热更新生效。权限和尺寸调整的排查见 [排障文档](troubleshooting.md)。
+
+## Codex 查询
+
+查询使用本机 Codex app-server 的 stdio JSON-RPC 协议：
+
+```text
+initialize → initialized → account/read → account/rateLimits/read → account/read
+```
+
+前后读取账户身份用于防止登录切换过程中将额度归到错误账户。额度优先读取 `rateLimitsByLimitId`，没有可用分组时回退到 `rateLimits`。圆环展示各额度窗口中最小的剩余比例。
+
+查询不启动模型任务，也不读取或复制 Codex 登录令牌。Codex 管理自身登录状态与本地状态文件。查询超时为 45 秒，结束或超时后清理子进程。
+
+## 测试与检查
+
+在项目根目录运行：
+
+```sh
+npm run build
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml
+```
+
+真实 Codex 集成测试默认跳过。需要本机 Codex 已登录且网络可用时，手动运行：
+
+```sh
+cargo test --manifest-path src-tauri/Cargo.toml live_codex_query -- --ignored --nocapture
+```
+
+涉及窗口和交互的改动，还应在桌面应用中检查：悬停预览与关闭延迟、跨图标和卡片移动、单账户刷新、账户切换后的高度、屏幕左右边缘展开，以及连接面板隐藏期间的登录流程。
+
+## 新增供应商
+
+1. 增加供应商数据类型，并扩展 `Account` 联合类型。
+2. 实现 Rust 端查询、必要的登录流程和 Tauri 命令注册。
+3. 添加前端 service 与专属卡片，并接入账户状态和供应商分组。
+4. 更新图标、圆环额度含义及连接入口。
+5. 补充数据解析、账户身份和卡片展示的测试。
+
+不要默认假设所有服务都采用相同的额度周期；保留服务返回的单位、窗口时长和未知字段语义。

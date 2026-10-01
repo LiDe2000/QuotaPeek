@@ -1,148 +1,218 @@
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import Icon from "./Icon";
-import { workbuddyErrorMessage, pollWorkbuddyLogin, startWorkbuddyLogin } from "../services/workbuddy";
-import { pollZcodeLogin, startZcodeLogin, zcodeErrorMessage } from "../services/zcode";
+import { workbuddyErrorMessage, pollWorkbuddyLogin, startWorkbuddyLogin, cancelWorkbuddyLogin } from "../services/workbuddy";
+import { pollZcodeLogin, startZcodeLogin, zcodeErrorMessage, cancelZcodeLogin } from "../services/zcode";
 import type { ZcodeSite } from "../services/zcode";
 import "./AddAccount.css";
 type Platform = "codex" | "workbuddy" | "zcode";
-/** Providers that sign in through a browser tab; Codex follows the local CLI login instead. */
 type BrowserPlatform = "workbuddy" | "zcode";
+type Phase = "idle" | "starting" | "waiting" | "reading" | "cancelling";
+interface Flow { provider: BrowserPlatform; state: string; startedAt: number }
 interface AddAccountProps {
+  hidden: boolean;
   codexConnected: boolean;
-  workbuddyConnected: boolean;
-  zcodeConnected: boolean;
-  loading: boolean;
-  error: string | null;
   onConnectCodex: () => Promise<boolean>;
-  onConnectWorkbuddy: () => Promise<boolean>;
-  onConnectZcode: () => Promise<boolean>;
+  onConnectWorkbuddy: (accountId: string) => Promise<boolean>;
+  onConnectZcode: (accountId: string) => Promise<boolean>;
   onClose: () => void;
 }
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
-const BROWSER_COPY: Record<BrowserPlatform, { name: string; mark: string; hint: string }> = {
-  workbuddy: {
-    name: "WorkBuddy",
-    mark: "W",
-    hint: "Sign in through the official WorkBuddy page opened in your browser. QuotaPeek receives a token using the same flow as the WorkBuddy CLI and keeps it in the app's local data.",
-  },
-  zcode: {
-    name: "ZCode",
-    mark: "Z",
-    hint: "Sign in through the official ZCode authorization page opened in your browser. Pick the account system you use — Z.ai (global) or BigModel (智谱, China). QuotaPeek uses the same CLI authorization flow and only reads quota afterwards.",
-  },
+const BROWSER_COPY = {
+  workbuddy: { name: "WorkBuddy", mark: "W", hint: "Sign in through the WorkBuddy page opened in your browser. Each account is saved separately." },
+  zcode: { name: "ZCode", mark: "Z", hint: "Choose Z.ai (global) or BigModel (China), then sign in through the authorization page. Each account is saved separately." },
 };
-export default function AddAccount({ codexConnected, workbuddyConnected, zcodeConnected, loading, error, onConnectCodex, onConnectWorkbuddy, onConnectZcode, onClose }: AddAccountProps) {
+function cancelFlow(flow: Flow) {
+  return flow.provider === "workbuddy" ? cancelWorkbuddyLogin(flow.state) : cancelZcodeLogin(flow.state);
+}
+
+export default function AddAccount({ hidden, codexConnected, onConnectCodex, onConnectWorkbuddy, onConnectZcode, onClose }: AddAccountProps) {
   const [selected, setSelected] = useState<Platform | null>(null);
-  const firstButton = useRef<HTMLButtonElement>(null);
-  useEffect(() => { firstButton.current?.focus(); }, [selected]);
-  // Browser sign-in: start the flow, hand off to the browser, then poll for the token.
-  const [flow, setFlow] = useState<{ provider: BrowserPlatform; state: string } | null>(null);
+  const [phase, setPhase] = useState<Phase>("idle");
+  const [flow, setFlow] = useState<Flow | null>(null);
   const [waitedMs, setWaitedMs] = useState(0);
   const [loginError, setLoginError] = useState<string | null>(null);
-  const callbacks = useRef({ onConnectWorkbuddy, onConnectZcode, onClose });
-  callbacks.current = { onConnectWorkbuddy, onConnectZcode, onClose };
-  const connected = { workbuddy: workbuddyConnected, zcode: zcodeConnected };
-  useEffect(() => {
-    if (!flow) return;
-    const browser = flow.provider;
-    let cancelled = false;
-    const ticker = window.setInterval(() => setWaitedMs(ms => ms + POLL_INTERVAL_MS), POLL_INTERVAL_MS);
-    const poller = window.setInterval(() => {
-      void (async () => {
-        try {
-          const result = browser === "workbuddy" ? await pollWorkbuddyLogin(flow.state) : await pollZcodeLogin(flow.state);
-          if (cancelled) return;
-          if (result.status === "success") {
-            stopWaiting();
-            const ok = browser === "workbuddy" ? await callbacks.current.onConnectWorkbuddy() : await callbacks.current.onConnectZcode();
-            if (ok) callbacks.current.onClose();
-          } else if (result.status === "error") {
-            setLoginError(result.message ?? "Sign-in failed. Start again.");
-            stopWaiting();
-          }
-        } catch (failure) {
-          if (!cancelled) { setLoginError(browser === "workbuddy" ? workbuddyErrorMessage(failure) : zcodeErrorMessage(failure)); stopWaiting(); }
-        }
-      })();
-    }, POLL_INTERVAL_MS);
-    function stopWaiting() {
-      cancelled = true;
-      window.clearInterval(ticker);
-      window.clearInterval(poller);
-      setFlow(null);
-    }
-    return () => { cancelled = true; window.clearInterval(ticker); window.clearInterval(poller); };
-  }, [flow]);
-  useEffect(() => {
-    if (waitedMs >= POLL_TIMEOUT_MS && flow) { setLoginError("Sign-in timed out. Start again and complete it within 10 minutes."); setFlow(null); }
-  }, [waitedMs, flow]);
-  async function beginBrowserLogin(provider: BrowserPlatform, site?: ZcodeSite) {
-    setLoginError(null);
-    setWaitedMs(0);
+  const [signedIn, setSignedIn] = useState<{ provider: BrowserPlatform; id: string } | null>(null);
+  const firstButton = useRef<HTMLButtonElement>(null);
+  const generation = useRef(0);
+  const busy = useRef(false);
+  const flowRef = useRef<Flow | null>(null);
+  const callbacks = useRef({ onConnectCodex, onConnectWorkbuddy, onConnectZcode });
+  callbacks.current = { onConnectCodex, onConnectWorkbuddy, onConnectZcode };
+  flowRef.current = flow;
+  useEffect(() => { if (!hidden) firstButton.current?.focus(); }, [hidden, selected]);
+  useEffect(() => () => {
+    generation.current++;
+    if (flowRef.current) void cancelFlow(flowRef.current).catch(() => {});
+  }, []);
+
+  async function readBrowserAccount(provider: BrowserPlatform, id: string, version: number) {
+    setPhase("reading");
     try {
-      const start = provider === "workbuddy" ? await startWorkbuddyLogin() : await startZcodeLogin(site ?? "zai");
-      setFlow({ provider, state: start.state });
-      await openUrl(start.authUrl);
+      const ok = provider === "workbuddy" ? await callbacks.current.onConnectWorkbuddy(id) : await callbacks.current.onConnectZcode(id);
+      if (generation.current !== version) return;
+      if (ok) { setSignedIn(null); setSelected(null); }
+      else setLoginError("Sign-in saved, but quota could not be read. Retry the quota query below.");
     } catch (failure) {
-      setLoginError(provider === "workbuddy" ? workbuddyErrorMessage(failure) : zcodeErrorMessage(failure));
-      setFlow(null);
+      if (generation.current === version) setLoginError(workbuddyErrorMessage(failure));
+    } finally {
+      if (generation.current === version) { busy.current = false; setPhase("idle"); }
     }
   }
-  const waiting = flow !== null;
-  const waitingFor = flow?.provider ?? null;
-  const heading = selected ? "STEP 2 OF 2" : "STEP 1 OF 2";
+
+  useEffect(() => {
+    if (!flow) return;
+    let stopped = false;
+    let timer = 0;
+    const version = generation.current;
+    const ticker = window.setInterval(() => setWaitedMs(Date.now() - flow.startedAt), 1000);
+    async function poll() {
+      if (stopped || version !== generation.current) return;
+      if (Date.now() - flow!.startedAt >= POLL_TIMEOUT_MS) {
+        if (await cancel()) setLoginError("Sign-in timed out. Start again when ready.");
+        return;
+      }
+      try {
+        const result = flow!.provider === "workbuddy" ? await pollWorkbuddyLogin(flow!.state) : await pollZcodeLogin(flow!.state);
+        if (stopped || version !== generation.current) return;
+        if (result.status === "success") {
+          if (!result.accountId) throw new Error("No account identity came back. Start sign-in again.");
+          setFlow(null);
+          const account = { provider: flow!.provider, id: result.accountId };
+          setSignedIn(account);
+          await readBrowserAccount(account.provider, account.id, version);
+          return;
+        }
+        if (result.status === "error") throw new Error(result.message ?? "Sign-in failed. Start again.");
+        // One request at a time, with a pause after the response.
+        timer = window.setTimeout(() => { void poll(); }, POLL_INTERVAL_MS);
+      } catch (failure) {
+        if (stopped || version !== generation.current) return;
+        setLoginError(flow!.provider === "workbuddy" ? workbuddyErrorMessage(failure) : zcodeErrorMessage(failure));
+        void cancelFlow(flow!).catch(() => {});
+        setFlow(null);
+        busy.current = false;
+        setPhase("idle");
+      }
+    }
+    timer = window.setTimeout(() => { void poll(); }, POLL_INTERVAL_MS);
+    return () => { stopped = true; clearTimeout(timer); clearInterval(ticker); };
+  }, [flow]);
+
+  async function cancel() {
+    const pending = flowRef.current;
+    generation.current++;
+    setPhase("cancelling");
+    try {
+      const completed = pending ? await cancelFlow(pending) : null;
+      setFlow(null);
+      if (pending && completed) {
+        const account = { provider: pending.provider, id: completed };
+        setSignedIn(account);
+        setLoginError(null);
+        await readBrowserAccount(account.provider, account.id, generation.current);
+        return false;
+      }
+      busy.current = false;
+      setPhase("idle");
+      setLoginError("Sign-in cancelled. Start again when ready.");
+      return true;
+    } catch (failure) {
+      setLoginError(`Could not cancel sign-in: ${workbuddyErrorMessage(failure)}`);
+      setPhase("waiting");
+      if (pending) setFlow({ ...pending });
+      return false;
+    }
+  }
+
+  async function beginBrowserLogin(provider: BrowserPlatform, site?: ZcodeSite) {
+    if (busy.current) return;
+    busy.current = true;
+    const version = ++generation.current;
+    setPhase("starting");
+    setLoginError(null);
+    setSignedIn(null);
+    setWaitedMs(0);
+    let pending: Flow | null = null;
+    try {
+      const start = provider === "workbuddy" ? await startWorkbuddyLogin() : await startZcodeLogin(site ?? "zai");
+      pending = { provider, state: start.state, startedAt: Date.now() };
+      if (version !== generation.current) { await cancelFlow(pending); return; }
+      flowRef.current = pending;
+      setFlow(pending);
+      setPhase("waiting");
+      await openUrl(start.authUrl);
+    } catch (failure) {
+      if (pending) await cancelFlow(pending).catch(() => {});
+      if (version === generation.current) {
+        setFlow(null);
+        busy.current = false;
+        setPhase("idle");
+        setLoginError(provider === "workbuddy" ? workbuddyErrorMessage(failure) : zcodeErrorMessage(failure));
+      }
+    }
+  }
+
+  async function connectCodex() {
+    if (busy.current) return;
+    busy.current = true;
+    setPhase("reading");
+    setLoginError(null);
+    try {
+      if (await callbacks.current.onConnectCodex()) setSelected(null);
+      else setLoginError("Could not read local Codex quota. Check your Codex login and retry.");
+    } catch (failure) { setLoginError(workbuddyErrorMessage(failure)); }
+    finally { busy.current = false; setPhase("idle"); }
+  }
+  const waiting = phase !== "idle";
   const browserPanel = (provider: BrowserPlatform) => {
     const copy = BROWSER_COPY[provider];
-    // ZCode binds either account system, so the user picks the one they hold.
-    const sitePending = provider === "zcode" && !waiting;
     return <>
       <div className={`selected-platform provider-${provider}`}>
         <span className="platform-mark" aria-hidden="true">{copy.mark}</span><strong>{copy.name}</strong>
-        <button className="change-platform" disabled={waiting} onClick={() => setSelected(null)}>Change</button>
+        <button className="change-platform" disabled={waiting} onClick={() => { setSelected(null); setLoginError(null); setSignedIn(null); }}>Change</button>
       </div>
       <p className="account-hint">{copy.hint}</p>
-      {waiting
-        ? <p className="account-hint" role="status">Waiting for sign-in… {Math.round(waitedMs / 1000)}s elapsed. Finish the login in your browser tab; QuotaPeek picks it up automatically.</p>
-        : <p className="account-hint">A browser tab opens for the login. QuotaPeek only reads quota afterwards and never auto-refreshes on a timer.</p>}
-      {(loginError || error) && <p className="account-error" role="alert">{loginError ?? error}</p>}
-      {waiting && waitingFor === provider
-        ? <button ref={firstButton} className="add-account-submit" onClick={() => { setFlow(null); setLoginError("Sign-in cancelled. Start again when ready."); }}>Cancel waiting</button>
-        : sitePending
-          ? <div className="site-choices">
-            <button ref={firstButton} className="add-account-submit" disabled={loading} onClick={() => void beginBrowserLogin(provider, "zai")}>Continue with Z.ai · Global</button>
-            <button className="add-account-submit is-secondary" disabled={loading} onClick={() => void beginBrowserLogin(provider, "bigmodel")}>Continue with BigModel · China</button>
-          </div>
-          : <button ref={firstButton} className="add-account-submit" disabled={loading || waiting} onClick={() => void beginBrowserLogin(provider)}>{connected[provider] ? "Sign in again with browser" : "Sign in with browser"}</button>}
+      {waiting && <p className="account-hint" role="status">{phase === "starting" ? "Starting sign-in…"
+        : phase === "reading" ? "Reading account quota…" : phase === "cancelling" ? "Cancelling sign-in…"
+        : `Waiting for sign-in… ${Math.floor(waitedMs / 1000)}s elapsed. You can hide this panel and return while sign-in continues.`}</p>}
+      {loginError && <p className="account-error" role="alert">{loginError}</p>}
+      {waiting ? <button ref={firstButton} className="add-account-submit" disabled={phase === "reading" || phase === "cancelling"} onClick={() => void cancel()}>Cancel sign-in</button>
+        : signedIn?.provider === provider ? <button ref={firstButton} className="add-account-submit" onClick={() => {
+          if (busy.current) return;
+          busy.current = true;
+          setLoginError(null);
+          void readBrowserAccount(provider, signedIn.id, generation.current);
+        }}>Retry quota query</button>
+        : provider === "zcode" ? <div className="site-choices">
+          <button ref={firstButton} className="add-account-submit" onClick={() => void beginBrowserLogin(provider, "zai")}>Continue with Z.ai · Global</button>
+          <button className="add-account-submit is-secondary" onClick={() => void beginBrowserLogin(provider, "bigmodel")}>Continue with BigModel · China</button>
+        </div> : <button ref={firstButton} className="add-account-submit" onClick={() => void beginBrowserLogin(provider)}>Sign in with browser</button>}
     </>;
   };
-  return (
-    <section id="add-account" className="panel add-account-panel" aria-labelledby="add-account-title" aria-busy={loading || waiting} onKeyDown={event => {
-      if (event.key === "Escape") { event.stopPropagation(); onClose(); }
-    }}>
-      <div className="add-account-heading">
-        <div><p className="account-step">{heading}</p><h2 id="add-account-title">Connect account</h2></div>
-        <button className="icon-button" aria-label="Close add account" onClick={onClose}><Icon name="close" /></button>
+
+  return <section id="add-account" className="panel add-account-panel" hidden={hidden} aria-labelledby="add-account-title" aria-busy={waiting} onKeyDown={event => {
+    if (event.key === "Escape") { event.stopPropagation(); onClose(); }
+  }}>
+    <div className="add-account-heading">
+      <div><p className="account-step">{selected ? "STEP 2 OF 2" : "STEP 1 OF 2"}</p><h2 id="add-account-title">Connect account</h2></div>
+      <button className="icon-button" aria-label="Close add account" title={waiting ? "Hide panel · Sign-in continues" : "Close"} onClick={onClose}><Icon name="close" /></button>
+    </div>
+    {selected === "codex" ? <>
+      <div className="selected-platform provider-codex"><span className="platform-mark" aria-hidden="true">O</span><strong>OpenAI Codex</strong>
+        <button className="change-platform" disabled={waiting} onClick={() => { setSelected(null); setLoginError(null); }}>Change</button></div>
+      <p className="account-hint">Connect the ChatGPT account currently signed in to Codex on this computer. Sign in to Codex first; this local login supports one account at a time.</p>
+      {loginError && <p className="account-error" role="alert">{loginError}</p>}
+      <button ref={firstButton} className="add-account-submit" disabled={waiting} onClick={() => void connectCodex()}>{waiting ? "Reading Codex quota…" : codexConnected ? "Refresh local Codex account" : "Connect local Codex"}</button>
+    </> : selected === "workbuddy" ? browserPanel("workbuddy") : selected === "zcode" ? browserPanel("zcode") : <>
+      <p className="account-hint">Choose a platform to connect an account. WorkBuddy and ZCode support multiple accounts.</p>
+      <div className="platform-options">
+        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>OpenAI Codex</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
+        <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><span className="platform-mark">W</span><span>WorkBuddy</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
+        <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><span className="platform-mark">Z</span><span>ZCode</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
+        <button className="platform-option provider-claude" disabled><span className="platform-mark">C</span><span>Claude · Coming soon</span></button>
       </div>
-      {selected === "codex" ? <>
-        <div className="selected-platform provider-codex">
-          <span className="platform-mark" aria-hidden="true">O</span><strong>OpenAI Codex</strong>
-          <button className="change-platform" disabled={loading} onClick={() => setSelected(null)}>Change</button>
-        </div>
-        <p className="account-hint">Connect the ChatGPT account currently signed in to Codex on this computer. Your email and quota are read automatically; no password is needed here.</p>
-        <p className="account-hint">Sign in to Codex first. This connection follows your local Codex login and supports one account at a time.</p>
-        {error && <p className="account-error" role="alert">{error}</p>}
-        <button ref={firstButton} className="add-account-submit" disabled={loading} onClick={() => void onConnectCodex()}>{loading ? "Reading Codex quota…" : codexConnected ? "Refresh local Codex account" : "Connect local Codex"}</button>
-      </> : selected === "workbuddy" ? browserPanel("workbuddy") : selected === "zcode" ? browserPanel("zcode") : <>
-        <p className="account-hint">Choose a platform to connect your account.</p>
-        <div className="platform-options">
-          <button ref={firstButton} className="platform-option provider-codex" onClick={() => setSelected("codex")}><span className="platform-mark">O</span><span>OpenAI Codex</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
-          <button className="platform-option provider-workbuddy" onClick={() => setSelected("workbuddy")}><span className="platform-mark">W</span><span>WorkBuddy</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
-          <button className="platform-option provider-zcode" onClick={() => setSelected("zcode")}><span className="platform-mark">Z</span><span>ZCode</span><span className="platform-chevron"><Icon name="chevron" /></span></button>
-          <button className="platform-option provider-claude" disabled><span className="platform-mark">C</span><span>Claude · Coming soon</span></button>
-        </div>
-      </>}
-    </section>
-  );
+    </>}
+  </section>;
 }

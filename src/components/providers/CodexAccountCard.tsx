@@ -46,11 +46,11 @@ function TokenStats({ usage }: { usage: CodexAccount["tokenUsage"] }) {
     {!usage && <p className="codex-tokens-unavailable">Token usage unavailable from Codex</p>}
   </section>;
 }
-export default function CodexAccountCard({ account, active, stale, loading }: { account: CodexAccount; active: boolean; stale: boolean; loading: boolean }) {
+export default function CodexAccountCard({ account, active, stale, loading, panelId }: { account: CodexAccount; active: boolean; stale: boolean; loading: boolean; panelId?: string }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed" : "Last query succeeded";
-  return <article id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-codex" aria-busy={loading}>
+  return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-codex" aria-busy={loading}>
     <div className="account-header">
       <span className="provider-mark" aria-hidden="true">O</span>
       <div className="account-identity"><h2>OpenAI Codex</h2><p title={account.email ?? "Email unavailable"}>{account.email ?? "Local Codex account"}</p></div>

@@ -1,159 +1,239 @@
 import { useEffect, useRef, useState } from "react";
-import type { KeyboardEvent, PointerEvent } from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import AddAccount from "./components/AddAccount";
 import { useAccounts } from "./hooks/useAccounts";
+import type { Account } from "./types/quota";
 import { accountLabel } from "./types/quota";
 import AccountCard from "./components/AccountCard";
 import AppearanceSettings from "./components/AppearanceSettings";
+import OrbRail from "./components/OrbRail";
+import { PROVIDER_SELECTION_KEY, providerGroups, providerName, readProviderSelection } from "./lib/providerGroups";
+import type { ProviderSelection } from "./lib/providerGroups";
+import { providerIcon } from "./lib/providerIcons";
+import { useHoverPreview } from "./hooks/useHoverPreview";
 import { useAppearance } from "./hooks/useAppearance";
 import { useFittedWindowHeight } from "./hooks/useFittedWindowHeight";
 import Icon from "./components/Icon";
 import "./App.css";
 
+type Popup = null | "home" | "add" | "appearance";
+function readSelected(): string | null {
+  try { return localStorage.getItem("quotapeek-selected-account"); } catch { return null; }
+}
+
 function App() {
   const desktop = isTauri();
-  const { accounts, loading, error, notice, refreshCodex, refreshWorkbuddy, refreshZcode } = useAccounts();
-  const [accountPanelOpen, setAccountPanelOpen] = useState(false);
-  const accountButton = useRef<HTMLButtonElement>(null);
-  const [page, setPage] = useState(0);
+  const { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect } = useAccounts();
+  const [selectedId, setSelectedId] = useState<string | null>(readSelected);
+  const [providerSelection, setProviderSelection] = useState<ProviderSelection>(() => {
+    try { return readProviderSelection(localStorage.getItem(PROVIDER_SELECTION_KEY)); } catch { return {}; }
+  });
   const { theme, setTheme } = useAppearance();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsButton = useRef<HTMLButtonElement>(null);
-  const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [popup, setPopup] = useState<Popup>(null);
+  const preview = useHoverPreview();
   const drag = useRef<{ x: number; y: number } | null>(null);
   const body = useRef<HTMLDivElement>(null);
-
-  // The desktop window follows its card; the browser preview keeps its viewport.
+  const panel = useRef<HTMLElement>(null);
+  const currentAccount = accounts.find(account => account.id === selectedId) ?? accounts[0];
+  const groups = providerGroups(accounts, providerSelection);
+  const currentGroup = groups.find(group => group.providerId === currentAccount?.providerId);
+  const groupAccounts = currentGroup?.accounts ?? [];
+  const page = currentAccount ? groupAccounts.findIndex(account => account.id === currentAccount.id) : 0;
+  const hoveredGroup = groups.find(group => group.providerId === preview.accountId);
+  const hoveredAccount = hoveredGroup?.selected;
+  function selectAccount(id: string) {
+    const account = accounts.find(candidate => candidate.id === id);
+    if (!account) return;
+    setSelectedId(id);
+    setProviderSelection(previous => ({ ...previous, [account.providerId]: id }));
+  }
+  const loading = Object.values(statuses).some(status => status.loading);
+  const settingsOpen = popup === "appearance";
   useFittedWindowHeight(body, desktop);
 
-  function closeAccountPanel() {
-    setAccountPanelOpen(false);
-    accountButton.current?.focus();
-  }
-
-  async function connectCodex(): Promise<boolean> {
-    const connected = await refreshCodex();
-    if (connected) {
-      setPage(0);
-      closeAccountPanel();
-    }
-    return connected;
-  }
-
-  async function connectWorkbuddy(): Promise<boolean> {
-    const connected = await refreshWorkbuddy();
-    if (connected) {
-      setPage(0);
-      closeAccountPanel();
-    }
-    return connected;
-  }
-
-  async function connectZcode(): Promise<boolean> {
-    const connected = await refreshZcode();
-    if (connected) {
-      setPage(0);
-      closeAccountPanel();
-    }
-    return connected;
-  }
-
-  // Refresh connected providers one at a time; each call paces its own requests.
-  async function refreshAll() {
-    if (accounts.some(account => account.providerId === "codex")) await refreshCodex();
-    if (accounts.some(account => account.providerId === "workbuddy")) await refreshWorkbuddy();
-    if (accounts.some(account => account.providerId === "zcode")) await refreshZcode();
-  }
-
-  function closeSettings() {
-    setSettingsOpen(false);
-    settingsButton.current?.focus();
-  }
-
-  // Panels are overlays, so a press anywhere but the panel or the toolbar dismisses them.
-  const panelOpen = accountPanelOpen || settingsOpen;
   useEffect(() => {
-    if (!panelOpen) return;
+    if (currentAccount) {
+      if (selectedId !== currentAccount.id) setSelectedId(currentAccount.id);
+      setProviderSelection(previous => previous[currentAccount.providerId] === currentAccount.id ? previous
+        : { ...previous, [currentAccount.providerId]: currentAccount.id });
+    }
+  }, [currentAccount, selectedId]);
+  useEffect(() => {
+    if (selectedId) try { localStorage.setItem("quotapeek-selected-account", selectedId); } catch { /* Selection still works. */ }
+  }, [selectedId]);
+
+  useEffect(() => {
+    try { localStorage.setItem(PROVIDER_SELECTION_KEY, JSON.stringify(providerSelection)); } catch { /* Selection works in memory. */ }
+  }, [providerSelection]);
+
+  useEffect(() => {
+    if (popup && panel.current) panel.current.scrollTop = 0;
+  }, [currentAccount?.id, popup]);
+
+  async function connectAccount(provider: Account["providerId"], accountId?: string): Promise<boolean> {
+    const account = await connect(provider, accountId, id => {
+      setSelectedId(id);
+      setProviderSelection(previous => ({ ...previous, [provider]: id }));
+    });
+    if (account) {
+      setSelectedId(account.id);
+      setProviderSelection(previous => ({ ...previous, [provider]: account.id }));
+      // Finishing a hidden login updates its account without reopening the window.
+      setPopup(open => open === "add" ? "home" : open);
+    }
+    return account !== null;
+  }
+
+  function shellDrag(event: React.MouseEvent) {
+    if (!desktop || event.button !== 0) return;
+    const target = event.target as Element | null;
+    if (target?.closest("button, a, input, select, textarea, .orb-pop, .orb-float")) return;
+    void getCurrentWindow().startDragging();
+  }
+
+  useEffect(() => {
+    if (!settingsOpen) return;
     function dismiss(event: Event) {
       if ((event.target as Element | null)?.closest(".panel, .icon-button")) return;
-      setAccountPanelOpen(false);
-      setSettingsOpen(false);
+      setPopup(open => open === "appearance" ? "home" : open);
     }
     window.addEventListener("pointerdown", dismiss);
     return () => window.removeEventListener("pointerdown", dismiss);
-  }, [panelOpen]);
+  }, [settingsOpen]);
 
-  function navigate(event: KeyboardEvent<HTMLElement>) {
-    if (!accounts.length) return;
-    let next = page;
-    if (event.key === "ArrowRight") next = (page + 1) % accounts.length;
-    else if (event.key === "ArrowLeft") next = (page + accounts.length - 1) % accounts.length;
-    else if (event.key === "Home") next = 0;
-    else if (event.key === "End") next = accounts.length - 1;
-    else return;
-    event.preventDefault();
-    setPage(next);
-    tabs.current[next]?.focus();
+  function select(index: number) {
+    const account = groupAccounts[index];
+    if (account) selectAccount(account.id);
   }
-
   function finishSwipe(event: PointerEvent<HTMLDivElement>) {
     if (!drag.current) return;
     const dx = event.clientX - drag.current.x;
     const dy = event.clientY - drag.current.y;
     drag.current = null;
     if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy)) {
-      setPage(current => Math.max(0, Math.min(accounts.length - 1, current + (dx < 0 ? 1 : -1))));
+      select(Math.max(0, Math.min(groupAccounts.length - 1, page + (dx < 0 ? 1 : -1))));
     }
   }
+  function navigate(event: KeyboardEvent<HTMLElement>) {
+    if (!groupAccounts.length || (event.target as Element).closest("button, input, select, textarea")) return;
+    let next = page;
+    if (event.key === "ArrowRight") next = (page + 1) % groupAccounts.length;
+    else if (event.key === "ArrowLeft") next = (page + groupAccounts.length - 1) % groupAccounts.length;
+    else if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = groupAccounts.length - 1;
+    else return;
+    event.preventDefault();
+    select(next);
+  }
+
+  function accountPicker(members: readonly Account[], id: string, label: string, compact = false) {
+    if (members.length < 2) return null;
+    const index = members.findIndex(account => account.id === id);
+    const account = members[index];
+    if (compact) return <div className={`preview-account-switcher provider-${account.providerId}`} role="group" aria-label={label}>
+      {members.map((member, position) => <button type="button" key={member.id} className="preview-account-number"
+        aria-label={`Switch to account ${position + 1}: ${accountLabel(member) || member.id}`}
+        aria-pressed={member.id === id} title={accountLabel(member) || member.id} onClick={() => selectAccount(member.id)}>
+        {position + 1}
+      </button>)}
+    </div>;
+    function step(direction: number) { selectAccount(members[(index + direction + members.length) % members.length].id); }
+    return <div className="account-switcher" role="group" aria-label={label}>
+      <button className="account-step previous" aria-label="Previous account" title="Previous account" onClick={() => step(-1)}><Icon name="chevron" /></button>
+      <div className="account-switcher-identity"><span title={accountLabel(account) || account.id}>{accountLabel(account) || account.id}</span><small>{index + 1} / {members.length}</small></div>
+      <button className="account-step" aria-label="Next account" title="Next account" onClick={() => step(1)}><Icon name="chevron" /></button>
+    </div>;
+  }
+
+  function renderCard(account: Account, previewCard = false) {
+    const status = statuses[account.id];
+    return <AccountCard account={account} active stale={!!status?.error} loading={!!status?.loading} preview={previewCard} />;
+  }
+  const currentStatus = currentAccount ? statuses[currentAccount.id] : undefined;
+  const fetchedAt = currentStatus?.lastSuccess ?? currentAccount?.fetchedAt;
+  const footer = currentStatus?.loading ? "Reading this account's quota…"
+    : currentStatus?.error ?? currentStatus?.notice ?? (fetchedAt ? `Updated ${new Date(fetchedAt * 1000).toLocaleTimeString()}`
+      : currentAccount ? "Quota not yet available" : restoring ? "Restoring accounts…" : "No accounts · Use the + ring to connect one");
 
   return (
-    <main className="app-shell">
+    <main className="app-shell" onMouseDown={shellDrag}>
       <section className="quota-window" aria-label="QuotaPeek AI usage">
-        <header className="window-header">
-          <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><img className="app-icon" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} /><h1>QuotaPeek</h1></div>
-          <div className="window-actions">
-            <button className="icon-button refresh-button" aria-label="Refresh quota" title="Refresh quota" disabled={accounts.length === 0 || loading} onClick={() => void refreshAll()}>
-              <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
-            </button>
-            <button ref={accountButton} className="icon-button" aria-label="Add account" title="Add account" aria-expanded={accountPanelOpen} aria-controls="add-account" onClick={() => { if (accountPanelOpen) closeAccountPanel(); else { setSettingsOpen(false); setAccountPanelOpen(true); } }}><Icon name="user" /></button>
-            <button ref={settingsButton} className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} aria-controls="appearance-settings" title="Appearance" onClick={() => { if (settingsOpen) closeSettings(); else { setAccountPanelOpen(false); setSettingsOpen(true); } }}><Icon name="settings" /></button>
-            {desktop && <div className="desktop-window-actions">
-              <button className="window-control" aria-label="Minimize window" title="Minimize" onClick={() => void getCurrentWindow().minimize()}><Icon name="minimize" /></button>
-              <button className="window-control" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}><Icon name="close" /></button>
-            </div>}
-          </div>
-        </header>
-
-        {accountPanelOpen && <AddAccount codexConnected={accounts.some(account => account.providerId === "codex")} workbuddyConnected={accounts.some(account => account.providerId === "workbuddy")} zcodeConnected={accounts.some(account => account.providerId === "zcode")} loading={loading} error={error} onConnectCodex={connectCodex} onConnectWorkbuddy={connectWorkbuddy} onConnectZcode={connectZcode} onClose={closeAccountPanel} />}
-        {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={closeSettings} />}
-
-        <div className="window-body" ref={body} role="region" aria-label="AI account quota details" tabIndex={0}>
-          {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
-            <div className="carousel-viewport" onPointerDown={event => {
-              if (!event.isPrimary || event.button !== 0) return;
-              // Controls inside a card must keep their clicks; capturing the pointer
-              // would retarget the browser's click event to the viewport.
-              if ((event.target as Element | null)?.closest("button, a, input, select, textarea")) return;
-              drag.current = { x: event.clientX, y: event.clientY };
-              event.currentTarget.setPointerCapture(event.pointerId);
-            }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>
-              <div className="carousel-track" style={{ transform: `translateX(-${page * 100}%)` }}>
-                {accounts.map((account, index) => <AccountCard key={account.id} account={account} active={page === index} stale={!!error} loading={loading} />)}              </div>
+        <div className="window-body" ref={body} role="region" aria-label="AI account quota details" tabIndex={0} onMouseLeave={preview.leave}>
+          <OrbRail groups={groups} selectedProvider={currentAccount?.providerId} cardOpen={popup !== null} refreshingIds={Object.keys(statuses).filter(id => statuses[id].loading)}
+            onToggleHome={() => { preview.hide(); setPopup(open => open ? null : "home"); }}
+            onHover={provider => { if (!popup) preview.enter(provider); }}
+            onLeave={preview.leave}
+            onRefresh={id => { const account = accounts.find(account => account.id === id); if (account) void manualRefresh(account.providerId, id); }}
+            onAddAccount={() => { preview.hide(); setPopup("add"); }} />
+          {hoveredAccount && !popup && <div className="orb-float" aria-label={`${accountLabel(hoveredAccount) ?? hoveredAccount.providerId} quota preview`}
+            onMouseEnter={preview.keep} onMouseLeave={preview.leave} onFocus={preview.keep} onBlur={event => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null)
+                && !(event.relatedTarget as Element | null)?.closest(".orb-ring[data-provider]")) preview.leave();
+            }} style={{ "--orb-i": groups.findIndex(group => group.providerId === hoveredAccount.providerId) } as CSSProperties}>
+            {renderCard(hoveredAccount, true)}
+            <div className="orb-preview-status">
+              <div className="orb-preview-messages" role="status" aria-live="polite">
+              {statuses[hoveredAccount.id]?.loading && <span>Refreshing this account…</span>}
+              {statuses[hoveredAccount.id]?.notice && <span>{statuses[hoveredAccount.id].notice}</span>}
+              {statuses[hoveredAccount.id]?.error && <span className="orb-preview-error">Refresh failed · {statuses[hoveredAccount.id].error}</span>}
+              </div>
+              <div className="orb-preview-footer">
+              <span className="orb-preview-updated">{(statuses[hoveredAccount.id]?.lastSuccess ?? hoveredAccount.fetchedAt)
+                ? `Last updated ${new Date((statuses[hoveredAccount.id]?.lastSuccess ?? hoveredAccount.fetchedAt) * 1000).toLocaleString()}` : "Quota not yet available"}</span>
+              {accountPicker(hoveredGroup!.accounts, hoveredAccount.id, "Preview account", true)}
+              </div>
             </div>
-            <nav className="pagination" aria-label="Account pages">
-              <button className="page-arrow previous" aria-label="Previous account" disabled={page === 0} onClick={() => setPage(page - 1)}><Icon name="chevron" /></button>
-              <div className="page-dots" role="tablist" aria-label="Select account">{accounts.map((account, index) => <button ref={node => { tabs.current[index] = node; }} key={account.id} id={`tab-${account.id}`} role="tab" aria-label={`${account.providerId} · ${accountLabel(account) ?? "Local account"}`} aria-selected={page === index} aria-controls={`panel-${account.id}`} tabIndex={page === index ? 0 : -1} className={`page-dot${page === index ? " is-active" : ""}`} onClick={() => setPage(index)}><span /></button>)}</div>
-              <button className="page-arrow" aria-label="Next account" disabled={page === accounts.length - 1} onClick={() => setPage(page + 1)}><Icon name="chevron" /></button>
-            </nav>
           </div>}
+          {/* Stay mounted when hidden: hiding the window or panel keeps login waiting. */}
+          <section className="orb-pop" ref={panel} aria-label="QuotaPeek accounts" hidden={!popup}>
+            <header className="window-header">
+              <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><img className="app-icon" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} /><h1>QuotaPeek</h1></div>
+              <div className="window-actions">
+                <button className="icon-button refresh-button" aria-label="Refresh quota" title="Refresh all accounts" disabled={accounts.length === 0 || loading || restoring} onClick={() => void refreshAll()}>
+                  <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
+                </button>
+                <button className="icon-button" aria-label="Add account" aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="user" /></button>
+                <button className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} title="Appearance" onClick={() => setPopup(open => open === "appearance" ? "home" : "appearance")}><Icon name="settings" /></button>
+                {desktop && <div className="desktop-window-actions">
+                  <button className="window-control" aria-label="Minimize window" title="Minimize" onClick={() => void getCurrentWindow().minimize()}><Icon name="minimize" /></button>
+                  <button className="window-control" aria-label="Close window" title="Close" onClick={() => void getCurrentWindow().close()}><Icon name="close" /></button>
+                </div>}
+              </div>
+            </header>
+            {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={() => setPopup("home")} />}
+            <AddAccount hidden={popup !== "add"} codexConnected={accounts.some(account => account.providerId === "codex")}
+              onConnectCodex={() => connectAccount("codex")}
+              onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}
+              onClose={() => setPopup("home")} />
+            {groups.length > 1 && <nav className="provider-switcher" aria-label="Select provider">
+              {groups.map(group => <button key={group.providerId} className={`provider-choice provider-${group.providerId}`}
+                aria-pressed={currentAccount?.providerId === group.providerId} onClick={() => selectAccount(group.selected.id)}>
+                <img src={providerIcon(group.providerId) ?? undefined} alt="" draggable={false} /><span>{providerName[group.providerId]}</span>
+              </button>)}
+            </nav>}
+            {currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
+            {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
+              <div className="carousel-viewport" onPointerDown={event => {
+                if (!event.isPrimary || event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select, textarea")) return;
+                drag.current = { x: event.clientX, y: event.clientY };
+                event.currentTarget.setPointerCapture(event.pointerId);
+              }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>
+                {groupAccounts.map(account => <div className="carousel-page" key={account.id} hidden={account.id !== currentAccount?.id}>
+                  {renderCard(account)}
+                </div>)}
+              </div>
+            </div>}
+            <footer className="window-footer"><span role="status" aria-live="polite">{footer}</span>
+              {currentStatus?.error && !!fetchedAt && <span>Last successful query {new Date(fetchedAt * 1000).toLocaleTimeString()}</span>}
+              {summary && <span role="status">{summary}</span>}
+              {startupErrors.map(message => <span key={message}>{message}</span>)}
+            </footer>
+          </section>
         </div>
-
-        <footer className="window-footer"><span role="status" aria-live="polite">{loading ? "Reading quota…" : error ?? notice ?? (accounts[0] ? `Updated ${new Date(accounts[0].fetchedAt * 1000).toLocaleTimeString()}` : "No accounts · Use the user icon to connect one")}</span></footer>
       </section>
     </main>
   );
 }
-
 export default App;

@@ -5,6 +5,6 @@ import type { ZcodeAccount } from "./zcode";
 // Provider-specific quota fields belong to that provider's own type.
 export type Account = CodexAccount | WorkbuddyAccount | ZcodeAccount;
 export function accountLabel(account: Account): string | null {
-  if (account.providerId === "workbuddy") return account.nickname;
+  if (account.providerId === "workbuddy") return account.nickname ?? account.uid;
   return account.email;
 }

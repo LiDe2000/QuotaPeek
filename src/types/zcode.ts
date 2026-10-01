@@ -14,7 +14,7 @@ export interface ZcodeWindow {
   oneTime: boolean;
 }
 export interface ZcodeAccount {
-  id: "zcode-oauth";
+  id: string;
   providerId: "zcode";
   source: "zcode-billing";
   /** The display name the sign-in carried; there is often no email. */

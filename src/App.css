@@ -1,6 +1,12 @@
-/* Window and toolbar. The shell never scrolls, so its radii and border stay intact. */
-.app-shell { height: 100svh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); justify-items: center; padding: 0 var(--space-card) var(--space-section); }
-.quota-window { --window-padding: var(--space-card); --panel-top: calc(var(--window-padding) + var(--control-size) + var(--space-medium)); position: relative; min-width: 0; min-height: 0; display: flex; flex-direction: column; width: min(100%, var(--window-width)); padding: var(--window-padding); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); }
+/* Only the rail and card paint backgrounds. The fit includes this fixed inset. */
+.app-shell { overflow: hidden; padding: var(--window-inset); }
+.quota-window { --window-padding: var(--space-card); --panel-top: calc(var(--window-padding) + var(--control-size) + var(--space-medium)); position: relative; min-width: 0; min-height: 0; width: max-content; display: flex; flex-direction: column; }
+/* Cards participate in layout so their entire bounds can be measured. Only content
+   exceeding the screen ceiling scrolls; the ceiling is independent of the current fit. */
+.orb-pop { position: relative; z-index: 6; flex: 0 0 384px; width: 384px; max-height: calc(var(--window-max-height) - 2 * var(--window-inset)); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; display: flex; flex-direction: column; gap: var(--space-small); padding: var(--window-padding); border-radius: var(--radius-window); background: var(--color-window); border: 1px solid var(--color-window-border); }
+.orb-pop::-webkit-scrollbar { display: none; }
+.orb-pop > * { flex-shrink: 0; }
+.orb-pop .panel { position: static; max-height: none; overflow: visible; }
 .window-header, .brand, .window-actions, .window-footer { display: flex; align-items: center; }
 .window-header { flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
 .brand { gap: var(--space-medium); }
@@ -14,29 +20,32 @@
 .window-control:hover { background: var(--color-surface-active); color: var(--color-text); }
 .refresh-button { padding: 4px; }
 .refresh-icon { display: block; width: 100%; height: 100%; }
-.is-refreshing { animation: refresh 800ms linear infinite; }
+.refresh-icon.is-refreshing { animation: refresh 800ms linear infinite; }
 @keyframes refresh { to { transform: rotate(360deg); } }
 
-/* The clipped rail keeps pages at identical heights. */
+/* Only the currently selected account contributes to the card height. */
+.carousel { flex: 1 1 auto; min-width: 0; }
 .carousel-viewport { overflow: hidden; border-radius: var(--radius-card); touch-action: pan-y; }
-.carousel-track { display: flex; align-items: stretch; transition: transform var(--duration-page) var(--ease-page); }
-/* Centered dots with optional previous/next controls. */
-.pagination { display: flex; justify-content: center; align-items: center; gap: var(--space-section); padding-top: var(--space-small); }
-.page-dots { display: flex; flex-wrap: wrap; justify-content: center; min-width: 0; }
-.page-dot { width: 24px; height: var(--control-size); padding: 0; display: grid; place-items: center; background: transparent; border-radius: var(--radius-control); }
-.page-dot span { width: 6px; height: 6px; border-radius: 50%; background: var(--color-dot); transition: background var(--duration-fast), transform var(--duration-fast); }
-.page-dot.is-active span { background: var(--color-dot-active); }
-.page-dot:hover span { transform: scale(1.2); }
-.page-arrow { flex-shrink: 0; width: 28px; height: 28px; padding: 7px; border-radius: 50%; background: transparent; color: var(--color-text-subtle); }
-.page-arrow.previous .ui-icon { transform: rotate(180deg); }
-.page-arrow:hover:not(:disabled) { background: var(--color-surface-active); color: var(--color-text); }
-.page-arrow:disabled { opacity: 0.2; }
+.carousel-page { width: 100%; }
 .window-footer { flex: 0 0 auto; justify-content: center; gap: var(--space-small); font-size: var(--font-size-caption); color: var(--color-text-subtle); flex-wrap: wrap; }
 
-/* The only scroll region: overflow stays inside the shell instead of clipping its corners. */
-.window-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
-.window-body::-webkit-scrollbar { display: none; }
+/* Natural row height follows the tallest child; it never clips the adjacent card. */
+.window-body { position: relative; display: flex; width: max-content; gap: var(--space-medium); align-items: flex-start; }
 .window-body:focus-visible { outline-offset: -3px; }
 
-@media (max-width: 420px) { .app-shell { padding: 0 var(--space-small) var(--space-small); } .quota-window { --window-padding: var(--space-large); } }
+@media (max-width: 420px) { .quota-window { --window-padding: var(--space-large); } }
 @media (max-width: 340px) { .quota-window { --window-padding: var(--space-medium); } }
+
+.provider-switcher { display: flex; gap: var(--space-small); flex-wrap: wrap; margin-bottom: var(--space-xs); }
+.provider-choice { display: flex; align-items: center; justify-content: center; gap: var(--space-small); flex: 1 1 auto; padding: var(--space-small) var(--space-medium); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-text-muted); font-size: var(--font-size-small); transition: background var(--duration-fast), border-color var(--duration-fast); }
+.provider-choice img { width: 18px; height: 18px; object-fit: contain; }
+.provider-choice:hover { background: var(--color-surface-active); color: var(--color-text); }
+.provider-choice[aria-pressed="true"] { background: var(--provider-soft); border-color: var(--provider-color); color: var(--color-text); }
+.account-switcher { display: flex; align-items: center; gap: var(--space-small); padding: var(--space-small); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-surface); }
+.account-switcher-identity { min-width: 0; flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--space-small); font-size: var(--font-size-small); color: var(--color-text-muted); }
+.account-switcher-identity > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-switcher-identity small { flex-shrink: 0; font-size: var(--font-size-caption); color: var(--color-text-subtle); font-variant-numeric: tabular-nums; }
+.account-step { flex-shrink: 0; display: grid; place-items: center; width: 24px; height: 24px; padding: 5px; border: 1px solid var(--color-control-border); border-radius: var(--radius-control); background: var(--color-control); color: var(--color-text-muted); }
+.account-step:hover { background: var(--color-surface-active); color: var(--color-text); }
+.account-step.previous .ui-icon { transform: rotate(180deg); }
+

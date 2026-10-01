@@ -8,7 +8,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    path::{Path, PathBuf},
+    path::PathBuf,
+    collections::{HashMap, HashSet},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
 use tauri::Manager;
@@ -44,11 +45,14 @@ pub struct WorkbuddyState {
     /// Serializes billing queries so overlapping refreshes cannot race.
     lock: Mutex<()>,
     last_query: Mutex<Option<Instant>>,
+    flows: Mutex<HashSet<String>>,
+    storage: Mutex<()>,
+    completed: Mutex<HashMap<String, String>>,
     http: reqwest::Client,
 }
 impl Default for WorkbuddyState {
     fn default() -> Self {
-        Self { lock: Mutex::default(), last_query: Mutex::default(), http: Self::client() }
+        Self { lock: Mutex::default(), last_query: Mutex::default(), flows: Mutex::default(), storage: Mutex::default(), completed: Mutex::default(), http: Self::client() }
     }
 }
 impl WorkbuddyState {
@@ -74,6 +78,7 @@ pub struct PollOutcome {
     /// "pending" | "success" | "error"
     status: &'static str,
     message: Option<String>,
+    account_id: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -101,7 +106,7 @@ pub struct WorkbuddyPackage {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct WorkbuddyAccount {
-    id: &'static str,
+    id: String,
     provider_id: &'static str,
     source: &'static str,
     uid: Option<String>,
@@ -126,44 +131,57 @@ fn auth_path(app: &tauri::AppHandle) -> Result<PathBuf, QueryError> {
     Ok(dir.join(AUTH_FILE))
 }
 
-fn load_auth(app: &tauri::AppHandle) -> Result<Option<StoredAuth>, QueryError> {
-    let path = auth_path(app)?;
-    match std::fs::read(&path) {
-        Ok(bytes) => Ok(Some(
-            serde_json::from_slice(&bytes).map_err(|_| error("storage", "Stored WorkBuddy login is unreadable. Reconnect the account."))?,
-        )),
-        Err(_) => adopt_legacy_auth(app, &path),
-    }
+fn account_id(auth: &StoredAuth) -> String {
+    crate::account_store::key("workbuddy", &format!("{}:{}:{}", region_of(&auth.domain), auth.uid, auth.enterprise_id))
 }
 
-/// Sessions written before the WorkBuddy rename: adopt one instead of asking for another sign-in.
-fn adopt_legacy_auth(app: &tauri::AppHandle, current: &Path) -> Result<Option<StoredAuth>, QueryError> {
-    let Some(dir) = current.parent() else { return Ok(None) };
-    let Ok(bytes) = std::fs::read(dir.join(LEGACY_AUTH_FILE)) else { return Ok(None) };
-    let auth: StoredAuth = serde_json::from_slice(&bytes).map_err(|_| error("storage", "Stored WorkBuddy login is unreadable. Reconnect the account."))?;
-    // Re-home it so the old file stops holding a live token, then it can go.
-    store_auth(app, &auth)?;
-    let _ = std::fs::remove_file(dir.join(LEGACY_AUTH_FILE));
-    Ok(Some(auth))
+fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, QueryError> {
+    Ok(auth_path(app)?.with_file_name("workbuddy-accounts.json"))
+}
+
+fn stored_accounts(app: &tauri::AppHandle) -> Result<Vec<crate::account_store::Entry<StoredAuth>>, QueryError> {
+    let path = accounts_path(app)?;
+    if !path.exists() {
+        let legacy = auth_path(app)?;
+        let bytes = match std::fs::read(&legacy) {
+            Ok(bytes) => Some(bytes),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => std::fs::read(legacy.with_file_name(LEGACY_AUTH_FILE)).ok(),
+            Err(_) => return Err(error("storage", "Could not read the WorkBuddy login.")),
+        };
+        if let Some(bytes) = bytes {
+            let auth: StoredAuth = serde_json::from_slice(&bytes).map_err(|_| error("storage", "Stored WorkBuddy login is unreadable."))?;
+            store_auth(app, &auth)?;
+        }
+    }
+    crate::account_store::read(&path).map_err(|message| error("storage", message))
+}
+
+fn load_auth(app: &tauri::AppHandle, requested: Option<&str>) -> Result<Option<StoredAuth>, QueryError> {
+    Ok(stored_accounts(app)?.into_iter().find(|entry| requested.map_or(true, |id| entry.id == id)).map(|entry| entry.auth))
 }
 
 fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
-    let path = auth_path(app)?;
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)
-            .map_err(|_| error("storage", "Could not create the app data directory."))?;
-    }
-    let body = serde_json::to_string_pretty(auth)
-        .map_err(|_| error("storage", "Could not serialize the WorkBuddy login."))?;
-    std::fs::write(&path, body).map_err(|_| error("storage", "Could not save the WorkBuddy login."))
+    crate::account_store::upsert(&accounts_path(app)?, account_id(auth), auth.clone()).map_err(|message| error("storage", message))
 }
 
-fn delete_auth(app: &tauri::AppHandle) {
-    let Ok(path) = auth_path(app) else { return };
-    let _ = std::fs::remove_file(&path);
-    if let Some(dir) = path.parent() {
-        let _ = std::fs::remove_file(dir.join(LEGACY_AUTH_FILE));
-    }
+#[tauri::command]
+pub async fn workbuddy_list_accounts(state: tauri::State<'_, WorkbuddyState>, app: tauri::AppHandle) -> Result<Vec<WorkbuddyAccount>, QueryError> {
+    let _storage = state.storage.lock().await;
+    Ok(stored_accounts(&app)?.into_iter().map(|entry| {
+        let mut account = snapshot(&json!({}), &entry.auth);
+        account.id = entry.id;
+        account.fetched_at = 0;
+        account
+    }).collect())
+}
+
+#[tauri::command]
+pub async fn workbuddy_cancel_login(state: tauri::State<'_, WorkbuddyState>, login_state: String) -> Result<Option<String>, QueryError> {
+    // The flow lock also covers credential commit. If commit already won, tell the
+    // frontend which account completed instead of reporting a misleading cancellation.
+    let mut flows = state.flows.lock().await;
+    flows.remove(&login_state);
+    Ok(state.completed.lock().await.remove(&login_state))
 }
 
 /// Decodes the middle segment of a JWT; tolerant of missing base64 padding.
@@ -374,7 +392,7 @@ fn snapshot(data: &Value, stored: &StoredAuth) -> WorkbuddyAccount {
         (total_size, total_used)
     };
     WorkbuddyAccount {
-        id: "workbuddy-oauth",
+        id: account_id(stored),
         provider_id: "workbuddy",
         source: "workbuddy-billing",
         uid: if stored.uid.is_empty() { None } else { Some(stored.uid.clone()) },
@@ -482,6 +500,9 @@ pub async fn workbuddy_start_login(state: tauri::State<'_, WorkbuddyState>) -> R
     let data = envelope(response).await?;
     let login_state = data["state"].as_str().ok_or_else(protocol_error)?.to_owned();
     let auth_url = data["authUrl"].as_str().ok_or_else(protocol_error)?.to_owned();
+    let mut flows = state.flows.lock().await;
+    if flows.len() >= 16 { flows.clear(); }
+    flows.insert(login_state.clone());
     Ok(LoginStart { state: login_state, auth_url })
 }
 
@@ -493,6 +514,9 @@ pub async fn workbuddy_poll_login(
 ) -> Result<PollOutcome, QueryError> {
     if login_state.is_empty() || login_state.len() > 256 || !login_state.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
         return Err(protocol_error());
+    }
+    if !state.flows.lock().await.contains(&login_state) {
+        return Ok(PollOutcome { status: "error", message: Some("Sign-in cancelled or expired.".into()), account_id: None });
     }
     let response = state
         .http
@@ -511,9 +535,15 @@ pub async fn workbuddy_poll_login(
         let expires_in = data["expiresIn"].as_u64().or_else(|| data["expires_in"].as_u64()).unwrap_or(0);
         let domain = data["domain"].as_str().unwrap_or("www.workbuddy.cn").to_owned();
         let (uid, nickname, enterprise_id) = jwt_identity(access);
-        store_auth(
-            &app,
-            &StoredAuth {
+        if uid.is_empty() { return Err(protocol_error()); }
+        let mut flows = state.flows.lock().await;
+        if !flows.remove(&login_state) {
+            return Ok(PollOutcome { status: "error", message: Some("Sign-in cancelled.".into()), account_id: None });
+        }
+        let _storage = state.storage.lock().await;
+        // Import an existing single-account login before adding the next account.
+        stored_accounts(&app)?;
+        let auth = StoredAuth {
                 access_token: access.to_owned(),
                 refresh_token: refresh.to_owned(),
                 expires_at: now_secs() + expires_in,
@@ -521,46 +551,44 @@ pub async fn workbuddy_poll_login(
                 uid,
                 nickname,
                 enterprise_id,
-            },
-        )?;
-        return Ok(PollOutcome { status: "success", message: None });
+            };
+        store_auth(&app, &auth)?;
+        let id = account_id(&auth);
+        let mut completed = state.completed.lock().await;
+        if completed.len() >= 16 { completed.clear(); }
+        completed.insert(login_state.clone(), id.clone());
+        return Ok(PollOutcome { status: "success", message: None, account_id: Some(id) });
     }
     if code == 12153 {
-        return Ok(PollOutcome { status: "error", message: Some("The sign-in session expired. Start again.".into()) });
+        return Ok(PollOutcome { status: "error", message: Some("The sign-in session expired. Start again.".into()), account_id: None });
     }
     // 11217 and any other transient codes simply mean "keep waiting".
-    Ok(PollOutcome { status: "pending", message: None })
+    Ok(PollOutcome { status: "pending", message: None, account_id: None })
 }
 
 #[tauri::command]
 pub async fn workbuddy_query_quota(
     state: tauri::State<'_, WorkbuddyState>,
     app: tauri::AppHandle,
+    account_id: Option<String>,
 ) -> Result<WorkbuddyAccount, QueryError> {
-    let _guard = state
-        .lock
-        .try_lock()
-        .map_err(|_| error("busy", "A WorkBuddy query is already running."))?;
+    let _guard = state.lock.lock().await;
+    let mut stored = {
+        let _storage = state.storage.lock().await;
+        load_auth(&app, account_id.as_deref())?.ok_or_else(|| error("not_connected", "Connect a WorkBuddy account first."))?
+    };
+    if stored.access_token.is_empty() { return Err(error("not_connected", "Reconnect this WorkBuddy account.")); }
     {
         let mut last = state.last_query.lock().await;
         if let Some(previous) = *last {
-            if previous.elapsed() < MIN_QUERY_INTERVAL {
-                return Err(error(
-                    "busy",
-                    "Quota was just refreshed. Wait a few seconds between queries.",
-                ));
-            }
+            let remaining = MIN_QUERY_INTERVAL.saturating_sub(previous.elapsed());
+            if !remaining.is_zero() { tokio::time::sleep(remaining).await; }
         }
         *last = Some(Instant::now());
     }
-    let mut stored = load_auth(&app)?
-        .ok_or_else(|| error("not_connected", "Connect a WorkBuddy account from the account panel first."))?;
-    if stored.access_token.is_empty() {
-        delete_auth(&app);
-        return Err(error("not_connected", "Connect a WorkBuddy account from the account panel first."));
-    }
     if stored.expires_at <= now_secs() + TOKEN_REFRESH_MARGIN && !stored.refresh_token.is_empty() {
         refresh_access_token(&state, &mut stored).await?;
+        let _storage = state.storage.lock().await;
         store_auth(&app, &stored)?;
     }
     let base = billing_base(&stored.domain);
@@ -674,6 +702,20 @@ mod tests {
         );
         assert_eq!(package_end_time(&json!({"ExpireTime":"0000-00-00 00:00:00"})), None);
         assert_eq!(package_end_time(&json!({})), None);
+    }
+
+    #[test]
+    fn accounts_keep_identity_when_tokens_rotate_and_separate_users() {
+        let auth = StoredAuth {
+            access_token: "old".into(), refresh_token: "refresh".into(), expires_at: 0,
+            domain: "www.workbuddy.cn".into(), uid: "one".into(),
+            nickname: "Same display name".into(), enterprise_id: String::new(),
+        };
+        let mut rotated = auth.clone();
+        rotated.access_token = "new".into();
+        assert_eq!(account_id(&auth), account_id(&rotated));
+        rotated.uid = "two".into();
+        assert_ne!(account_id(&auth), account_id(&rotated));
     }
 
     #[test]

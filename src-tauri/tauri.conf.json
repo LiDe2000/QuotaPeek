@@ -13,9 +13,9 @@
     "windows": [
       {
         "title": "QuotaPeek",
-        "width": 420,
-        "height": 125,
-        "minWidth": 420,
+        "width": 78,
+        "height": 140,
+        "minWidth": 78,
         "minHeight": 120,
         "decorations": false,
         "transparent": true,

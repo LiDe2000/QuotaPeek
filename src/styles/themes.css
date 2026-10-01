@@ -2,10 +2,10 @@
 :root,
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --color-background: #111215;
-  --color-window: #1b1d22;
-  --color-surface: #23252a;
-  --color-surface-active: #34373e;
+  --color-background: #0b0c0e;
+  --color-window: #131418;
+  --color-surface: #1b1d22;
+  --color-surface-active: #2a2d34;
   --color-control: #ffffff06;
   --color-control-border: transparent;
   --color-text: #f4f4f6;

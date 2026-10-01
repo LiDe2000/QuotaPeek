@@ -1,68 +1,134 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isTauri } from "@tauri-apps/api/core";
 import type { Account } from "../types/quota";
 import { queryCodexQuota, queryErrorMessage } from "../services/codex";
-import { workbuddyErrorMessage, queryWorkbuddyQuota } from "../services/workbuddy";
-import { queryZcodeQuota, zcodeErrorMessage } from "../services/zcode";
+import { listWorkbuddyAccounts, queryWorkbuddyQuota } from "../services/workbuddy";
+import { listZcodeAccounts, queryZcodeQuota } from "../services/zcode";
+import { refreshCooldown } from "../lib/refreshCooldown";
+import { ACCOUNT_CACHE_KEY, cachedAccounts, mergeAccount, restoreAccounts } from "../lib/accountState";
+
+type Provider = Account["providerId"];
+export interface AccountStatus { loading: boolean; error: string | null; lastSuccess: number | null; notice?: string | null }
+const idle: AccountStatus = { loading: false, error: null, lastSuccess: null };
+function readCache() {
+  try { return cachedAccounts(localStorage.getItem(ACCOUNT_CACHE_KEY)); } catch { return []; }
+}
+
 export function useAccounts() {
-  const [accounts, setAccounts] = useState<readonly Account[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const busy = useRef({ codex: false, workbuddy: false, zcode: false });
-  const codexIdentity = useRef<{ accountId: string | null; email: string | null } | null>(null);
-  function syncLoading() { setLoading(busy.current.codex || busy.current.workbuddy || busy.current.zcode); }
-  function merge(next: Account) {
-    // One connection per provider; keep Codex first for a stable page order.
-    setAccounts(previous => {
-      const others = previous.filter(account => account.providerId !== next.providerId);
-      return next.providerId === "codex" ? [next, ...others] : [...others, next];
-    });
+  const [accounts, setAccounts] = useState<readonly Account[]>(readCache);
+  const [statuses, setStatuses] = useState<Record<string, AccountStatus>>({});
+  const [summary, setSummary] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState(isTauri);
+  const [startupErrors, setStartupErrors] = useState<string[]>([]);
+  const accountsRef = useRef(accounts);
+  const lastFinished = useRef(new Map<string, number>());
+  const noticeTimers = useRef(new Map<string, number>());
+  const requests = useRef(new Map<string, Promise<Account | null>>());
+  const startup = useRef<Promise<void> | null>(null);
+  const allRefresh = useRef<Promise<void> | null>(null);
+
+  function commit(next: readonly Account[]) { accountsRef.current = next; setAccounts(next); }
+  function merge(next: Account) { commit(mergeAccount(accountsRef.current, next)); }
+  function status(id: string, patch: Partial<AccountStatus>) {
+    setStatuses(previous => ({ ...previous, [id]: { ...idle, ...previous[id], ...patch } }));
   }
-  async function refreshCodex(): Promise<boolean> {
-    if (busy.current.codex) return false;
-    busy.current.codex = true;
-    syncLoading();
-    setError(null);
-    setNotice(null);
-    try {
-      const next = await queryCodexQuota();
-      const previous = codexIdentity.current;
-      if (previous && (previous.accountId !== next.accountId || previous.email !== next.email)) setNotice("Local Codex account changed · Showing the current login");
-      codexIdentity.current = { accountId: next.accountId, email: next.email };
-      merge(next);
-      return true;
-    } catch (failure) {
-      setError(queryErrorMessage(failure));
-      return false;
-    } finally { busy.current.codex = false; syncLoading(); }
+  function refresh(provider: Provider, accountId?: string): Promise<Account | null> {
+    const id = accountId ?? "codex-local";
+    const current = requests.current.get(id);
+    if (current) return current;
+    const timer = noticeTimers.current.get(id);
+    if (timer !== undefined) window.clearTimeout(timer);
+    noticeTimers.current.delete(id);
+    status(id, { loading: true, error: null, notice: null });
+    const task = (async () => {
+      try {
+        const next = provider === "codex" ? await queryCodexQuota()
+          : provider === "workbuddy" ? await queryWorkbuddyQuota(accountId) : await queryZcodeQuota(accountId);
+        merge(next);
+        status(next.id, { loading: false, error: null, lastSuccess: next.fetchedAt });
+        return next;
+      } catch (failure) {
+        status(id, { loading: false, error: queryErrorMessage(failure) });
+        return null;
+      } finally { lastFinished.current.set(id, Date.now()); requests.current.delete(id); }
+    })();
+    requests.current.set(id, task);
+    return task;
   }
-  async function refreshWorkbuddy(): Promise<boolean> {
-    if (busy.current.workbuddy) return false;
-    busy.current.workbuddy = true;
-    syncLoading();
-    setError(null);
-    setNotice(null);
-    try {
-      merge(await queryWorkbuddyQuota());
-      return true;
-    } catch (failure) {
-      setError(workbuddyErrorMessage(failure));
-      return false;
-    } finally { busy.current.workbuddy = false; syncLoading(); }
+
+  function manualRefresh(provider: Provider, accountId: string): Promise<Account | null> {
+    const running = requests.current.get(accountId);
+    if (running) return running;
+    const remaining = refreshCooldown(Date.now(), lastFinished.current.get(accountId));
+    if (remaining > 0) {
+      const timer = noticeTimers.current.get(accountId);
+      if (timer !== undefined) window.clearTimeout(timer);
+      status(accountId, { notice: statuses[accountId]?.error ? "Please wait a few seconds before retrying." : "Just refreshed · Please wait a few seconds." });
+      noticeTimers.current.set(accountId, window.setTimeout(() => {
+        noticeTimers.current.delete(accountId);
+        status(accountId, { notice: null });
+      }, Math.min(remaining, 3000)));
+      return Promise.resolve(accountsRef.current.find(account => account.id === accountId) ?? null);
+    }
+    return refresh(provider, accountId);
   }
-  async function refreshZcode(): Promise<boolean> {
-    if (busy.current.zcode) return false;
-    busy.current.zcode = true;
-    syncLoading();
-    setError(null);
-    setNotice(null);
-    try {
-      merge(await queryZcodeQuota());
-      return true;
-    } catch (failure) {
-      setError(zcodeErrorMessage(failure));
-      return false;
-    } finally { busy.current.zcode = false; syncLoading(); }
+  useEffect(() => () => {
+    for (const timer of noticeTimers.current.values()) window.clearTimeout(timer);
+    noticeTimers.current.clear();
+  }, []);
+
+  async function connect(provider: Provider, accountId?: string, onRegistered?: (id: string) => void): Promise<Account | null> {
+    if (provider !== "codex") {
+      try {
+        const known = provider === "workbuddy" ? await listWorkbuddyAccounts() : await listZcodeAccounts();
+        for (const account of known) if (!accountsRef.current.some(old => old.id === account.id)) merge(account);
+        if (accountId && known.some(account => account.id === accountId)) onRegistered?.(accountId);
+      } catch (failure) {
+        status(accountId ?? provider, { error: queryErrorMessage(failure) });
+        return null;
+      }
+    }
+    return refresh(provider, accountId);
   }
-  return { accounts, loading, error, notice, refreshCodex, refreshWorkbuddy, refreshZcode };
+
+  function refreshAll(): Promise<void> {
+    if (allRefresh.current) return allRefresh.current;
+    const targets = [...accountsRef.current];
+    setSummary("Refreshing all accounts…");
+    const task = (async () => {
+      let succeeded = 0;
+      for (const account of targets) if (await refresh(account.providerId, account.id)) succeeded++;
+      setSummary(`Refresh complete · ${succeeded}/${targets.length} succeeded${succeeded < targets.length ? ` · ${targets.length - succeeded} failed` : ""}`);
+    })().finally(() => { allRefresh.current = null; });
+    allRefresh.current = task;
+    return task;
+  }
+
+  useEffect(() => {
+    try { localStorage.setItem(ACCOUNT_CACHE_KEY, JSON.stringify(accounts)); } catch { /* Quota stays available in memory. */ }
+  }, [accounts]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    // A single promise also prevents React StrictMode from issuing duplicate startup queries.
+    if (!startup.current) startup.current = (async () => {
+      const results = await Promise.allSettled([listWorkbuddyAccounts(), listZcodeAccounts()]);
+      const discovered: Account[] = [];
+      const providers: Provider[] = [];
+      const errors: string[] = [];
+      results.forEach((result, index) => {
+        const provider = index === 0 ? "workbuddy" : "zcode";
+        if (result.status === "fulfilled") { providers.push(provider); discovered.push(...result.value); }
+        else errors.push(`${provider}: ${queryErrorMessage(result.reason)}`);
+      });
+      setStartupErrors(errors);
+      commit(restoreAccounts(accountsRef.current, discovered, providers));
+      // Only reconnect the local Codex entry after the user has connected it before.
+      const targets = [...accountsRef.current];
+      for (const account of targets) await refresh(account.providerId, account.id);
+      setRestoring(false);
+    })();
+  }, []);
+
+  return { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect };
 }

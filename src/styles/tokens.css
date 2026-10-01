@@ -18,6 +18,10 @@
   --radius-card: 1.125rem;
   --radius-window: 1.5rem;
   --window-width: 380px;
+  /* Whitespace the shell keeps around the rail and the floating cards. The window-height
+     fit reads it back as `padding`, so changing it here moves the fit with it. */
+  --window-inset: 0.5rem;
+  --window-max-height: calc(100svh - 80px);
   --control-size: 32px;
   --provider-size: 36px;
   --progress-height: 5px;
@@ -25,4 +29,3 @@
   --duration-page: 360ms;
   --ease-page: cubic-bezier(0.22, 1, 0.36, 1);
 }
-

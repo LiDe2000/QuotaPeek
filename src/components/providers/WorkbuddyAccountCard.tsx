@@ -26,7 +26,7 @@ const credits = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 function percent(value: number): string {
   return String(Number(value.toFixed(1)));
 }
-export default function WorkbuddyAccountCard({ account, active, stale, loading, defaultExpanded = false }: { account: WorkbuddyAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean }) {
+export default function WorkbuddyAccountCard({ account, active, stale, loading, defaultExpanded = false, panelId }: { account: WorkbuddyAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean; panelId?: string }) {
   const [now, setNow] = useState(Date.now);
   const [expanded, setExpanded] = useState(defaultExpanded);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
@@ -36,7 +36,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
   // No reported allowance means no percentage to claim, rather than a made-up 100%.
   const remainPercent = account.totalSize > 0 ? percent(100 - usedPercent) : null;
   const identity = account.nickname || account.uid || "WorkBuddy account";
-  return <article id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-workbuddy" aria-busy={loading}>
+  return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-workbuddy" aria-busy={loading}>
     <div className="account-header">
       <span className="provider-mark" aria-hidden="true">W</span>
       <div className="account-identity"><h2>WorkBuddy</h2><p title={identity}>{identity} · {region}</p></div>
@@ -46,7 +46,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
     {/* One card holds the balance and the overall bar; a click anywhere on it — mouse on the
         deck, keyboard on the button — expands the breakdown. */}
     <div className={`wb-deck${expanded ? " is-expanded" : ""}`} onClick={() => setExpanded(open => !open)}>
-      <button type="button" className="wb-balance" aria-expanded={expanded} aria-controls="workbuddy-packages">
+      <button type="button" className="wb-balance" aria-expanded={expanded} aria-controls={`workbuddy-packages-${panelId ?? account.id}`}>
         <span className="wb-balance-shine" aria-hidden="true" />
         <span className="wb-balance-label">Credits balance</span>
         <strong className="wb-balance-value">{credits.format(account.totalRemain)}<span> credits</span></strong>
@@ -61,7 +61,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
       {remainPercent !== null && <div className="wb-remaining">Remaining: {remainPercent}%</div>}
     </div>
 
-    {expanded && <ul id="workbuddy-packages" className="wb-packages">
+    {expanded && <ul id={`workbuddy-packages-${panelId ?? account.id}`} className="wb-packages">
       {account.packages.map((pkg, index) => {
         const badge = expiryBadge(pkg, now);
         const used = pkg.size > 0 ? Math.min(100, pkg.used / pkg.size * 100) : 0;

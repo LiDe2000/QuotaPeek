@@ -1,0 +1,55 @@
+/* The provider rail: a dark capsule hugging the window's edge. The main ring opens the
+   accounts card; every signed-in provider stacks a status ring under it. The bare capsule —
+   gaps included — drags the window. */
+:root { --orb-warn: #e2b34c; --orb-hot: #e2604f; }
+.orb-rail { max-height: calc(var(--window-max-height) - 2 * var(--window-inset)); overflow-y: auto; scrollbar-width: none; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 8px; border-radius: 999px; background: var(--color-window); border: 1px solid var(--color-window-border); cursor: grab; user-select: none; }
+.orb-rail:active { cursor: grabbing; }
+.orb-rail::-webkit-scrollbar { display: none; }
+
+/* The ring: a track circle, a value arc that fills clockwise from the top, and the provider's
+   logo in the middle. */
+.orb-ring { position: relative; flex-shrink: 0; width: 44px; height: 44px; padding: 0; border-radius: 50%; background: transparent; display: grid; place-items: center; transition: transform var(--duration-fast) var(--ease-page), background var(--duration-fast); }
+.orb-ring:hover { transform: scale(1.06); }
+.orb-ring:focus-visible { outline-offset: 2px; }
+.orb-ring.is-active { background: var(--color-surface-active); }
+.orb-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.orb-ring.is-refreshing svg { animation: orb-spin 800ms linear infinite; }
+@keyframes orb-spin { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
+.orb-track { fill: none; stroke: var(--color-track); stroke-width: 3.5; }
+.orb-value { fill: none; stroke: var(--color-status); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset var(--duration-page) var(--ease-page); }
+.is-warn .orb-value { stroke: var(--orb-warn); }
+.is-hot .orb-value { stroke: var(--orb-hot); }
+.is-idle .orb-value { stroke: transparent; }
+.orb-logo { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; pointer-events: none; }
+span.orb-logo { display: grid; place-items: center; font-size: 13px; font-weight: 650; color: var(--provider-color); background: var(--provider-soft); }
+.is-main .orb-logo { width: 26px; height: 26px; }
+.is-main .orb-track { stroke: var(--color-border); }
+.is-add { border: 1px dashed var(--color-border); color: var(--color-text-subtle); }
+.orb-plus { font-size: 18px; line-height: 1; }
+
+/* The hover card: the provider's full account card, speech-bubble style — a little arrow
+   points at the hovered ring. It floats beside the rail and is only as tall as the card it
+   holds, so the window follows the content; on a short screen it stops at the edge and
+   scrolls instead. */
+.orb-float { position: relative; z-index: 6; flex: 0 0 340px; width: 340px; --orb-offset: calc(10px + (var(--orb-i, 0) + 1) * 54px); margin-top: var(--orb-offset); max-height: max(80px, calc(var(--window-max-height) - 2 * var(--window-inset) - var(--orb-offset))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.orb-float::-webkit-scrollbar { display: none; }
+.orb-float::before { content: ""; position: absolute; left: -5px; top: 16px; width: 10px; height: 10px; transform: rotate(45deg); background: var(--color-surface); border-left: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
+
+.window-body[data-side="left"] { flex-direction: row-reverse; }
+.window-body[data-side="left"] .orb-float::before { left: auto; right: -5px; border: 0; border-right: 1px solid var(--color-border); border-top: 1px solid var(--color-border); }
+
+.orb-float .account-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.orb-preview-status { display: grid; gap: var(--space-xs); padding: var(--space-small) var(--space-medium); border: 1px solid var(--color-border); border-top: 0; border-radius: 0 0 var(--radius-card) var(--radius-card); background: var(--color-surface); color: var(--color-text-subtle); font-size: var(--font-size-caption); overflow-wrap: anywhere; }
+.orb-preview-error { color: var(--orb-hot); }
+
+/* Compact navigation shares the footer with the last update timestamp. */
+.preview-account-switcher { display: flex; flex: 0 1 auto; align-items: center; gap: 2px; max-width: 140px; min-width: 0; padding: 2px; border: 1px solid var(--color-border); border-radius: 7px; background: var(--color-window); overflow-x: auto; scrollbar-width: none; }
+.preview-account-switcher::-webkit-scrollbar { display: none; }
+.preview-account-number { flex: 0 0 auto; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 4px; border-radius: 5px; background: transparent; color: var(--color-text-subtle); font-size: var(--font-size-caption); line-height: 1; font-variant-numeric: tabular-nums; }
+.preview-account-number:hover { background: var(--color-surface-active); color: var(--color-text); }
+.preview-account-number[aria-pressed="true"] { background: var(--provider-soft); color: var(--provider-color); }
+
+.orb-preview-messages { display: grid; gap: var(--space-xs); }
+.orb-preview-messages:empty { display: none; }
+.orb-preview-footer { display: flex; align-items: center; justify-content: space-between; gap: var(--space-small); line-height: 1.5; }
+.orb-preview-updated { flex: 1; min-width: 0; }

@@ -6,7 +6,7 @@ export interface WorkbuddyPackage {
   endTime: string | null;
 }
 export interface WorkbuddyAccount {
-  id: "workbuddy-oauth";
+  id: string;
   providerId: "workbuddy";
   source: "workbuddy-billing";
   uid: string | null;

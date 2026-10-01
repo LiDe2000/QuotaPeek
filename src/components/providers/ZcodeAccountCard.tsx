@@ -46,7 +46,7 @@ export function resetText(resetsAt: number | null, now: number, oneTime: boolean
   const stamp = `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   return [`${oneTime ? "Expires" : "Resets"} ${stamp}`, remaining];
 }
-export default function ZcodeAccountCard({ account, active, stale, loading, defaultExpanded = false }: { account: ZcodeAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean }) {
+export default function ZcodeAccountCard({ account, active, stale, loading, defaultExpanded = false, panelId }: { account: ZcodeAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean; panelId?: string }) {
   const [now, setNow] = useState(Date.now);
   const [expanded, setExpanded] = useState(defaultExpanded);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
@@ -59,7 +59,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
   const identity = account.email ?? "ZCode account";
   const region = account.region === "global" ? "Global" : "CN";
   const plan = [account.planName ?? "Plan unavailable", account.planDescription].filter(Boolean).join(" · ");
-  return <article id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-zcode" aria-busy={loading}>
+  return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-zcode" aria-busy={loading}>
     <div className="account-header">
       <span className="provider-mark" aria-hidden="true">Z</span>
       <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity} · {region}</p></div>
@@ -74,7 +74,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
       className={`zc-deck${expanded ? " is-expanded" : ""}${expandable ? "" : " is-static"}`}
       onClick={expandable ? () => setExpanded(open => !open) : undefined}
     >
-      <button type="button" className="zc-balance" aria-expanded={expandable ? expanded : undefined} aria-controls={expandable ? "zcode-windows" : undefined}>
+      <button type="button" className="zc-balance" aria-expanded={expandable ? expanded : undefined} aria-controls={expandable ? `zcode-windows-${panelId ?? account.id}` : undefined}>
         <span className="zc-balance-shine" aria-hidden="true" />
         <span className="zc-balance-label">{aggregate ? `${unit[0].toUpperCase()}${unit.slice(1)} remaining` : "Quota remaining"}</span>
         <strong className="zc-balance-value">{count(aggregate?.remain ?? null)}{aggregate && <span> {unit}</span>}</strong>
@@ -90,7 +90,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
         : <span className="zc-deck-sub">No quota bucket reported.</span>}
     </div>
 
-    {expanded && expandable && <ul id="zcode-windows" className="zc-windows">
+    {expanded && expandable && <ul id={`zcode-windows-${panelId ?? account.id}`} className="zc-windows">
       {account.windows.map(quota => {
         const [reset, time] = resetText(quota.resetsAt, now, quota.oneTime);
         return <li className="zc-window" key={quota.key}>
