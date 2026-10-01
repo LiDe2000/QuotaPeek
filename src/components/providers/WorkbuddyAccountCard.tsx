@@ -22,6 +22,10 @@ function expiryText(pkg: WorkbuddyPackage): string {
 }
 // Credits carry fractions from the API's precise fields; integers stay bare (1,871), the rest show up to 2 decimals (1,869.69).
 const credits = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
+/** One decimal at most, without a trailing ".0". */
+function percent(value: number): string {
+  return String(Number(value.toFixed(1)));
+}
 export default function WorkbuddyAccountCard({ account, active, stale, loading, defaultExpanded = false }: { account: WorkbuddyAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean }) {
   const [now, setNow] = useState(Date.now);
   const [expanded, setExpanded] = useState(defaultExpanded);
@@ -29,6 +33,8 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed" : "Last query succeeded";
   const region = account.region === "global" ? "Global" : "CN";
   const usedPercent = account.totalSize > 0 ? Math.min(100, account.totalUsed / account.totalSize * 100) : 0;
+  // No reported allowance means no percentage to claim, rather than a made-up 100%.
+  const remainPercent = account.totalSize > 0 ? percent(100 - usedPercent) : null;
   const identity = account.nickname || account.uid || "WorkBuddy account";
   return <article id={`panel-${account.id}`} role="tabpanel" aria-labelledby={`tab-${account.id}`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-workbuddy" aria-busy={loading}>
     <div className="account-header">
@@ -37,16 +43,23 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
     </div>
 
-    <div className={`wb-deck${expanded ? " is-expanded" : ""}`}>
-      <button type="button" className="wb-balance" aria-expanded={expanded} aria-controls="workbuddy-packages" onClick={() => setExpanded(open => !open)}>
+    {/* One card holds the balance and the overall bar; a click anywhere on it — mouse on the
+        deck, keyboard on the button — expands the breakdown. */}
+    <div className={`wb-deck${expanded ? " is-expanded" : ""}`} onClick={() => setExpanded(open => !open)}>
+      <button type="button" className="wb-balance" aria-expanded={expanded} aria-controls="workbuddy-packages">
         <span className="wb-balance-shine" aria-hidden="true" />
         <span className="wb-balance-label">Credits balance</span>
         <strong className="wb-balance-value">{credits.format(account.totalRemain)}<span> credits</span></strong>
-        <span className="wb-balance-sub">{credits.format(account.totalUsed)} of {credits.format(account.totalSize)} used · {account.packages.length} {account.packages.length === 1 ? "package" : "packages"}</span>
         <span className="wb-balance-hint">{expanded ? "Hide breakdown" : "View breakdown"}</span>
       </button>
+      {/* The bar carries its own caption: what the total is made of above, what is still left below. */}
+      <div className="wb-total">
+        <span>{account.packages.length} {account.packages.length === 1 ? "package" : "packages"}</span>
+        <span>{credits.format(account.totalUsed)}/{credits.format(account.totalSize)}</span>
+      </div>
+      <progress max={100} value={usedPercent} aria-label="WorkBuddy credits used">{usedPercent}%</progress>
+      {remainPercent !== null && <div className="wb-remaining">Remaining: {remainPercent}%</div>}
     </div>
-    <progress max={100} value={usedPercent} aria-label="WorkBuddy credits used">{usedPercent}%</progress>
 
     {expanded && <ul id="workbuddy-packages" className="wb-packages">
       {account.packages.map((pkg, index) => {
@@ -55,11 +68,14 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
         return <li className="wb-package" key={index}>
           <div className="wb-package-summary">
             <span className="wb-package-name" title={pkg.name}>{pkg.name}</span>
-            {badge && <span className={`wb-package-badge${badge === "Expired" ? " is-expired" : ""}`}>{badge}</span>}
             <span className="wb-package-usage">{credits.format(pkg.used)}/{credits.format(pkg.size)}</span>
           </div>
           <progress max={100} value={used} aria-label={`${pkg.name} used`}>{used}%</progress>
-          <p className="wb-package-expiry">{expiryText(pkg)}</p>
+          {/* The urgency flag rides with the expiry stamp: it says the same thing as the row's own line, so it must not compete with the package name for width. */}
+          <p className="wb-package-expiry">
+            <span>{expiryText(pkg)}</span>
+            {badge && <span className={`wb-package-badge${badge === "Expired" ? " is-expired" : ""}`}>{badge}</span>}
+          </p>
         </li>;
       })}
       {account.packages.length === 0 && <li className="wb-packages-empty">No credit packages reported.</li>}
