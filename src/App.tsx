@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
@@ -71,6 +71,18 @@ function App() {
   useEffect(() => {
     if (popup && panel.current) panel.current.scrollTop = 0;
   }, [currentAccount?.id, popup]);
+
+  useLayoutEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const card = popup ? panel.current?.querySelector(".carousel-page:not([hidden]) .account-card")
+      : body.current?.querySelector(".orb-float .account-card");
+    // Animate only the inner content; the card surface stays opaque and stationary.
+    const animations = Array.from(card?.children ?? []).map(child => child.animate([
+      { opacity: 0.94, transform: "translateY(3px)" },
+      { opacity: 1, transform: "translateY(0)" },
+    ], { duration: 160, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }));
+    return () => animations.forEach(animation => animation.cancel());
+  }, [currentAccount?.id, hoveredAccount?.id, popup]);
 
   async function connectAccount(provider: Account["providerId"], accountId?: string): Promise<boolean> {
     const account = await connect(provider, accountId, id => {

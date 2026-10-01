@@ -1,0 +1,20 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "windows": [
+      {
+        "title": "QuotaPeek",
+        "width": 78,
+        "height": 140,
+        "minWidth": 78,
+        "minHeight": 120,
+        "decorations": false,
+        "transparent": true,
+        "noRedirectionBitmap": true,
+        "shadow": false,
+        "resizable": false,
+        "additionalBrowserArgs": "--disable-gpu --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection"
+      }
+    ]
+  }
+}

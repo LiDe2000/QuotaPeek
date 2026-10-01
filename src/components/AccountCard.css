@@ -18,5 +18,3 @@
 .account-card progress::-webkit-progress-value { border-radius: var(--progress-height); background: var(--provider-color); }
 .account-card progress::-moz-progress-bar { border-radius: var(--progress-height); background: var(--provider-color); }
 .reset-details { justify-content: space-between; gap: var(--space-small); margin-top: var(--space-small); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }
-
-@media (max-width: 340px) { .account-card { padding: var(--space-large) var(--space-medium); } .reset-details { font-size: var(--font-size-caption); } }

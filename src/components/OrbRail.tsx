@@ -68,7 +68,6 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
           aria-controls={`panel-${account.id}`}
           className={`orb-ring ${level}${active ? " is-active" : ""}${refreshing ? " is-refreshing" : ""}`}
             aria-label={`${names[account.providerId]}${accountLabel(account) ? ` · ${accountLabel(account)}` : ""}`}
-            title={meter.percent === null ? `${names[account.providerId]} · ${accountLabel(account) || account.id} · Quota unavailable · Click to refresh` : `${accountLabel(account) ?? names[account.providerId]} · ${Number(meter.percent.toFixed(1))}% remaining · Click to refresh`}
           onMouseEnter={() => onHover(group.providerId)}
           onMouseLeave={onLeave}
           onFocus={event => { if (event.currentTarget.matches(":focus-visible")) onHover(group.providerId); }}
