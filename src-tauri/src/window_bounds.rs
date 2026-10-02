@@ -1,5 +1,5 @@
 /// Physical screen coordinates and dimensions, captured using one window DPI.
-/// On Windows a single native operation avoids painting intermediate bounds.
+/// UI-thread geometry completion does not imply WebView2 has presented a frame.
 #[tauri::command]
 pub async fn fit_window_bounds(
     window: tauri::WebviewWindow,
@@ -11,11 +11,16 @@ pub async fn fit_window_bounds(
     visible_width: i32,
     source_x: i32,
     source_y: i32,
+    visible_height: Option<i32>,
 ) -> Result<bool, String> {
+    // Older frontends can omit this and keep height-based clipping.
+    let visible_height = visible_height.unwrap_or(height);
     if width <= 0
         || height <= 0
         || clip_left < 0
         || visible_width <= 0
+        || visible_height <= 0
+        || visible_height > height
         || clip_left
             .checked_add(visible_width)
             .is_none_or(|right| right > width)
@@ -74,7 +79,7 @@ pub async fn fit_window_bounds(
                             // The unused viewport must neither paint nor intercept input.
                             // Windows owns the region after a successful SetWindowRgn.
                             let region =
-                                CreateRectRgn(clip_left, 0, clip_left + visible_width, height);
+                                CreateRectRgn(clip_left, 0, clip_left + visible_width, visible_height);
                             if region.is_invalid() {
                                 return Err("Failed to create window region".into());
                             }

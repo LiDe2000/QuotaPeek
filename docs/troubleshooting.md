@@ -61,15 +61,19 @@ core:window:allow-set-position
 
 ## Windows 整窗短暂消失或闪帧
 
+2026-10-02：用户对照反馈，停用原生几何更新的 `--fixed` 模式暂未闪烁；恢复左右自适应、保持原生宽高稳定的 `--stable` 模式也暂未闪烁。Windows 默认开发和正式构建现已采用稳定视口，保持 GPU 渲染，只让可见裁剪区域随内容改变。进一步分析与复测入口见 [Windows 闪烁排查记录](windows-rendering-investigation.md)。现有结果支持原生高度变化是主要触发条件，不代表已确认某个底层驱动缺陷或所有设备均无闪烁。
+
 整窗（包括侧栏）一起短暂消失与卡片内容过渡不同，需要检查 WebView2、透明窗口合成和原生尺寸更新。普通动画不能保证解决这类问题。
 
-先退出当前开发进程和 QuotaPeek 窗口，再对照测试软件渲染模式：
+更新后先完全退出旧进程，使用普通 `npm run tauri dev` 或重新构建的 exe 验证。仍有闪烁时，可以对照软件渲染模式：
 
 ```powershell
 npm run tauri:software
 ```
 
 该命令仅为这一次开发启动传入 `--disable-gpu`，不修改系统设置、账户数据或正式构建配置。窗口仍按内容自适应。对照运行 `npm run tauri dev` 时会恢复默认渲染。两个模式不要同时运行，以免共用 WebView2 数据目录的进程沿用旧参数。
+
+需要同样参数的 exe 时运行 `npm run tauri:build:software -- --no-bundle`，输出为 `src-tauri/target/release/quotapeek.exe`。普通构建不会继承软件开发模式的参数。此入口保留作兼容性回退；默认稳定视口方案无需关闭 GPU。
 
 如果只有软件渲染模式不闪，可进一步定位 GPU/DirectComposition 呈现路径；如果仍闪，应继续检查原生窗口和 WebView 尺寸更新的衔接。软件渲染可能增加 CPU 占用。这是诊断入口，不代表已经确认根因或完成修复；浏览器参数不作为正式发行版的长期保证。
 

@@ -53,7 +53,9 @@ function App() {
   }
   const loading = Object.values(statuses).some(status => status.loading);
   const settingsOpen = popup === "appearance";
-  useFittedWindowHeight(body, desktop);
+  useFittedWindowHeight(body, desktop,
+    import.meta.env.DEV && import.meta.env.VITE_QUOTAPEEK_FIXED_VIEWPORT === "1",
+    !(import.meta.env.DEV && import.meta.env.VITE_QUOTAPEEK_STABLE_VIEWPORT === "0"));
 
   useEffect(() => {
     if (!desktop) return;

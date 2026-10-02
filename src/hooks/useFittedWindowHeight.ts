@@ -8,11 +8,14 @@ import { physicalHorizontalPlacement } from "../lib/windowPlacement";
 import type { ExpandSide } from "../lib/windowPlacement";
 
 /** One serialized resize path owns dimensions and keeps the rail anchored at screen edges. */
-export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabled: boolean): void {
+export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabled: boolean, fixedViewport = false, stableHeight = true): void {
   useEffect(() => {
     const node = body.current;
     const shell = node?.closest<HTMLElement>(".app-shell");
     if (!node || !shell) return;
+    // Diagnostic control: keep React/CSS active, but remove native bounds and
+    // region updates from the presentation path. App enables this only in dev.
+    const nativeFitEnabled = enabled && !fixedViewport;
     let frame = 0;
     let busy = false;
     let pending = false;
@@ -24,6 +27,7 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
     let lastSize = { width: window.innerWidth, height: window.innerHeight };
     let lastClip = "";
     let lastContentWidth = window.innerWidth;
+    let lastContentHeight = window.innerHeight;
     const stableViewport = navigator.userAgent.includes("Windows");
     let placementDirty = true;
     let expectedPosition: { x: number; y: number } | null = null;
@@ -39,7 +43,9 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       const style = getComputedStyle(shell);
       const verticalPadding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-      const ceiling = `${Math.max(verticalPadding, screenHeight - SCREEN_RESERVE)}px`;
+      const availableHeight = fixedViewport ? Math.min(window.innerHeight, screenHeight - SCREEN_RESERVE)
+        : screenHeight - SCREEN_RESERVE;
+      const ceiling = `${Math.max(verticalPadding, availableHeight)}px`;
       if (node.style.getPropertyValue("--window-max-height") !== ceiling) node.style.setProperty("--window-max-height", ceiling);
       let content = 0;
       let width = 0;
@@ -52,7 +58,7 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       return {
         width: Math.ceil(width + horizontalPadding),
         height: fittedWindowHeight({ content, panel: 0, chrome: 0, padding: verticalPadding,
-          current: lastSize.height, screen: screenHeight }) ?? lastSize.height,
+          current: lastContentHeight, screen: screenHeight }) ?? lastContentHeight,
         inset: parseFloat(style.paddingLeft),
         railWidth: node.querySelector<HTMLElement>(".orb-rail")?.offsetWidth ?? 62,
         panelWidth: parseFloat(getComputedStyle(node).getPropertyValue("--main-panel-width")) || 384,
@@ -65,9 +71,9 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       if (disposed) return;
       if (dragging) { placementDirty = true; return; }
       if (busy) { pending = true; return; }
-      if (!enabled) { measure(); return; }
+      if (!nativeFitEnabled) { measure(); return; }
       const measured = measure();
-      if (!measured || (!placementDirty && measured.width === lastContentWidth && measured.height === lastSize.height)) return;
+      if (!measured || (!placementDirty && measured.width === lastContentWidth && measured.height === lastContentHeight)) return;
       busy = true;
       try {
         const appWindow = getCurrentWindow();
@@ -83,6 +89,10 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
         // Reserve the main-panel width; the native region clips unused pixels.
         const viewportWidth = stableViewport
           ? Math.max(size.width, size.panelWidth + size.railWidth + size.gap + size.inset * 2) : size.width;
+        // Keep WebView2's surface height stable when cards change. Only the native
+        // visible region follows content; monitor/DPI changes can resize the surface.
+        const viewportHeight = stableViewport && stableHeight
+          ? Math.max(size.height, 120, Math.round(screenHeight - SCREEN_RESERVE)) : size.height;
         const previousSize = lastSize;
         expectedPosition = position;
         let nextX: number | null = null;
@@ -94,20 +104,21 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
           if (node.dataset.side !== side) node.dataset.side = side;
           if (placement.x !== position.x) nextX = placement.x;
         }
-        const clip = `${side}:${size.width}:${scaleFactor}`;
-        if (nextX !== null || viewportWidth !== previousSize.width || size.height !== previousSize.height || clip !== lastClip) {
+        const clip = `${side}:${size.width}:${size.height}:${scaleFactor}`;
+        if (nextX !== null || viewportWidth !== previousSize.width || viewportHeight !== previousSize.height || clip !== lastClip) {
           expectedPosition = { x: nextX ?? position.x, y: position.y };
           // Commit position and size together: separate calls expose a narrow,
           // displaced window for one frame when expanding to the left.
-          lastSize = { width: viewportWidth, height: size.height };
+          lastSize = { width: viewportWidth, height: viewportHeight };
           const physicalWidth = Math.round(viewportWidth * scaleFactor);
           const visibleWidth = Math.min(physicalWidth, Math.round(size.width * scaleFactor));
           try { const applied = await invoke<boolean>("fit_window_bounds", { x: expectedPosition.x, y: expectedPosition.y,
-            width: physicalWidth, height: Math.round(size.height * scaleFactor),
+            width: physicalWidth, height: Math.round(viewportHeight * scaleFactor),
+            visibleHeight: Math.round(size.height * scaleFactor),
             clipLeft: side === "left" ? physicalWidth - visibleWidth : 0,
             visibleWidth, sourceX: position.x, sourceY: position.y });
             if (!applied) { lastSize = previousSize; placementDirty = true; pending = true; }
-            else { lastClip = clip; lastContentWidth = size.width; } }
+            else { lastClip = clip; lastContentWidth = size.width; lastContentHeight = size.height; } }
           catch (error) { lastSize = previousSize; throw error; }
         }
       } catch (error) { placementDirty = true; console.warn("Window fit was refused", error); }
@@ -136,7 +147,7 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
     observeTargets();
     mutations.observe(node, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["hidden"] });
     window.addEventListener("resize", schedule);
-    if (enabled) void getCurrentWindow().onMoved(event => {
+    if (nativeFitEnabled) void getCurrentWindow().onMoved(event => {
       // Our own reposition notification does not require another geometry query.
       if (expectedPosition && Math.abs(event.payload.x - expectedPosition.x) < 1
         && Math.abs(event.payload.y - expectedPosition.y) < 1) return;
@@ -146,14 +157,14 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
     }).then(stop => {
       if (disposed) stop(); else unlisten = stop;
     }).catch(error => console.warn("Window movement listener was refused", error));
-    if (enabled) void getCurrentWindow().onScaleChanged(() => {
+    if (nativeFitEnabled) void getCurrentWindow().onScaleChanged(() => {
       placementDirty = true;
       geometryRevision++;
       if (!dragging) schedule();
     }).then(stop => {
       if (disposed) stop(); else unlistenScale = stop;
     }).catch(error => console.warn("Window scale listener was refused", error));
-    if (enabled && stableViewport) void listen<boolean>("desktop-window-dragging", event => {
+    if (nativeFitEnabled && stableViewport) void listen<boolean>("desktop-window-dragging", event => {
       dragging = event.payload;
       geometryRevision++;
       placementDirty = true;
@@ -174,5 +185,5 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       window.removeEventListener("resize", schedule);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [body, enabled]);
+  }, [body, enabled, fixedViewport, stableHeight]);
 }

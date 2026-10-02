@@ -7,10 +7,16 @@ require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
 }).outputText, file);
 
-test('right-edge fits commit physical position and size together without crossing DPI boundaries', async () => {
+for (const mode of ['baseline', 'fixed', 'stable']) test(mode === 'fixed'
+  ? 'fixed viewport comparison renders content without native fitting or movement listeners'
+  : `${mode}: right-edge fits commit physical position and size together without crossing DPI boundaries`, async () => {
+  const fixedViewport = mode === 'fixed';
+  const stableHeight = mode === 'stable';
   let expanded = false;
   let position = { x: 3684, y: 80 };
   let nativeWidth = 156;
+  let nativeHeight = 600;
+  let visibleHeight = 600;
   const calls = [];
   const frames = [];
   const listeners = {};
@@ -29,6 +35,7 @@ test('right-edge fits commit physical position and size together without crossin
     get children() { return expanded ? [rail, panel] : [rail]; } };
   const appWindow = {
     outerPosition: async () => {
+      assert.equal(fixedViewport, false, 'fixed viewport must not query native geometry');
       const snapshot = { ...position };
       if (!blockNextRead) return snapshot;
       blockNextRead = false;
@@ -50,6 +57,7 @@ test('right-edge fits commit physical position and size together without crossin
       assert.equal(bounds.sourceY, position.y);
       calls.push('bounds');
       position = { x: bounds.x, y: bounds.y }; nativeWidth = bounds.width;
+      nativeHeight = bounds.height; visibleHeight = bounds.visibleHeight;
       assert.equal(bounds.visibleWidth, expanded ? 860 : 156);
       if (assertRightEdge) assert.equal(bounds.clipLeft + bounds.visibleWidth, 948, 'visible region stays against the same right edge');
       assert.ok(position.x + nativeWidth <= 3840, 'combined bounds must remain on the current monitor');
@@ -76,22 +84,38 @@ test('right-edge fits commit physical position and size together without crossin
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/hooks/useFittedWindowHeight.ts', 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
   }).outputText, context);
-  context.exports.useFittedWindowHeight({ current: node }, true);
+  // Omitting the override must exercise the same stable geometry as release builds.
+  context.exports.useFittedWindowHeight({ current: node }, true, fixedViewport, stableHeight ? undefined : false);
   async function flush() {
     for (let i = 0; i < 40; i++) { frames.shift()?.(); await Promise.resolve(); }
     assert.equal(frames.length, 0);
   }
   await flush();
+  if (fixedViewport) {
+    expanded = true; observerCallbacks[1](); await flush();
+    expanded = false; observerCallbacks[1](); await flush();
+    listeners.resize(); await flush();
+    assert.deepEqual(calls, [], 'content changes must never update native bounds or regions');
+    assert.equal(listeners.moved, undefined);
+    assert.equal(listeners.drag, undefined);
+    assert.equal(properties.get('--window-max-height'), '300px', 'content scrolls within the fixed viewport');
+    cleanup();
+    return;
+  }
   calls.length = 0;
   for (let i = 0; i < 3; i++) {
     expanded = true; observerCallbacks[1](); await flush();
     assert.deepEqual(calls.splice(0), ['bounds']);
     assert.equal(position.x, 2892);
     assert.equal(nativeWidth, 948);
+    assert.equal(visibleHeight, 768, 'expanded content keeps its natural visible height');
+    assert.equal(nativeHeight, stableHeight ? 2000 : visibleHeight);
     expanded = false; observerCallbacks[1](); await flush();
     assert.deepEqual(calls.splice(0), ['bounds']);
     assert.equal(position.x, 2892);
     assert.equal(nativeWidth, 948);
+    assert.equal(visibleHeight, 600, 'collapsed blank area must not intercept input');
+    assert.equal(nativeHeight, stableHeight ? 2000 : visibleHeight, 'stable mode must never resize the surface on collapse');
   }
   observerCallbacks[0](); await flush();
   assert.deepEqual(calls, [], 'unchanged bounds should not issue native updates');
