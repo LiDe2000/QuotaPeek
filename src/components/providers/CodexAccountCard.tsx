@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import gptAvatar from "../../assets/models/gpt/avatar.png";
 import type { CodexAccount, CodexRateLimitWindow } from "../../types/codex";
 import "../AccountCard.css";
 import "./CodexAccountCard.css";
@@ -52,8 +53,8 @@ export default function CodexAccountCard({ account, active, stale, loading, pane
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed" : "Last query succeeded";
   return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-codex" aria-busy={loading}>
     <div className="account-header">
-      <span className="provider-mark" aria-hidden="true">O</span>
-      <div className="account-identity"><h2>OpenAI Codex</h2><p title={account.email ?? "Email unavailable"}>{account.email ?? "Local Codex account"}</p></div>
+      <span className="provider-mark provider-portrait" aria-hidden="true"><img src={gptAvatar} alt="" draggable={false} /></span>
+      <div className="account-identity"><h2>Codex</h2><p title={account.email ?? "Email unavailable"}>{account.email ?? "Local Codex account"}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
     </div>
     <p className="codex-plan">{account.planType ?? "Plan unavailable"} · Local account{stale ? " · Stale data" : ""}</p>

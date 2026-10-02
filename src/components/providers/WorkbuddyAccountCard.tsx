@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import workbuddyAvatar from "../../assets/models/workbuddy/avatar.svg";
 import type { WorkbuddyAccount, WorkbuddyPackage } from "../../types/workbuddy";
 import "../AccountCard.css";
 import "./WorkbuddyAccountCard.css";
@@ -38,7 +39,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
   const identity = account.nickname || account.uid || "WorkBuddy account";
   return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-workbuddy" aria-busy={loading}>
     <div className="account-header">
-      <span className="provider-mark" aria-hidden="true">W</span>
+      <span className="provider-mark provider-portrait" aria-hidden="true"><img src={workbuddyAvatar} alt="" draggable={false} /></span>
       <div className="account-identity"><h2>WorkBuddy</h2><p title={identity}>{identity} · {region}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
     </div>

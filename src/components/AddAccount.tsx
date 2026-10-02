@@ -199,7 +199,7 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
       <div><p className="account-step">{selected ? "STEP 2 OF 2" : "STEP 1 OF 2"}</p><h2 id="add-account-title">Connect account</h2></div>
     </div>
     {selected === "codex" ? <>
-      <div className="selected-platform provider-codex"><span className="platform-mark" aria-hidden="true">O</span><strong>OpenAI Codex</strong>
+      <div className="selected-platform provider-codex"><span className="platform-mark" aria-hidden="true">O</span><strong>Codex</strong>
         <button className="change-platform" disabled={waiting} onClick={() => { setSelected(null); setLoginError(null); }}>Change</button></div>
       <p className="account-hint">Connect the ChatGPT account currently signed in to Codex on this computer. Sign in to Codex first; this local login supports one account at a time.</p>
       {loginError && <p className="account-error" role="alert">{loginError}</p>}
@@ -207,7 +207,7 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
     </> : selected === "workbuddy" ? browserPanel("workbuddy") : selected === "zcode" ? browserPanel("zcode") : <>
       <p className="account-hint">Choose a platform to connect an account. WorkBuddy and ZCode support multiple accounts.</p>
       <div className="platform-options">
-        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>OpenAI Codex</span></button>
+        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>Codex</span></button>
         <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><span className="platform-mark">W</span><span>WorkBuddy</span></button>
         <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><span className="platform-mark">Z</span><span>ZCode</span></button>
       </div>

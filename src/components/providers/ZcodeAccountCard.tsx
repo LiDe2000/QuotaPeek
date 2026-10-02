@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import glmAvatar from "../../assets/models/glm/avatar.png";
 import type { ZcodeAccount, ZcodeWindow } from "../../types/zcode";
 import "../AccountCard.css";
 import "./ZcodeAccountCard.css";
@@ -61,7 +62,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
   const plan = [account.planName ?? "Plan unavailable", account.planDescription].filter(Boolean).join(" · ");
   return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-zcode" aria-busy={loading}>
     <div className="account-header">
-      <span className="provider-mark" aria-hidden="true">Z</span>
+      <span className="provider-mark provider-portrait" aria-hidden="true"><img src={glmAvatar} alt="" draggable={false} /></span>
       <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity} · {region}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
     </div>
