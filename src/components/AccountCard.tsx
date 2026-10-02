@@ -10,7 +10,7 @@ interface AccountCardProps { account: Account; active: boolean; stale: boolean; 
 export default function AccountCard(props: AccountCardProps) {
   const { account, active, stale, loading, preview = false } = props;
   const panelId = `${preview ? "preview" : "panel"}-${account.id}`;
-  const actions = !preview && props.onRemove ? <AccountActions account={account} disabled={!!props.removalDisabled} onRemove={props.onRemove} /> : undefined;
+  const actions = !preview && props.onRemove ? <AccountActions disabled={!!props.removalDisabled} onRemove={props.onRemove} /> : undefined;
   if (!account.fetchedAt) return <article id={panelId} className={`account-card provider-${account.providerId}`} aria-busy={loading}>
     <div className="account-header"><div className="account-identity"><h2>{providerName[account.providerId]}</h2><p>{accountLabel(account) ?? "Connected account"}</p></div>{actions}</div>
     <p className="account-hint">{loading ? "Reading quota…" : stale ? "Quota query failed. Refresh to retry." : "Waiting for the first quota query…"}</p>

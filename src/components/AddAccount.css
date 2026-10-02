@@ -1,9 +1,17 @@
 /* Flow panel sharing the same overlay layer as the appearance popover. */
 .add-account-panel { left: var(--window-padding); right: var(--window-padding); padding: var(--space-medium); }
-.add-account-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-medium); }
-.add-account-heading h2 { font-size: var(--font-size-body); font-weight: 600; }
-.account-step { color: var(--color-text-subtle); font-size: var(--font-size-caption); letter-spacing: 1px; margin-bottom: var(--space-xs); }
-.account-hint { color: var(--color-text-muted); font-size: var(--font-size-small); line-height: 1.6; margin: var(--space-small) 0 var(--space-medium); }
+.add-account-heading { display: flex; align-items: center; justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-medium); }
+.add-account-heading h2 { color: var(--color-text); font-size: var(--font-size-body); font-weight: 600; }
+.account-step { display: flex; flex-shrink: 0; align-items: center; width: fit-content; padding: 5px 7px; }
+.account-step-node { display: grid; place-items: center; position: relative; width: 20px; height: 20px; border: 1px solid var(--color-border); border-radius: 50%; color: var(--color-text-subtle); font-size: var(--font-size-caption); font-weight: 650; line-height: 1; transition: color var(--duration-fast), background var(--duration-fast), border-color var(--duration-fast), box-shadow var(--duration-fast); }
+.account-step-node.is-current { color: var(--color-accent); border-color: color-mix(in srgb, var(--color-accent) 60%, transparent); background: color-mix(in srgb, var(--color-accent) 15%, var(--color-surface)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+.account-step-node.is-complete { color: var(--color-accent); border-color: transparent; background: color-mix(in srgb, var(--color-accent) 10%, var(--color-surface)); }
+.account-step-node svg { width: 14px; height: 14px; }
+.account-step-connector { display: grid; place-items: center; width: 20px; margin: 0 5px; color: var(--color-text-subtle); opacity: 0.45; transition: color var(--duration-page), opacity var(--duration-page); }
+.account-step-connector svg { width: 18px; height: 12px; }
+.account-step-connector.is-complete { color: var(--color-accent); opacity: 0.8; }
+@media (prefers-reduced-motion: reduce) { .account-step-node, .account-step-connector { transition: none; } }
+.account-hint, .account-progress { color: var(--color-text-muted); font-size: var(--font-size-small); line-height: 1.6; margin: var(--space-small) 0 var(--space-medium); }
 .platform-options { display: grid; gap: var(--space-small); }
 .platform-option, .selected-platform { display: flex; align-items: center; gap: var(--space-small); padding: var(--space-small); border-radius: var(--radius-control); }
 .platform-option { width: 100%; text-align: left; background: var(--color-control); border: 1px solid var(--color-border); }
@@ -12,7 +20,10 @@
 .selected-platform { padding: 0; margin-bottom: var(--space-large); }
 .selected-platform strong { font-size: var(--font-size-body); }
 .change-platform { margin-left: auto; background: transparent; color: var(--color-accent); padding: var(--space-small) 0; font-size: var(--font-size-small); }
-.account-error { margin-top: var(--space-small); color: var(--color-text); font-size: var(--font-size-small); }
+.account-notice { --notice-color: var(--color-accent); display: flex; align-items: flex-start; gap: var(--space-small); margin: var(--space-medium) 0 var(--space-medium); padding: var(--space-small) var(--space-medium); border: 1px solid color-mix(in srgb, var(--notice-color) 35%, transparent); border-radius: var(--radius-control); background: color-mix(in srgb, var(--notice-color) 10%, var(--color-surface)); color: var(--color-text); font-size: var(--font-size-small); line-height: 1.6; overflow-wrap: anywhere; }
+.account-notice.is-error { --notice-color: var(--color-error); }
+.account-notice svg { flex-shrink: 0; width: 16px; height: 16px; margin-top: 2px; color: var(--notice-color); }
+.account-notice span { min-width: 0; }
 .add-account-submit { width: 100%; padding: var(--space-medium); border-radius: var(--radius-control); background: var(--color-surface-active); color: var(--color-text); border: 1px solid var(--color-accent); font-weight: 600; }
 .add-account-submit:hover { background: var(--color-window); }
 /* Two account systems to choose from; the alternate one stays visually quieter. */

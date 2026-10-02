@@ -14,27 +14,26 @@ const { default: AccountCard } = require('../src/components/AccountCard.tsx');
 const account = { id: 'codex-local', providerId: 'codex', email: 'test@example.com' };
 
 test('a single account has a direct accessible removal button', () => {
-  const html = renderToStaticMarkup(React.createElement(AccountActions, { account, disabled: false, onRemove: async () => true }));
+  const html = renderToStaticMarkup(React.createElement(AccountActions, { disabled: false, onRemove: async () => true }));
   assert.match(html, /Remove account/);
   assert.match(html, /<svg/);
   assert.doesNotMatch(html, /<details/);
 });
 
-test('confirmation identifies the account and explains that external logins are preserved', () => {
-  const render = providerId => renderToStaticMarkup(React.createElement(RemovalConfirmation, {
-    account: { ...account, providerId }, busy: false, error: null, onConfirm: () => {}, onCancel: () => {},
+test('confirmation contains just the question and actions without repeating account details', () => {
+  const html = renderToStaticMarkup(React.createElement(RemovalConfirmation, {
+    busy: false, error: null, onConfirm: () => {}, onCancel: () => {},
   }));
-  assert.match(render('codex'), /role="alertdialog"/);
-  assert.match(render('codex'), /test@example.com/);
-  assert.match(render('codex'), /Codex stays signed in/);
-  assert.match(render('workbuddy'), /Saved login and quota cache/);
-  assert.match(render('workbuddy'), /browser stays signed in/);
-  assert.match(render('workbuddy'), />Cancel</);
+  assert.match(html, /role="alertdialog"/);
+  assert.match(html, />Remove account\?</);
+  assert.doesNotMatch(html, /test@example.com|removal-account-name|<p|aria-describedby/);
+  assert.match(html, />Cancel</);
+  assert.match(html, />Remove</);
 });
 
 test('removal progress disables confirmation and cancellation and errors remain visible', () => {
   const html = renderToStaticMarkup(React.createElement(RemovalConfirmation, {
-    account, busy: true, error: 'Could not remove this account.', onConfirm: () => {}, onCancel: () => {},
+    busy: true, error: 'Could not remove this account.', onConfirm: () => {}, onCancel: () => {},
   }));
   assert.equal((html.match(/disabled=""/g) ?? []).length, 2);
   assert.match(html, /Removing/);

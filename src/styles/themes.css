@@ -17,6 +17,7 @@
   --color-track: #ffffff0d;
   --color-token-surface: #ffffff06;
   --color-accent: #8aa4ff;
+  --color-error: #f18a88;
   --color-codex: #88a0ff;
   --color-codex-soft: #283351;
   --color-claude: #dfa982;
@@ -80,6 +81,7 @@
   --color-track: #1a23400c;
   --color-token-surface: #f6f7fa;
   --color-accent: #4e65c9;
+  --color-error: #bd4141;
   --color-codex: #607bdc;
   --color-codex-soft: #e9edfd;
   --color-claude: #a5653c;
