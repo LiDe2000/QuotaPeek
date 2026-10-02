@@ -17,6 +17,7 @@ import { useHoverPreview } from "./hooks/useHoverPreview";
 import { useAppearance } from "./hooks/useAppearance";
 import { useFittedWindowHeight } from "./hooks/useFittedWindowHeight";
 import Icon from "./components/Icon";
+import { formatRefreshTime } from "./lib/refreshTime";
 import "./App.css";
 
 type Popup = null | "home" | "add" | "appearance";
@@ -185,7 +186,7 @@ function App() {
   const currentStatus = currentAccount ? statuses[currentAccount.id] : undefined;
   const fetchedAt = currentStatus?.lastSuccess ?? currentAccount?.fetchedAt;
   const footer = currentStatus?.loading ? "Reading this account's quota…"
-    : currentStatus?.error ?? currentStatus?.notice ?? (fetchedAt ? `Updated ${new Date(fetchedAt * 1000).toLocaleTimeString()}`
+    : currentStatus?.error ?? currentStatus?.notice ?? (fetchedAt ? `Updated ${formatRefreshTime(fetchedAt)}`
       : currentAccount ? "Quota not yet available" : restoring ? "Restoring accounts…" : "No accounts · Use the + ring to connect one");
 
   return (
@@ -212,7 +213,7 @@ function App() {
               </div>
               <div className="orb-preview-footer">
               <span className="orb-preview-updated">{(statuses[hoveredAccount.id]?.lastSuccess ?? hoveredAccount.fetchedAt)
-                ? `Last updated ${new Date((statuses[hoveredAccount.id]?.lastSuccess ?? hoveredAccount.fetchedAt) * 1000).toLocaleString()}` : "Quota not yet available"}</span>
+                ? `Last updated ${formatRefreshTime(statuses[hoveredAccount.id]?.lastSuccess ?? hoveredAccount.fetchedAt, true)}` : "Quota not yet available"}</span>
               {accountPicker(hoveredGroup!.accounts, hoveredAccount.id, "Preview account", true)}
               </div>
             </div>
@@ -249,7 +250,7 @@ function App() {
               </div>
             </div>}
             <footer className="window-footer"><span role="status" aria-live="polite">{footer}</span>
-              {currentStatus?.error && !!fetchedAt && <span>Last successful query {new Date(fetchedAt * 1000).toLocaleTimeString()}</span>}
+              {currentStatus?.error && !!fetchedAt && <span>Last successful query {formatRefreshTime(fetchedAt)}</span>}
               {summary && <span role="status">{summary}</span>}
               {startupErrors.map(message => <span key={message}>{message}</span>)}
             </footer>

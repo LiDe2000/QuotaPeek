@@ -11,7 +11,7 @@ export interface DeepseekAccount {
   source: "deepseek-api" | "deepseek-platform";
   label: string;
   contact?: string | null;
-  fetchedAt: number;
+  fetchedAt: number; // Unix timestamp in seconds, consistent with other providers.
   isAvailable: boolean;
   balances: DeepseekBalance[];
 }

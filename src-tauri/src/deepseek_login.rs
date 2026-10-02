@@ -302,7 +302,7 @@ pub(super) async fn query_account(app: &tauri::AppHandle, id: &str) -> Result<Ac
         label,
         contact,
         balances(value)?,
-        chrono::Utc::now().timestamp_millis(),
+        crate::deepseek::now_secs(),
     ))
 }
 

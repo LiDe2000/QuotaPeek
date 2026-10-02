@@ -73,3 +73,32 @@ test('DeepSeek keys group under one provider with independent named selections',
   assert.equal(groups.length, 1);
   assert.equal(groups[0].selected.id, second.id);
 });
+
+const { formatRefreshTime } = require('../src/lib/refreshTime.ts');
+test('legacy DeepSeek refresh timestamps migrate from milliseconds without losing balances', () => {
+  const milliseconds = Date.parse('2026-10-02T06:26:48.123Z');
+  const seconds = Math.floor(milliseconds / 1000);
+  for (const source of ['deepseek-api', 'deepseek-platform']) {
+    const legacy = { ...account, source, fetchedAt: milliseconds };
+    const migrated = cachedAccounts(JSON.stringify([legacy]));
+    assert.equal(migrated[0].fetchedAt, seconds);
+    assert.equal(new Date(migrated[0].fetchedAt * 1000).toISOString(), '2026-10-02T06:26:48.000Z');
+    assert.deepEqual(migrated[0].balances, legacy.balances);
+    const restored = restoreAccounts(migrated, [{ ...legacy, fetchedAt: 0, balances: [] }], ['deepseek']);
+    assert.equal(restored[0].fetchedAt, seconds);
+    assert.equal(cachedAccounts(JSON.stringify(restored))[0].fetchedAt, seconds);
+  }
+  assert.equal(cachedAccounts(JSON.stringify([{ ...account, fetchedAt: seconds }]))[0].fetchedAt, seconds);
+  assert.equal(cachedAccounts(JSON.stringify([{ ...account, fetchedAt: 0 }]))[0].fetchedAt, 0);
+  const other = { id: 'codex', providerId: 'codex', rateLimits: {}, fetchedAt: milliseconds };
+  assert.equal(cachedAccounts(JSON.stringify([other]))[0].fetchedAt, milliseconds);
+});
+test('refresh time uses local 24-hour time in both the main window and preview', () => {
+  for (const hour of [0, 13, 23]) {
+    const timestamp = new Date(2026, 9, 2, hour, 26, 48).getTime() / 1000;
+    const expected = `${String(hour).padStart(2, '0')}:26:48`;
+    assert.equal(formatRefreshTime(timestamp), expected);
+    assert.ok(formatRefreshTime(timestamp, true).includes(expected));
+    assert.ok(formatRefreshTime(timestamp, true).includes('2026'));
+  }
+});

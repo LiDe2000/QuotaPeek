@@ -68,6 +68,9 @@ pub(super) fn error(message: &str) -> Error {
         message: message.into(),
     }
 }
+pub(super) fn now_secs() -> i64 {
+    chrono::Utc::now().timestamp()
+}
 fn path(app: &tauri::AppHandle) -> Result<PathBuf, Error> {
     app.path()
         .app_data_dir()
@@ -175,12 +178,7 @@ pub async fn deepseek_connect(
         },
     )
     .map_err(|message| error(&message))?;
-    Ok(snapshot(
-        id,
-        label.into(),
-        response,
-        chrono::Utc::now().timestamp_millis(),
-    ))
+    Ok(snapshot(id, label.into(), response, now_secs()))
 }
 #[tauri::command]
 pub async fn deepseek_list_accounts(
@@ -224,16 +222,38 @@ pub async fn deepseek_query_balance(
             .ok_or_else(|| error("DeepSeek account not found. Reconnect it."))?
     };
     let response = query(&entry.auth.api_key).await?;
-    Ok(snapshot(
-        entry.id,
-        entry.auth.label,
-        response,
-        chrono::Utc::now().timestamp_millis(),
-    ))
+    Ok(snapshot(entry.id, entry.auth.label, response, now_secs()))
 }
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn refresh_time_uses_unix_seconds_for_both_account_sources() {
+        let before = chrono::Utc::now().timestamp();
+        let fetched_at = now_secs();
+        let after = chrono::Utc::now().timestamp();
+        assert!((before..=after).contains(&fetched_at));
+        let api = snapshot(
+            "api".into(),
+            "API".into(),
+            Response {
+                is_available: false,
+                balance_infos: vec![],
+            },
+            fetched_at,
+        );
+        let platform = platform_snapshot(
+            "platform".into(),
+            "Platform".into(),
+            None,
+            vec![],
+            fetched_at,
+        );
+        for account in [api, platform] {
+            let json = serde_json::to_value(account).unwrap();
+            assert_eq!(json["fetchedAt"].as_i64(), Some(fetched_at));
+        }
+    }
     #[test]
     fn accepts_zero_balance_and_preserves_currencies_and_precision() {
         let value: Response = serde_json::from_str(r#"{"is_available":false,"balance_infos":[{"currency":"CNY","total_balance":"0.0000","granted_balance":"0","topped_up_balance":"0"},{"currency":"USD","total_balance":"1.123456","granted_balance":"0","topped_up_balance":"1.123456"}]}"#).unwrap();

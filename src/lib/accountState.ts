@@ -22,6 +22,12 @@ export function cachedAccounts(value: string | null): readonly Account[] {
         : item.providerId === "zcode" && Array.isArray(item.windows);
       if (valid) seen.add(item.id);
       return !!valid;
+    }).map(account => {
+      // Earlier DeepSeek snapshots used milliseconds; all account timestamps use seconds.
+      if (account.providerId === "deepseek" && account.fetchedAt >= 1_000_000_000_000) {
+        return { ...account, fetchedAt: Math.floor(account.fetchedAt / 1000) };
+      }
+      return account;
     });
   } catch { return []; }
 }
