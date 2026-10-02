@@ -2841,14 +2841,18 @@ dependencies = [
 name = "quotapeek"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "chrono",
+ "getrandom 0.4.3",
  "reqwest 0.12.28",
  "serde",
  "serde_json",
+ "sha2",
  "tauri",
  "tauri-build",
  "tauri-plugin-opener",
  "tokio",
+ "uuid",
  "windows 0.62.2",
 ]
 

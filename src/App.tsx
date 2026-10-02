@@ -166,7 +166,7 @@ function App() {
       <div className="account-choices">
         {members.map((member, position) => {
           const name = accountLabel(member) || `Account ${position + 1}`;
-          const region = member.providerId === "codex" ? null : member.region === "cn" ? "CN" : "Global";
+          const region = member.providerId === "deepseek" ? (member.source === "deepseek-api" ? "API" : null) : member.providerId === "codex" ? null : member.region === "cn" ? "CN" : "Global";
           return <button type="button" key={member.id} className="account-choice" aria-pressed={member.id === id}
             aria-label={`Switch to ${name}${region ? ` · ${region}` : ""}`} title={`${name}${region ? ` · ${region}` : ""}`}
             onClick={() => selectAccount(member.id)}>
@@ -233,6 +233,7 @@ function App() {
             <AddAccount hidden={popup !== "add"} codexConnected={accounts.some(account => account.providerId === "codex")}
               onConnectCodex={() => connectAccount("codex")}
               onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}
+              onConnectDeepseek={id => connectAccount("deepseek", id)}
               onClose={() => setPopup("home")} />
             {groups.length > 1 && <nav className="provider-switcher" aria-label="Select provider">
               {groups.map(group => <button key={group.providerId} className={`provider-choice provider-${group.providerId}`}

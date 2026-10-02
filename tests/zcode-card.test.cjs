@@ -9,6 +9,7 @@ require.extensions['.tsx'] = (module, file) => module._compile(ts.transpileModul
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 },
 }).outputText, file);
 require.extensions['.css'] = () => {};
+require.extensions['.png'] = (module, file) => { module.exports = file; };
 const { default: Card, resetText } = require('../src/components/providers/ZcodeAccountCard.tsx');
 
 const account = {

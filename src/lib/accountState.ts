@@ -18,6 +18,7 @@ export function cachedAccounts(value: string | null): readonly Account[] {
       if (!item || typeof item.id !== "string" || seen.has(item.id) || typeof item.fetchedAt !== "number") return false;
       const valid = item.providerId === "codex" ? item.rateLimits && typeof item.rateLimits === "object"
         : item.providerId === "workbuddy" ? Array.isArray(item.packages) && Number.isFinite(item.totalSize) && Number.isFinite(item.totalUsed) && Number.isFinite(item.totalRemain)
+        : item.providerId === "deepseek" ? typeof item.label === "string" && typeof item.isAvailable === "boolean" && Array.isArray(item.balances)
         : item.providerId === "zcode" && Array.isArray(item.windows);
       if (valid) seen.add(item.id);
       return !!valid;

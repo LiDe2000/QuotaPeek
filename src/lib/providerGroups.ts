@@ -3,7 +3,7 @@ import type { Account } from "../types/quota";
 export type Provider = Account["providerId"];
 export type ProviderSelection = Partial<Record<Provider, string>>;
 export const PROVIDER_SELECTION_KEY = "quotapeek-provider-selection-v1";
-export const providerName: Record<Provider, string> = { codex: "Codex", workbuddy: "WorkBuddy", zcode: "ZCode" };
+export const providerName: Record<Provider, string> = { codex: "Codex", workbuddy: "WorkBuddy", zcode: "ZCode", deepseek: "DeepSeek" };
 export interface ProviderGroup { providerId: Provider; accounts: readonly Account[]; selected: Account }
 
 /** Keep provider and account order stable while resolving missing remembered identities. */
@@ -21,7 +21,7 @@ export function readProviderSelection(raw: string | null): ProviderSelection {
   try {
     const value = JSON.parse(raw ?? "{}");
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-    return Object.fromEntries((["codex", "workbuddy", "zcode"] as const)
+    return Object.fromEntries((["codex", "workbuddy", "zcode", "deepseek"] as const)
       .filter(provider => typeof value[provider] === "string").map(provider => [provider, value[provider]]));
   } catch { return {}; }
 }

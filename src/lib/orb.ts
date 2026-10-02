@@ -9,6 +9,7 @@ export interface OrbMeter {
 const empty: OrbMeter = { percent: null, used: null, total: null };
 function remaining(used: number): number { return Math.max(0, Math.min(100, 100 - used)); }
 export function orbMeter(account: Account): OrbMeter {
+  if (account.providerId === "deepseek") return empty;
   if (account.providerId === "workbuddy") return account.totalSize > 0
     ? { percent: remaining(account.totalUsed / account.totalSize * 100), used: account.totalUsed, total: account.totalSize } : empty;
   if (account.providerId === "zcode") {

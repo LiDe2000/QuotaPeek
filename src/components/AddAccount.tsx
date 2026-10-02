@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { startDeepseekLogin, pollDeepseekLogin, cancelDeepseekLogin } from "../services/deepseek";
+import PlatformMark from "./PlatformMark";
 
 import { workbuddyErrorMessage, pollWorkbuddyLogin, startWorkbuddyLogin, cancelWorkbuddyLogin } from "../services/workbuddy";
 import { pollZcodeLogin, startZcodeLogin, zcodeErrorMessage, cancelZcodeLogin } from "../services/zcode";
 import type { ZcodeSite } from "../services/zcode";
 import "./AddAccount.css";
-type Platform = "codex" | "workbuddy" | "zcode";
-type BrowserPlatform = "workbuddy" | "zcode";
+type Platform = "codex" | "workbuddy" | "zcode" | "deepseek";
+type BrowserPlatform = "workbuddy" | "zcode" | "deepseek";
 type Phase = "idle" | "starting" | "waiting" | "reading" | "cancelling";
 interface Flow { provider: BrowserPlatform; state: string; startedAt: number }
 interface AddAccountProps {
@@ -15,19 +17,21 @@ interface AddAccountProps {
   onConnectCodex: () => Promise<boolean>;
   onConnectWorkbuddy: (accountId: string) => Promise<boolean>;
   onConnectZcode: (accountId: string) => Promise<boolean>;
+  onConnectDeepseek: (accountId: string) => Promise<boolean>;
   onClose: () => void;
 }
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 10 * 60 * 1000;
 const BROWSER_COPY = {
-  workbuddy: { name: "WorkBuddy", mark: "W", hint: "Sign in through the WorkBuddy page opened in your browser. Each account is saved separately." },
-  zcode: { name: "ZCode", mark: "Z", hint: "Choose Z.ai (global) or BigModel (China), then sign in through the authorization page. Each account is saved separately." },
+  deepseek: { name: "DeepSeek", hint: "Sign in to your DeepSeek account in the browser to view its balance. No API key is needed. Each account is saved separately." },
+  workbuddy: { name: "WorkBuddy", hint: "Sign in through the WorkBuddy page opened in your browser. Each account is saved separately." },
+  zcode: { name: "ZCode", hint: "Choose Z.ai (global) or BigModel (China), then sign in through the authorization page. Each account is saved separately." },
 };
 function cancelFlow(flow: Flow) {
-  return flow.provider === "workbuddy" ? cancelWorkbuddyLogin(flow.state) : cancelZcodeLogin(flow.state);
+  return flow.provider === "deepseek" ? cancelDeepseekLogin(flow.state) : flow.provider === "workbuddy" ? cancelWorkbuddyLogin(flow.state) : cancelZcodeLogin(flow.state);
 }
 
-export default function AddAccount({ hidden, codexConnected, onConnectCodex, onConnectWorkbuddy, onConnectZcode, onClose }: AddAccountProps) {
+export default function AddAccount({ hidden, codexConnected, onConnectCodex, onConnectWorkbuddy, onConnectZcode, onConnectDeepseek, onClose }: AddAccountProps) {
   const [selected, setSelected] = useState<Platform | null>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [flow, setFlow] = useState<Flow | null>(null);
@@ -38,8 +42,8 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
   const generation = useRef(0);
   const busy = useRef(false);
   const flowRef = useRef<Flow | null>(null);
-  const callbacks = useRef({ onConnectCodex, onConnectWorkbuddy, onConnectZcode });
-  callbacks.current = { onConnectCodex, onConnectWorkbuddy, onConnectZcode };
+  const callbacks = useRef({ onConnectCodex, onConnectWorkbuddy, onConnectZcode, onConnectDeepseek });
+  callbacks.current = { onConnectCodex, onConnectWorkbuddy, onConnectZcode, onConnectDeepseek };
   flowRef.current = flow;
   useEffect(() => { if (!hidden) firstButton.current?.focus(); }, [hidden, selected]);
   useEffect(() => () => {
@@ -50,7 +54,7 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
   async function readBrowserAccount(provider: BrowserPlatform, id: string, version: number) {
     setPhase("reading");
     try {
-      const ok = provider === "workbuddy" ? await callbacks.current.onConnectWorkbuddy(id) : await callbacks.current.onConnectZcode(id);
+      const ok = provider === "deepseek" ? await callbacks.current.onConnectDeepseek(id) : provider === "workbuddy" ? await callbacks.current.onConnectWorkbuddy(id) : await callbacks.current.onConnectZcode(id);
       if (generation.current !== version) return;
       if (ok) { setSignedIn(null); setSelected(null); }
       else setLoginError("Sign-in saved, but quota could not be read. Retry the quota query below.");
@@ -74,7 +78,7 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
         return;
       }
       try {
-        const result = flow!.provider === "workbuddy" ? await pollWorkbuddyLogin(flow!.state) : await pollZcodeLogin(flow!.state);
+        const result = flow!.provider === "deepseek" ? await pollDeepseekLogin(flow!.state) : flow!.provider === "workbuddy" ? await pollWorkbuddyLogin(flow!.state) : await pollZcodeLogin(flow!.state);
         if (stopped || version !== generation.current) return;
         if (result.status === "success") {
           if (!result.accountId) throw new Error("No account identity came back. Start sign-in again.");
@@ -136,7 +140,7 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
     setWaitedMs(0);
     let pending: Flow | null = null;
     try {
-      const start = provider === "workbuddy" ? await startWorkbuddyLogin() : await startZcodeLogin(site ?? "zai");
+      const start = provider === "deepseek" ? await startDeepseekLogin() : provider === "workbuddy" ? await startWorkbuddyLogin() : await startZcodeLogin(site ?? "zai");
       pending = { provider, state: start.state, startedAt: Date.now() };
       if (version !== generation.current) { await cancelFlow(pending); return; }
       flowRef.current = pending;
@@ -170,7 +174,7 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
     const copy = BROWSER_COPY[provider];
     return <>
       <div className={`selected-platform provider-${provider}`}>
-        <span className="platform-mark" aria-hidden="true">{copy.mark}</span><strong>{copy.name}</strong>
+        <PlatformMark provider={provider} /><strong>{copy.name}</strong>
         <button className="change-platform" disabled={waiting} onClick={() => { setSelected(null); setLoginError(null); setSignedIn(null); }}>Change</button>
       </div>
       <p className="account-hint">{copy.hint}</p>
@@ -198,18 +202,19 @@ export default function AddAccount({ hidden, codexConnected, onConnectCodex, onC
     <div className="add-account-heading">
       <div><p className="account-step">{selected ? "STEP 2 OF 2" : "STEP 1 OF 2"}</p><h2 id="add-account-title">Connect account</h2></div>
     </div>
-    {selected === "codex" ? <>
-      <div className="selected-platform provider-codex"><span className="platform-mark" aria-hidden="true">O</span><strong>Codex</strong>
+    {selected === "deepseek" ? browserPanel("deepseek") : selected === "codex" ? <>
+      <div className="selected-platform provider-codex"><PlatformMark provider="codex" /><strong>Codex</strong>
         <button className="change-platform" disabled={waiting} onClick={() => { setSelected(null); setLoginError(null); }}>Change</button></div>
       <p className="account-hint">Connect the ChatGPT account currently signed in to Codex on this computer. Sign in to Codex first; this local login supports one account at a time.</p>
       {loginError && <p className="account-error" role="alert">{loginError}</p>}
       <button ref={firstButton} className="add-account-submit" disabled={waiting} onClick={() => void connectCodex()}>{waiting ? "Reading Codex quota…" : codexConnected ? "Refresh local Codex account" : "Connect local Codex"}</button>
     </> : selected === "workbuddy" ? browserPanel("workbuddy") : selected === "zcode" ? browserPanel("zcode") : <>
-      <p className="account-hint">Choose a platform to connect an account. WorkBuddy and ZCode support multiple accounts.</p>
+      <p className="account-hint">Choose a platform to connect an account.</p>
       <div className="platform-options">
-        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><span className="platform-mark">O</span><span>Codex</span></button>
-        <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><span className="platform-mark">W</span><span>WorkBuddy</span></button>
-        <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><span className="platform-mark">Z</span><span>ZCode</span></button>
+        <button ref={firstButton} className="platform-option provider-codex" onClick={() => { setSelected("codex"); setLoginError(null); }}><PlatformMark provider="codex" /><span>Codex</span></button>
+        <button className="platform-option provider-workbuddy" onClick={() => { setSelected("workbuddy"); setLoginError(null); }}><PlatformMark provider="workbuddy" /><span>WorkBuddy</span></button>
+        <button className="platform-option provider-zcode" onClick={() => { setSelected("zcode"); setLoginError(null); }}><PlatformMark provider="zcode" /><span>ZCode</span></button>
+        <button className="platform-option provider-deepseek" onClick={() => { setSelected("deepseek"); setLoginError(null); }}><PlatformMark provider="deepseek" /><span>DeepSeek</span></button>
       </div>
     </>}
   </section>;
