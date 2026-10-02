@@ -10,9 +10,9 @@ import { accountLabel } from "./types/quota";
 import AccountCard from "./components/AccountCard";
 import AppearanceSettings from "./components/AppearanceSettings";
 import OrbRail from "./components/OrbRail";
-import { PROVIDER_SELECTION_KEY, providerGroups, providerName, readProviderSelection } from "./lib/providerGroups";
+import ProviderSwitcher from "./components/ProviderSwitcher";
+import { PROVIDER_SELECTION_KEY, providerGroups, readProviderSelection } from "./lib/providerGroups";
 import type { ProviderSelection } from "./lib/providerGroups";
-import { providerIcon } from "./lib/providerIcons";
 import { useHoverPreview } from "./hooks/useHoverPreview";
 import { useAppearance } from "./hooks/useAppearance";
 import { useFittedWindowHeight } from "./hooks/useFittedWindowHeight";
@@ -235,12 +235,7 @@ function App() {
               onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}
               onConnectDeepseek={id => connectAccount("deepseek", id)}
               onClose={() => setPopup("home")} />
-            {groups.length > 1 && <nav className="provider-switcher" aria-label="Select provider">
-              {groups.map(group => <button key={group.providerId} className={`provider-choice provider-${group.providerId}`}
-                aria-pressed={currentAccount?.providerId === group.providerId} onClick={() => selectAccount(group.selected.id)}>
-                <img src={providerIcon(group.providerId) ?? undefined} alt="" draggable={false} /><span>{providerName[group.providerId]}</span>
-              </button>)}
-            </nav>}
+            {groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} />}
             {currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
             {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
               <div className="carousel-viewport" onPointerDown={event => {
