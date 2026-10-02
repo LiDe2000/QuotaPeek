@@ -45,9 +45,9 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
     onKeyDown={navigate}
   >
     <button type="button" className="orb-ring is-main" aria-expanded={cardOpen} aria-label={cardOpen ? "Collapse QuotaPeek" : "Expand QuotaPeek"} title={cardOpen ? "Collapse" : "Expand QuotaPeek"} onClick={onToggleHome}>
-      <svg viewBox="0 0 44 44" aria-hidden="true"><circle className="orb-track" cx="22" cy="22" r="19" /></svg>
       <img className="orb-logo" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} />
     </button>
+    <div className="orb-section-divider" aria-hidden="true" />
       {groups.map((group, index) => {
         const account = group.selected;
         const icon = providerIcon(account.providerId);

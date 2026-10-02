@@ -1,10 +1,12 @@
-/* The provider rail: a dark capsule hugging the window's edge. The main ring opens the
+/* The provider rail: a dark capsule hugging the window's edge. The app icon opens the
    accounts card; every signed-in provider stacks a status ring under it. The bare capsule —
    gaps included — drags the window. */
-:root { --orb-warn: #e2b34c; --orb-hot: #e2604f; }
+:root { --orb-warn: #e2b34c; --orb-hot: #e2604f; --orb-section-extra: 15px; }
 .orb-rail { max-height: calc(var(--window-max-height) - 2 * var(--window-inset)); overflow-y: auto; scrollbar-width: none; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 8px; border-radius: 999px; background: var(--color-window); border: 1px solid var(--color-window-border); cursor: grab; user-select: none; }
 .orb-rail:active { cursor: grabbing; }
 .orb-rail::-webkit-scrollbar { display: none; }
+/* The divider adds 5px of content and one extra 10px gap above the providers. */
+.orb-section-divider { flex-shrink: 0; width: 28px; height: 1px; margin: 2px 0; background: var(--color-border); pointer-events: none; }
 
 /* The ring: a track circle, a value arc that fills clockwise from the top, and the provider's
    logo in the middle. */
@@ -22,8 +24,7 @@
 .is-idle .orb-value { stroke: transparent; }
 .orb-logo { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; pointer-events: none; }
 span.orb-logo { display: grid; place-items: center; font-size: 13px; font-weight: 650; color: var(--provider-color); background: var(--provider-soft); }
-.is-main .orb-logo { width: 26px; height: 26px; }
-.is-main .orb-track { stroke: var(--color-border); }
+.is-main .orb-logo { width: 36px; height: 36px; border-radius: 0; }
 .is-add { border: 1px dashed var(--color-border); color: var(--color-text-subtle); }
 .orb-plus { font-size: 18px; line-height: 1; }
 .orb-balance-status { position: absolute; bottom: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-status); box-shadow: 0 0 0 2px var(--color-window); }
@@ -33,7 +34,7 @@ span.orb-logo { display: grid; place-items: center; font-size: 13px; font-weight
    points at the hovered ring. It floats beside the rail and is only as tall as the card it
    holds, so the window follows the content; on a short screen it stops at the edge and
    scrolls instead. */
-.orb-float { position: relative; z-index: 6; flex: 0 0 340px; width: 340px; --orb-offset: calc(10px + (var(--orb-i, 0) + 1) * 54px); margin-top: var(--orb-offset); max-height: max(80px, calc(var(--window-max-height) - 2 * var(--window-inset) - var(--orb-offset))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.orb-float { position: relative; z-index: 6; flex: 0 0 340px; width: 340px; --orb-offset: calc(10px + var(--orb-section-extra) + (var(--orb-i, 0) + 1) * 54px); margin-top: var(--orb-offset); max-height: max(80px, calc(var(--window-max-height) - 2 * var(--window-inset) - var(--orb-offset))); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .orb-float::-webkit-scrollbar { display: none; }
 .orb-float::before { content: ""; position: absolute; left: -5px; top: 16px; width: 10px; height: 10px; transform: rotate(45deg); background: var(--color-surface); border-left: 1px solid var(--color-border); border-bottom: 1px solid var(--color-border); }
 
