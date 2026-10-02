@@ -11,6 +11,7 @@ export const storage = createPersistentState({
   },
   async saveSettings(patch) { if (isTauri()) await invoke("storage_save_settings", { patch }); },
   async saveCache(accounts) { if (isTauri()) await invoke("storage_save_cache", { accounts }); },
+  async removeAccount(id, selection) { if (isTauri()) await invoke("storage_remove_account", { id, selection }); },
 });
 
 // Failures are reported by the shared storage status, while interaction stays usable.

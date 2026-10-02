@@ -6,6 +6,83 @@ fn temp_root() -> PathBuf {
 }
 
 #[test]
+fn removal_deletes_credentials_and_cache_and_repairs_selection_across_restarts() {
+    let root = temp_root();
+    let path = root.join("quotapeek.db");
+    let removed = json!({"id":"w1","providerId":"workbuddy","fetchedAt":42});
+    let kept = json!({"id":"w2","providerId":"workbuddy","fetchedAt":42});
+    let patch: BTreeMap<String, String> = [
+        ("quotapeek-selected-account".into(), "w2".into()),
+        (
+            "quotapeek-provider-selection-v1".into(),
+            "{\"workbuddy\":\"w2\"}".into(),
+        ),
+    ]
+    .into();
+    {
+        let db = Database::open(&path).unwrap();
+        db.save_cache(&[removed, kept.clone()]).unwrap();
+        db.connection.lock().unwrap().execute("INSERT INTO credentials(account_id,protection,payload) VALUES ('w1','fixture',X'01'),('w2','fixture',X'02')", []).unwrap();
+        db.save_settings(
+            &[
+                ("quotapeek-theme".into(), "light".into()),
+                ("quotapeek-selected-account".into(), "w1".into()),
+            ]
+            .into(),
+        )
+        .unwrap();
+        db.remove_account("w1", &patch).unwrap();
+        assert!(db
+            .credential::<Value>("workbuddy", Some("w1"))
+            .unwrap()
+            .is_none());
+        assert_eq!(
+            db.list::<Value>("workbuddy")
+                .unwrap()
+                .iter()
+                .map(|a| a.id.as_str())
+                .collect::<Vec<_>>(),
+            vec!["w2"]
+        );
+    }
+    let db = Database::open(&path).unwrap();
+    let saved = db.load_state().unwrap();
+    assert_eq!(saved.accounts, vec![kept]);
+    assert_eq!(saved.settings["quotapeek-selected-account"], "w2");
+    assert_eq!(saved.settings["quotapeek-theme"], "light");
+    drop(db);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn failed_removal_rolls_back_account_credentials_cache_and_settings() {
+    let root = temp_root();
+    let db = Database::open(&root.join("quotapeek.db")).unwrap();
+    let account = json!({"id":"codex-local","providerId":"codex","fetchedAt":42});
+    db.save_cache(&[account.clone()]).unwrap();
+    db.connection.lock().unwrap().execute("INSERT INTO credentials(account_id,protection,payload) VALUES ('codex-local','fixture',X'01')", []).unwrap();
+    db.save_settings(&[("quotapeek-selected-account".into(), "codex-local".into())].into())
+        .unwrap();
+    db.connection.lock().unwrap().execute_batch("CREATE TRIGGER refuse_selection BEFORE INSERT ON settings BEGIN SELECT RAISE(ABORT,'fixture: disk full'); END;").unwrap();
+    let patch = [("quotapeek-selected-account".into(), "".into())].into();
+    assert!(db.remove_account("codex-local", &patch).is_err());
+    assert_eq!(db.load_state().unwrap().accounts, vec![account]);
+    assert_eq!(db.list::<Value>("codex").unwrap().len(), 1);
+    assert_eq!(
+        db.load_state().unwrap().settings["quotapeek-selected-account"],
+        "codex-local"
+    );
+    assert!(db
+        .remove_account(
+            "codex-local",
+            &[("quotapeek-theme".into(), "dark".into())].into()
+        )
+        .is_err());
+    drop(db);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn portable_paths_follow_exe_and_installed_paths_follow_user_data() {
     assert_eq!(
         data_root(

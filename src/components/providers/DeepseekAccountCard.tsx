@@ -1,11 +1,12 @@
 import { formatMoney } from "../../lib/money";
+import type { ReactNode } from "react";
 import type { DeepseekAccount } from "../../types/deepseek";
 import deepseekAvatar from "../../assets/models/deepseek/avatar.png";
 import "../AccountCard.css";
 import "./DeepseekAccountCard.css";
 
-export default function DeepseekAccountCard({ account, active, stale, loading, panelId }: {
-  account: DeepseekAccount; active: boolean; stale: boolean; loading: boolean; panelId: string;
+export default function DeepseekAccountCard({ account, active, stale, loading, panelId, actions }: {
+  account: DeepseekAccount; active: boolean; stale: boolean; loading: boolean; panelId: string; actions?: ReactNode;
 }) {
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed"
     : account.isAvailable ? "Balance available" : "No available balance";
@@ -14,6 +15,7 @@ export default function DeepseekAccountCard({ account, active, stale, loading, p
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={deepseekAvatar} alt="" draggable={false} /></span>
       <div className="account-identity"><h2>DeepSeek</h2><p title={account.contact ? `${account.label} · ${account.contact}` : account.label}>{account.label}{account.contact ? ` · ${account.contact}` : account.source === "deepseek-api" ? " · API" : ""}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}${account.isAvailable ? "" : " ds-unavailable"}`} role="img" aria-label={status} title={status} />
+      {actions}
     </div>
     {account.balances.map((balance, index) => <section className="ds-deck" aria-label={`${balance.currency} balance`} key={`${balance.currency}-${index}`}>
       <div className="ds-balance-heading"><span>Available balance</span><span>{balance.currency}</span></div>

@@ -23,7 +23,9 @@ Rust 后端统一管理 accounts、credentials、quota_cache、settings、schema
 | settings | key 主键、value；主题和账户选择与设备标识采用不同 key |
 | schema_migrations | version 主键、applied_at；与 user_version 同事务推进 |
 
-新增供应商通常无需改表：定义 namespace、供应商数据类型和公开元数据字段即可。新增设置无需改表，在后端 UI 设置白名单注册 key。需要新的列、索引或表时，在 MIGRATIONS 末尾追加 SQL；当前 schema 版本自动取升级步骤数量，不手动修改旧步骤。credentials 与 quota_cache 的外键启用级联删除，供今后账户删除功能同步清理关联数据。
+新增供应商通常无需改表：定义 namespace、供应商数据类型和公开元数据字段即可。新增设置无需改表，在后端 UI 设置白名单注册 key。需要新的列、索引或表时，在 MIGRATIONS 末尾追加 SQL；当前 schema 版本自动取升级步骤数量，不手动修改旧步骤。credentials 与 quota_cache 的外键启用级联删除，账户移除时同步清理关联数据。
+
+账户移除通过 `storage_remove_account` 在同一事务中删除账户及其关联凭据、缓存，并修复当前账户与供应商选择；失败整体回滚。前端先等待该账户已有查询结束，避免凭据轮换重新写入账户；已移除 ID 在本次运行中阻止旧缓存和查询重新加入，仅显式重新连接解除此限制。全部移除后保存空选择并展示连接入口。该操作不调用供应商退出接口，不更改外部 Codex 登录状态。此功能使用现有表和外键，无需追加 schema 升级。
 
 Windows 使用当前用户范围 DPAPI，密文 BLOB 存在 credentials 中。其他平台在尚无安全存储实现时拒绝保存凭据，不回退为明文。账户列表不依赖解密，因此跨电脑或跨用户打开数据库仍可看到账户；查询提示重新授权，重新登录覆盖该账户凭据。Codex 授权始终由外部 Codex 管理。
 

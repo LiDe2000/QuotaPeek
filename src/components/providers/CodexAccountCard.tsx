@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import gptAvatar from "../../assets/models/gpt/avatar.png";
 import type { CodexAccount, CodexRateLimitWindow } from "../../types/codex";
 import "../AccountCard.css";
@@ -71,7 +72,7 @@ function ManualResets({ resets, now }: { resets: CodexAccount["rateLimitResetCre
     </details> : <div className="codex-resets-heading">{heading}</div>}
   </section>;
 }
-export default function CodexAccountCard({ account, active, stale, loading, panelId }: { account: CodexAccount; active: boolean; stale: boolean; loading: boolean; panelId?: string }) {
+export default function CodexAccountCard({ account, active, stale, loading, panelId, actions }: { account: CodexAccount; active: boolean; stale: boolean; loading: boolean; panelId?: string; actions?: ReactNode }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed" : "Last query succeeded";
@@ -80,6 +81,7 @@ export default function CodexAccountCard({ account, active, stale, loading, pane
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={gptAvatar} alt="" draggable={false} /></span>
       <div className="account-identity"><h2>Codex</h2><p title={account.email ?? "Email unavailable"}>{account.email ?? "Local Codex account"}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
+      {actions}
     </div>
     <p className="codex-plan">{account.planType ?? "Plan unavailable"} · Local account{stale ? " · Stale data" : ""}</p>
     {Object.entries(account.rateLimits).map(([id, bucket]) => <div className="codex-bucket" key={id}>

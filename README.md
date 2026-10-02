@@ -68,6 +68,7 @@ Windows 可执行文件将通过 [GitHub Releases](https://github.com/LiDe2000/Q
 | 单击供应商图标 | 刷新当前账户 |
 | 单击 QuotaPeek 主图标 | 打开或收起主面板 |
 | 主面板中的账户标签 / 预览右下角的数字按钮 | 切换同一供应商的账户 |
+| 账户卡片右上角的 **×** | 确认后移除该账户在 QuotaPeek 中的连接、授权信息和额度缓存 |
 | 主面板顶部的刷新按钮 | 刷新全部已连接账户 |
 | 主面板中的主题设置 | 切换 Original、Midnight 或 Pearl 主题 |
 | 左键点击托盘图标 | 显示主面板 |
@@ -76,6 +77,8 @@ Windows 可执行文件将通过 [GitHub Releases](https://github.com/LiDe2000/Q
 关闭窗口会隐藏到托盘；完全退出请使用托盘菜单中的 **Quit**。托盘图标可能被 Windows 收进通知区域的折叠菜单。
 
 账户连接信息、额度缓存和界面偏好保存在本机。连接或运行遇到问题时，请参阅 [排障文档](docs/troubleshooting.md)。
+
+移除账户只操作 QuotaPeek，不退出供应商网站或浏览器登录。移除 Codex 只断开本地连接并清理 QuotaPeek 缓存，Codex 本身保持登录。移除后可重新连接；若该账户正在查询，会等待查询结束后完成移除。
 
 ## 从源码开发
 

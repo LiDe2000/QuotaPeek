@@ -299,6 +299,37 @@ impl Database {
         Ok(value)
     }
 
+    pub fn remove_account(
+        &self,
+        id: &str,
+        selection: &BTreeMap<String, String>,
+    ) -> Result<(), String> {
+        if id.is_empty()
+            || id.len() > 512
+            || selection.iter().any(|(key, value)| {
+                ![
+                    "quotapeek-selected-account",
+                    "quotapeek-provider-selection-v1",
+                ]
+                .contains(&key.as_str())
+                    || value.len() > 16_384
+            })
+        {
+            return Err("Invalid account removal.".into());
+        }
+        let mut conn = self.lock()?;
+        let tx = conn
+            .transaction_with_behavior(TransactionBehavior::Immediate)
+            .map_err(sql_error)?;
+        // Credentials and quota snapshots are deleted by the existing foreign keys.
+        tx.execute("DELETE FROM accounts WHERE id=?1", [id])
+            .map_err(sql_error)?;
+        for (key, value) in selection {
+            tx.execute("INSERT INTO settings(key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value", params![key,value]).map_err(sql_error)?;
+        }
+        tx.commit().map_err(sql_error)
+    }
+
     pub fn save_cache(&self, accounts: &[Value]) -> Result<(), String> {
         let mut conn = self.lock()?;
         let tx = conn.transaction().map_err(sql_error)?;

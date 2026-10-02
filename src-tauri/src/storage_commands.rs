@@ -22,3 +22,12 @@ pub fn storage_save_cache(
 ) -> Result<(), String> {
     state.save_cache(&accounts)
 }
+
+#[tauri::command]
+pub fn storage_remove_account(
+    state: tauri::State<'_, Database>,
+    id: String,
+    selection: BTreeMap<String, String>,
+) -> Result<(), String> {
+    state.remove_account(&id, &selection)
+}

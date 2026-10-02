@@ -29,7 +29,7 @@ function readSelected(): string | null {
 
 function App() {
   const desktop = isTauri();
-  const { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect } = useAccounts();
+  const { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect, removeAccount } = useAccounts();
   const [selectedId, setSelectedId] = useState<string | null>(readSelected);
   const [providerSelection, setProviderSelection] = useState<ProviderSelection>(() => {
     return readProviderSelection(storage.getSetting(PROVIDER_SELECTION_KEY));
@@ -79,7 +79,7 @@ function App() {
   }, [currentAccount, selectedId]);
   useEffect(() => {
     const patch: Record<string, string> = { [PROVIDER_SELECTION_KEY]: JSON.stringify(providerSelection) };
-    if (selectedId) patch["quotapeek-selected-account"] = selectedId;
+    patch["quotapeek-selected-account"] = selectedId ?? "";
     saveSettings(patch);
   }, [selectedId, providerSelection]);
 
@@ -111,6 +111,18 @@ function App() {
       setPopup(open => open === "add" ? "home" : open);
     }
     return account !== null;
+  }
+
+  async function removeCurrentAccount(id: string): Promise<boolean> {
+    if (!await removeAccount(id)) return false;
+    preview.hide();
+    setSelectedId(storage.getSetting("quotapeek-selected-account") || null);
+    setProviderSelection(readProviderSelection(storage.getSetting(PROVIDER_SELECTION_KEY)));
+    requestAnimationFrame(() => {
+      const target = panel.current?.querySelector<HTMLElement>(".carousel-page:not([hidden]) .account-remove-trigger, .connect-empty-button");
+      target?.focus();
+    });
+    return true;
   }
 
   function shellDrag(event: React.MouseEvent) {
@@ -184,11 +196,12 @@ function App() {
 
   function renderCard(account: Account, previewCard = false) {
     const status = statuses[account.id];
-    return <AccountCard account={account} active stale={!!status?.error} loading={!!status?.loading} preview={previewCard} />;
+    return <AccountCard account={account} active stale={!!status?.error} loading={!!status?.loading} preview={previewCard}
+      removalDisabled={restoring} onRemove={() => removeCurrentAccount(account.id)} />;
   }
   const currentStatus = currentAccount ? statuses[currentAccount.id] : undefined;
   const fetchedAt = currentStatus?.lastSuccess ?? currentAccount?.fetchedAt;
-  const footer = storageError ?? (currentStatus?.loading ? "Reading this account's quota…"
+  const footer = storageError ?? (currentStatus?.removing ? "Removing this account…" : currentStatus?.loading ? "Reading this account's quota…"
     : currentStatus?.error ?? currentStatus?.notice ?? (fetchedAt ? `Updated ${formatRefreshTime(fetchedAt)}`
       : currentAccount ? "Quota not yet available" : restoring ? "Restoring accounts…" : "No accounts · Use the + ring to connect one"));
 
@@ -241,6 +254,10 @@ function App() {
               onClose={() => setPopup("home")} />
             {groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} />}
             {currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
+            {!currentAccount && !restoring && popup === "home" && <div className="empty-accounts">
+              <p>No accounts connected.</p>
+              <button type="button" className="connect-empty-button" onClick={() => setPopup("add")}>Connect an account</button>
+            </div>}
             {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
               <div className="carousel-viewport" onPointerDown={event => {
                 if (!event.isPrimary || event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select, textarea, summary")) return;

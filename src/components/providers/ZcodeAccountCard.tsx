@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import glmAvatar from "../../assets/models/glm/avatar.png";
 import type { ZcodeAccount, ZcodeWindow } from "../../types/zcode";
 import "../AccountCard.css";
@@ -47,7 +48,7 @@ export function resetText(resetsAt: number | null, now: number, oneTime: boolean
   const stamp = `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
   return [`${oneTime ? "Expires" : "Resets"} ${stamp}`, remaining];
 }
-export default function ZcodeAccountCard({ account, active, stale, loading, defaultExpanded = false, panelId }: { account: ZcodeAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean; panelId?: string }) {
+export default function ZcodeAccountCard({ account, active, stale, loading, defaultExpanded = false, panelId, actions }: { account: ZcodeAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean; panelId?: string; actions?: ReactNode }) {
   const [now, setNow] = useState(Date.now);
   const [expanded, setExpanded] = useState(defaultExpanded);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
@@ -65,6 +66,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={glmAvatar} alt="" draggable={false} /></span>
       <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity} · {region}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
+      {actions}
     </div>
     <p className="zc-plan">{plan}{stale ? " · Stale data" : ""}</p>
 

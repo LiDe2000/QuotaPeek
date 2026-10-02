@@ -1,4 +1,24 @@
 import type { Account } from "../types/quota";
+import { PROVIDER_SELECTION_KEY, readProviderSelection } from "./providerGroups";
+
+/** Remove one identity and repair only selections pointing at it. */
+export function accountRemoval(accounts: readonly Account[], settings: Record<string, string>, id: string) {
+  const remaining = accounts.filter(account => account.id !== id);
+  const selection = readProviderSelection(settings[PROVIDER_SELECTION_KEY] ?? null);
+  const provider = accounts.find(account => account.id === id)?.providerId
+    ?? Object.entries(selection).find(([, selected]) => selected === id)?.[0];
+  const fallback = remaining.find(account => account.providerId === provider) ?? remaining[0];
+  for (const key of Object.keys(selection) as Account["providerId"][]) {
+    if (selection[key] !== id) continue;
+    const next = remaining.find(account => account.providerId === key);
+    if (next) selection[key] = next.id; else delete selection[key];
+  }
+  return { accounts: remaining, settings: {
+    "quotapeek-selected-account": settings["quotapeek-selected-account"] === id
+      ? fallback?.id ?? "" : settings["quotapeek-selected-account"] ?? "",
+    [PROVIDER_SELECTION_KEY]: JSON.stringify(selection),
+  } };
+}
 
 
 /** Update in place so refresh and reconnection cannot move the selected account. */

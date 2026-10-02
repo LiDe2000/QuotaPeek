@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import workbuddyAvatar from "../../assets/models/workbuddy/avatar.svg";
 import type { WorkbuddyAccount, WorkbuddyPackage } from "../../types/workbuddy";
 import "../AccountCard.css";
@@ -27,7 +28,7 @@ const credits = new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 });
 function percent(value: number): string {
   return String(Number(value.toFixed(1)));
 }
-export default function WorkbuddyAccountCard({ account, active, stale, loading, defaultExpanded = false, panelId }: { account: WorkbuddyAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean; panelId?: string }) {
+export default function WorkbuddyAccountCard({ account, active, stale, loading, defaultExpanded = false, panelId, actions }: { account: WorkbuddyAccount; active: boolean; stale: boolean; loading: boolean; defaultExpanded?: boolean; panelId?: string; actions?: ReactNode }) {
   const [now, setNow] = useState(Date.now);
   const [expanded, setExpanded] = useState(defaultExpanded);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
@@ -42,6 +43,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={workbuddyAvatar} alt="" draggable={false} /></span>
       <div className="account-identity"><h2>WorkBuddy</h2><p title={identity}>{identity} · {region}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
+      {actions}
     </div>
 
     {/* One card holds the balance and the overall bar; a click anywhere on it — mouse on the

@@ -49,6 +49,7 @@ pub fn run() {
             storage_commands::storage_load,
             storage_commands::storage_save_settings,
             storage_commands::storage_save_cache,
+            storage_commands::storage_remove_account,
             window_bounds::fit_window_bounds,
             codex::query_codex_quota,
             workbuddy::workbuddy_list_accounts,
