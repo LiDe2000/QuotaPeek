@@ -94,16 +94,16 @@ fn desktop_binary(root: &Path) -> Option<PathBuf> {
     if !root.is_absolute() {
         return None;
     }
-    let direct = root.join(native_name());
-    if native_file(&direct) {
-        return Some(direct);
-    }
-    // Desktop versions use opaque directory names. Inspect just one level and rank
-    // actual executable timestamps, not the directory name or directory timestamp.
-    let mut candidates: Vec<_> = std::fs::read_dir(root)
-        .ok()?
+    // Desktop updates may leave a legacy binary directly in bin/. Compare it
+    // with the versioned binaries instead of letting it mask newer installations.
+    // Version names are opaque; rank executable timestamps, not directory names.
+    let versioned = std::fs::read_dir(root)
+        .into_iter()
+        .flatten()
         .filter_map(Result::ok)
-        .map(|entry| entry.path().join(native_name()))
+        .map(|entry| entry.path().join(native_name()));
+    let mut candidates: Vec<_> = std::iter::once(root.join(native_name()))
+        .chain(versioned)
         .filter(|candidate| native_file(candidate))
         .map(|candidate| {
             let modified = candidate
@@ -204,6 +204,35 @@ mod tests {
         let fixture = Fixture::new();
         let old = fixture.file(&format!("desktop/zzz/{}", native_name()));
         let new = fixture.file(&format!("desktop/aaa/{}", native_name()));
+        std::fs::File::options()
+            .write(true)
+            .open(old)
+            .unwrap()
+            .set_modified(SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(100))
+            .unwrap();
+        assert_eq!(desktop_binary(&fixture.root.join("desktop")).unwrap(), new);
+    }
+    #[test]
+    fn newer_versioned_binary_supersedes_legacy_direct_binary() {
+        let fixture = Fixture::new();
+        let old = fixture.file(&format!("desktop/{}", native_name()));
+        let new = fixture.file(&format!("desktop/version/{}", native_name()));
+        std::fs::File::options()
+            .write(true)
+            .open(old)
+            .unwrap()
+            .set_modified(SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(100))
+            .unwrap();
+        assert_eq!(
+            resolve(None, None, vec![fixture.root.join("desktop")]).unwrap(),
+            new
+        );
+    }
+    #[test]
+    fn newer_direct_binary_supersedes_older_versioned_binary() {
+        let fixture = Fixture::new();
+        let old = fixture.file(&format!("desktop/version/{}", native_name()));
+        let new = fixture.file(&format!("desktop/{}", native_name()));
         std::fs::File::options()
             .write(true)
             .open(old)

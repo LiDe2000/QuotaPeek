@@ -1,6 +1,5 @@
 import type { Account } from "../types/quota";
 
-export const ACCOUNT_CACHE_KEY = "quotapeek-accounts-v2";
 
 /** Update in place so refresh and reconnection cannot move the selected account. */
 export function mergeAccount(accounts: readonly Account[], next: Account): readonly Account[] {

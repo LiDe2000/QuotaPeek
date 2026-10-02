@@ -6,13 +6,14 @@ import { listWorkbuddyAccounts, queryWorkbuddyQuota } from "../services/workbudd
 import { listZcodeAccounts, queryZcodeQuota } from "../services/zcode";
 import { listDeepseekAccounts, queryDeepseekBalance } from "../services/deepseek";
 import { refreshCooldown } from "../lib/refreshCooldown";
-import { ACCOUNT_CACHE_KEY, cachedAccounts, mergeAccount, restoreAccounts } from "../lib/accountState";
+import { mergeAccount, restoreAccounts } from "../lib/accountState";
+import { storage } from "../services/storage";
 
 type Provider = Account["providerId"];
 export interface AccountStatus { loading: boolean; error: string | null; lastSuccess: number | null; notice?: string | null }
 const idle: AccountStatus = { loading: false, error: null, lastSuccess: null };
 function readCache() {
-  try { return cachedAccounts(localStorage.getItem(ACCOUNT_CACHE_KEY)); } catch { return []; }
+  return storage.getAccounts();
 }
 
 export function useAccounts() {
@@ -108,7 +109,7 @@ export function useAccounts() {
   }
 
   useEffect(() => {
-    try { localStorage.setItem(ACCOUNT_CACHE_KEY, JSON.stringify(accounts)); } catch { /* Quota stays available in memory. */ }
+    void storage.saveAccounts(accounts).catch(() => {});
   }, [accounts]);
 
   useEffect(() => {

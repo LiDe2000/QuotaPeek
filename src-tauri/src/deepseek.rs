@@ -1,6 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{path::PathBuf, time::Duration};
-use tauri::Manager;
+use std::time::Duration;
 use tokio::sync::Mutex;
 
 #[derive(Default)]
@@ -70,12 +69,6 @@ pub(super) fn error(message: &str) -> Error {
 }
 pub(super) fn now_secs() -> i64 {
     chrono::Utc::now().timestamp()
-}
-fn path(app: &tauri::AppHandle) -> Result<PathBuf, Error> {
-    app.path()
-        .app_data_dir()
-        .map(|dir| dir.join("deepseek-accounts.json"))
-        .map_err(|_| error("Could not locate the account directory."))
 }
 fn snapshot(id: String, label: String, response: Response, fetched_at: i64) -> Account {
     Account {
@@ -154,23 +147,12 @@ pub async fn deepseek_connect(
     }
     let response = query(api_key).await?;
     let _guard = state.0.lock().await;
-    let path = path(&app)?;
-    let entries =
-        crate::account_store::read::<Credential>(&path).map_err(|message| error(&message))?;
-    // IDs reveal no part of the key, and reconnecting the same key updates in place.
-    let id = entries
-        .iter()
-        .find(|entry| entry.auth.api_key == api_key)
-        .map(|entry| entry.id.clone())
-        .unwrap_or_else(|| {
-            format!(
-                "deepseek-{}-{}",
-                std::process::id(),
-                chrono::Utc::now().timestamp_nanos_opt().unwrap_or_default()
-            )
-        });
+    // A hash of the high-entropy key keeps reconnection stable without storing it in the ID.
+    use sha2::{Digest, Sha256};
+    let id = format!("deepseek-{:x}", Sha256::digest(api_key.as_bytes()));
     crate::account_store::upsert(
-        &path,
+        &app,
+        "deepseek-api",
         id.clone(),
         Credential {
             api_key: api_key.into(),
@@ -186,7 +168,7 @@ pub async fn deepseek_list_accounts(
     app: tauri::AppHandle,
 ) -> Result<Vec<Account>, Error> {
     let _guard = state.0.lock().await;
-    let mut accounts: Vec<Account> = crate::account_store::read::<Credential>(&path(&app)?)
+    let mut accounts: Vec<Account> = crate::account_store::read::<Credential>(&app, "deepseek-api")
         .map_err(|message| error(&message))?
         .into_iter()
         .map(|entry| {
@@ -215,10 +197,8 @@ pub async fn deepseek_query_balance(
     }
     let entry = {
         let _guard = state.0.lock().await;
-        crate::account_store::read::<Credential>(&path(&app)?)
+        crate::account_store::load::<Credential>(&app, "deepseek-api", Some(&account_id))
             .map_err(|message| error(&message))?
-            .into_iter()
-            .find(|entry| entry.id == account_id)
             .ok_or_else(|| error("DeepSeek account not found. Reconnect it."))?
     };
     let response = query(&entry.auth.api_key).await?;

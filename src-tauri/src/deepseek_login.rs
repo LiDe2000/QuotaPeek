@@ -8,7 +8,6 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{
     collections::HashMap,
-    path::PathBuf,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -51,12 +50,6 @@ pub struct Start {
     auth_url: String,
 }
 
-fn path(app: &tauri::AppHandle) -> Result<PathBuf, Error> {
-    app.path()
-        .app_data_dir()
-        .map(|dir| dir.join("deepseek-platform-accounts.json"))
-        .map_err(|_| error("Could not locate the account directory."))
-}
 fn protocol() -> Error {
     error("DeepSeek returned an unsupported account response. Please retry later.")
 }
@@ -256,7 +249,7 @@ fn balances(value: Value) -> Result<Vec<Balance>, Error> {
         .collect()
 }
 pub(super) fn list_accounts(app: &tauri::AppHandle) -> Result<Vec<Account>, Error> {
-    Ok(crate::account_store::read::<Grant>(&path(app)?)
+    Ok(crate::account_store::read::<Grant>(app, "deepseek-platform")
         .map_err(|message| error(&message))?
         .into_iter()
         .map(|entry| {
@@ -274,10 +267,8 @@ pub(super) async fn query_account(app: &tauri::AppHandle, id: &str) -> Result<Ac
     let entry = {
         let state = app.state::<DeepseekState>();
         let _guard = state.0.lock().await;
-        crate::account_store::read::<Grant>(&path(app)?)
+        crate::account_store::load::<Grant>(app, "deepseek-platform", Some(id))
             .map_err(|message| error(&message))?
-            .into_iter()
-            .find(|entry| entry.id == id)
             .ok_or_else(|| error("DeepSeek account not found. Sign in again."))?
     };
     let client = client()?;
@@ -442,27 +433,11 @@ pub async fn deepseek_start_login(
         let task = async {
             let (code, stream) = receive(&listener, &csrf).await?;
             browser = Some(stream);
-            let device_path = app
-                .path()
-                .app_data_dir()
-                .map_err(|_| protocol())?
-                .join("deepseek-device.json");
-            let device_id = match std::fs::read_to_string(&device_path) {
-                Ok(value) => uuid::Uuid::parse_str(value.trim())
-                    .map_err(|_| error("Stored DeepSeek device identity is unreadable."))?
-                    .to_string(),
-                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                    let id = uuid::Uuid::new_v4().to_string();
-                    if let Some(parent) = device_path.parent() {
-                        std::fs::create_dir_all(parent).map_err(|_| protocol())?;
-                    }
-                    std::fs::write(&device_path, &id).map_err(|_| {
-                        crate::deepseek::error("Could not save the DeepSeek device identity.")
-                    })?;
-                    id
-                }
-                Err(_) => return Err(error("Could not read the DeepSeek device identity.")),
-            };
+            let device_id = app.state::<crate::storage::Database>()
+                .setting_or_insert("device.deepseek", &uuid::Uuid::new_v4().to_string())
+                .map_err(|message| error(&message))?;
+            let device_id = uuid::Uuid::parse_str(&device_id)
+                .map_err(|_| error("Saved DeepSeek device identity is unreadable."))?.to_string();
             let exchange = auth(&client, "auth_exchange", json!({ "code": code, "code_verifier": verifier, "redirect_uri": redirect_uri, "device_id": device_id,
                 "device_model": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH), "os_version": std::env::consts::OS })).await?;
             let token = exchange
@@ -519,11 +494,8 @@ pub async fn deepseek_start_login(
                     Err(error("DeepSeek sign-in cancelled."))
                 } else {
                     let id = crate::account_store::key("deepseek-account", &grant.user_id);
-                    path(&app)
-                        .and_then(|path| {
-                            crate::account_store::upsert(&path, id.clone(), grant)
-                                .map_err(|message| error(&message))
-                        })
+                    crate::account_store::upsert(&app, "deepseek-platform", id.clone(), grant)
+                        .map_err(|message| error(&message))
                         .map(|_| (id, completed))
                 }
             }

@@ -18,11 +18,13 @@ import { useAppearance } from "./hooks/useAppearance";
 import { useFittedWindowHeight } from "./hooks/useFittedWindowHeight";
 import Icon from "./components/Icon";
 import { formatRefreshTime } from "./lib/refreshTime";
+import { storage, saveSettings } from "./services/storage";
+import { useStorageStatus } from "./hooks/useStorageStatus";
 import "./App.css";
 
 type Popup = null | "home" | "add" | "appearance";
 function readSelected(): string | null {
-  try { return localStorage.getItem("quotapeek-selected-account"); } catch { return null; }
+  return storage.getSetting("quotapeek-selected-account");
 }
 
 function App() {
@@ -30,9 +32,10 @@ function App() {
   const { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect } = useAccounts();
   const [selectedId, setSelectedId] = useState<string | null>(readSelected);
   const [providerSelection, setProviderSelection] = useState<ProviderSelection>(() => {
-    try { return readProviderSelection(localStorage.getItem(PROVIDER_SELECTION_KEY)); } catch { return {}; }
+    return readProviderSelection(storage.getSetting(PROVIDER_SELECTION_KEY));
   });
   const { theme, setTheme } = useAppearance();
+  const storageError = useStorageStatus();
   const [popup, setPopup] = useState<Popup>(null);
   const preview = useHoverPreview();
   const drag = useRef<{ x: number; y: number } | null>(null);
@@ -75,12 +78,10 @@ function App() {
     }
   }, [currentAccount, selectedId]);
   useEffect(() => {
-    if (selectedId) try { localStorage.setItem("quotapeek-selected-account", selectedId); } catch { /* Selection still works. */ }
-  }, [selectedId]);
-
-  useEffect(() => {
-    try { localStorage.setItem(PROVIDER_SELECTION_KEY, JSON.stringify(providerSelection)); } catch { /* Selection works in memory. */ }
-  }, [providerSelection]);
+    const patch: Record<string, string> = { [PROVIDER_SELECTION_KEY]: JSON.stringify(providerSelection) };
+    if (selectedId) patch["quotapeek-selected-account"] = selectedId;
+    saveSettings(patch);
+  }, [selectedId, providerSelection]);
 
   useEffect(() => {
     if (popup && panel.current) panel.current.scrollTop = 0;
@@ -187,9 +188,9 @@ function App() {
   }
   const currentStatus = currentAccount ? statuses[currentAccount.id] : undefined;
   const fetchedAt = currentStatus?.lastSuccess ?? currentAccount?.fetchedAt;
-  const footer = currentStatus?.loading ? "Reading this account's quota…"
+  const footer = storageError ?? (currentStatus?.loading ? "Reading this account's quota…"
     : currentStatus?.error ?? currentStatus?.notice ?? (fetchedAt ? `Updated ${formatRefreshTime(fetchedAt)}`
-      : currentAccount ? "Quota not yet available" : restoring ? "Restoring accounts…" : "No accounts · Use the + ring to connect one");
+      : currentAccount ? "Quota not yet available" : restoring ? "Restoring accounts…" : "No accounts · Use the + ring to connect one"));
 
   return (
     <main className="app-shell" onMouseDown={shellDrag}>

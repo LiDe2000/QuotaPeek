@@ -8,11 +8,9 @@
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
-    path::PathBuf,
     collections::{HashMap, HashSet},
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
-use tauri::Manager;
 use tokio::sync::Mutex;
 
 const AUTH_HOST: &str = "https://copilot.tencent.com";
@@ -24,9 +22,6 @@ const BILLING_GLOBAL: &str = "https://www.workbuddy.ai";
 const TOKEN_REFRESH_MARGIN: u64 = 24 * 3600;
 /// Minimum spacing between billing queries; manual refresh stays user-paced.
 const MIN_QUERY_INTERVAL: Duration = Duration::from_secs(10);
-const AUTH_FILE: &str = "workbuddy-auth.json";
-/// Written by builds that shipped before the CodeBuddy -> WorkBuddy rename.
-const LEGACY_AUTH_FILE: &str = "codebuddy-auth.json";
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -123,45 +118,20 @@ fn now_secs() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
 }
 
-fn auth_path(app: &tauri::AppHandle) -> Result<PathBuf, QueryError> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| error("storage", "Could not locate the app data directory."))?;
-    Ok(dir.join(AUTH_FILE))
-}
-
 fn account_id(auth: &StoredAuth) -> String {
     crate::account_store::key("workbuddy", &format!("{}:{}:{}", region_of(&auth.domain), auth.uid, auth.enterprise_id))
 }
 
-fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, QueryError> {
-    Ok(auth_path(app)?.with_file_name("workbuddy-accounts.json"))
-}
-
 fn stored_accounts(app: &tauri::AppHandle) -> Result<Vec<crate::account_store::Entry<StoredAuth>>, QueryError> {
-    let path = accounts_path(app)?;
-    if !path.exists() {
-        let legacy = auth_path(app)?;
-        let bytes = match std::fs::read(&legacy) {
-            Ok(bytes) => Some(bytes),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => std::fs::read(legacy.with_file_name(LEGACY_AUTH_FILE)).ok(),
-            Err(_) => return Err(error("storage", "Could not read the WorkBuddy login.")),
-        };
-        if let Some(bytes) = bytes {
-            let auth: StoredAuth = serde_json::from_slice(&bytes).map_err(|_| error("storage", "Stored WorkBuddy login is unreadable."))?;
-            store_auth(app, &auth)?;
-        }
-    }
-    crate::account_store::read(&path).map_err(|message| error("storage", message))
+    crate::account_store::read(app, "workbuddy").map_err(|message| error("storage", message))
 }
 
 fn load_auth(app: &tauri::AppHandle, requested: Option<&str>) -> Result<Option<StoredAuth>, QueryError> {
-    Ok(stored_accounts(app)?.into_iter().find(|entry| requested.map_or(true, |id| entry.id == id)).map(|entry| entry.auth))
+    Ok(crate::account_store::load::<StoredAuth>(app, "workbuddy", requested).map_err(|message| error("storage", message))?.map(|entry| entry.auth))
 }
 
 fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
-    crate::account_store::upsert(&accounts_path(app)?, account_id(auth), auth.clone()).map_err(|message| error("storage", message))
+    crate::account_store::upsert(app, "workbuddy", account_id(auth), auth.clone()).map_err(|message| error("storage", message))
 }
 
 #[tauri::command]

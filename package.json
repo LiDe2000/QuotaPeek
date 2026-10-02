@@ -9,6 +9,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "tauri:build:portable": "tauri build --no-bundle",
+    "tauri:build:installed": "tauri build --config src-tauri/tauri.installed.conf.json --features installed",
     "tauri:software": "tauri dev --config src-tauri/tauri.software-rendering.conf.json",
     "tauri:build:software": "tauri build --config src-tauri/tauri.software-rendering.conf.json",
     "tauri:diagnose": "node scripts/diagnose-rendering.cjs"

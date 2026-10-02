@@ -4,6 +4,7 @@
     "windows": [
       {
         "title": "QuotaPeek",
+        "create": false,
         "width": 78,
         "height": 140,
         "minWidth": 78,

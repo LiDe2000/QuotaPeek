@@ -3,9 +3,27 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
+            use tauri::Manager;
+            let exe = std::env::current_exe()?;
+            let installed =
+                cfg!(feature = "installed") || std::env::args().any(|arg| arg == "--installed");
+            let root = storage::data_root(&exe, &app.path().app_local_data_dir()?, installed)
+                .map_err(std::io::Error::other)?;
+            let database = storage::Database::open(&root.join("quotapeek.db"))
+                .map_err(std::io::Error::other)?;
+            app.manage(database);
+            let mut webview = root.join("webview");
+            // WebView2 profiles with different browser arguments must be separate.
+            if let Some(args) = &app.config().app.windows[0].additional_browser_args {
+                use sha2::{Digest, Sha256};
+                webview = webview.join(format!("profile-{:x}", Sha256::digest(args.as_bytes())));
+            }
+            std::fs::create_dir_all(&webview)?;
+            tauri::WebviewWindowBuilder::from_config(app.handle(), &app.config().app.windows[0])?
+                .data_directory(webview)
+                .build()?;
             #[cfg(windows)]
             {
-                use tauri::Manager;
                 app.manage(window_drag::DragState::default());
                 window_drag::setup(app)?;
             }
@@ -28,6 +46,9 @@ pub fn run() {
         .manage(deepseek::DeepseekState::default())
         .manage(deepseek_login::LoginState::default())
         .invoke_handler(tauri::generate_handler![
+            storage_commands::storage_load,
+            storage_commands::storage_save_settings,
+            storage_commands::storage_save_cache,
             window_bounds::fit_window_bounds,
             codex::query_codex_quota,
             workbuddy::workbuddy_list_accounts,
@@ -48,20 +69,43 @@ pub fn run() {
             deepseek_login::deepseek_cancel_login
         ])
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .unwrap_or_else(|error| {
+            eprintln!("Could not start QuotaPeek: {error}");
+            #[cfg(windows)]
+            unsafe {
+                use windows::{
+                    core::PCWSTR,
+                    Win32::UI::WindowsAndMessaging::{MessageBoxW, MB_ICONERROR, MB_OK},
+                };
+                let message: Vec<u16> = format!("Could not start QuotaPeek.\n\n{error}")
+                    .encode_utf16()
+                    .chain(Some(0))
+                    .collect();
+                let title: Vec<u16> = "QuotaPeek".encode_utf16().chain(Some(0)).collect();
+                MessageBoxW(
+                    None,
+                    PCWSTR(message.as_ptr()),
+                    PCWSTR(title.as_ptr()),
+                    MB_OK | MB_ICONERROR,
+                );
+            }
+        });
 }
 mod account_store;
+mod codex;
+mod codex_executable;
+mod credential_protection;
 mod deepseek;
 mod deepseek_login;
 mod deepseek_wallet;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod desktop_window;
+mod storage;
+mod storage_commands;
+#[cfg(not(any(target_os = "android", target_os = "ios")))]
+mod tray;
 mod window_bounds;
 #[cfg(windows)]
 mod window_drag;
-mod codex;
-mod codex_executable;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod desktop_window;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod tray;
 mod workbuddy;
 mod zcode;

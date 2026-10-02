@@ -36,8 +36,6 @@ const SITE_BIGMODEL: &str = "bigmodel";
 /// Matches the desktop client's own billing fingerprint.
 const APP_VERSION: &str = "3.14.4";
 const ORIGIN: &str = "https://zcode.z.ai";
-const AUTH_FILE: &str = "zcode-auth.json";
-const DEVICE_FILE: &str = "zcode-device.json";
 /// Manual refresh only; a burst of billing calls is the fastest way to get flagged.
 /// The route answers 429 to a handful of rapid calls.
 const MIN_QUERY_INTERVAL: Duration = Duration::from_secs(10);
@@ -218,49 +216,21 @@ fn random_poll_token() -> String {
     random_hex(4)
 }
 
-fn app_file(app: &tauri::AppHandle, name: &str) -> Result<PathBuf, QueryError> {
-    let dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| error("storage", "Could not locate the app data directory."))?;
-    Ok(dir.join(name))
-}
-
-fn write_app_file(path: &Path, body: String, failure: &'static str) -> Result<(), QueryError> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|_| error("storage", "Could not create the app data directory."))?;
-    }
-    std::fs::write(path, body).map_err(|_| error("storage", failure))
-}
-
 fn account_id(auth: &StoredAuth) -> String {
     let identity = if auth.identity.is_empty() { auth.who() } else { &auth.identity };
     crate::account_store::key("zcode", &format!("{}:{}", normalize_site(auth.site()), identity))
 }
 
-fn accounts_path(app: &tauri::AppHandle) -> Result<PathBuf, QueryError> { app_file(app, "zcode-accounts.json") }
-
 fn stored_accounts(app: &tauri::AppHandle) -> Result<Vec<crate::account_store::Entry<StoredAuth>>, QueryError> {
-    let path = accounts_path(app)?;
-    if !path.exists() {
-        match std::fs::read(app_file(app, AUTH_FILE)?) {
-            Ok(bytes) => {
-                let auth: StoredAuth = serde_json::from_slice(&bytes).map_err(|_| error("storage", "Stored ZCode login is unreadable."))?;
-                store_auth(app, &auth)?;
-            },
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {},
-            Err(_) => return Err(error("storage", "Could not read the ZCode login.")),
-        }
-    }
-    crate::account_store::read(&path).map_err(|message| error("storage", message))
+    crate::account_store::read(app, "zcode").map_err(|message| error("storage", message))
 }
 
 fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
-    crate::account_store::upsert(&accounts_path(app)?, account_id(auth), auth.clone()).map_err(|message| error("storage", message))
+    crate::account_store::upsert(app, "zcode", account_id(auth), auth.clone()).map_err(|message| error("storage", message))
 }
 
 fn load_auth(app: &tauri::AppHandle, requested: Option<&str>) -> Result<Option<StoredAuth>, QueryError> {
-    Ok(stored_accounts(app)?.into_iter().find(|entry| requested.map_or(true, |id| entry.id == id)).map(|entry| entry.auth))
+    Ok(crate::account_store::load::<StoredAuth>(app, "zcode", requested).map_err(|message| error("storage", message))?.map(|entry| entry.auth))
 }
 
 #[tauri::command]
@@ -299,24 +269,14 @@ fn client_device_id(home: &Path) -> Option<String> {
 
 /// Falls back to one id of our own, minted once and then reused for the life of the app.
 fn own_device_id(app: &tauri::AppHandle) -> Result<String, QueryError> {
-    let path = app_file(app, DEVICE_FILE)?;
-    if let Ok(bytes) = std::fs::read(&path) {
-        if let Ok(value) = serde_json::from_slice::<Value>(&bytes) {
-            if let Some(mid) = value.get("deviceMid").and_then(Value::as_str) {
-                if valid_device_id(mid) {
-                    return Ok(mid.trim().to_owned());
-                }
-            }
-        }
-    }
-    let mid = random_id();
-    let body = serde_json::json!({ "deviceMid": mid }).to_string();
-    write_app_file(&path, body, "Could not save the ZCode device identity.")?;
+    let mid = app.state::<crate::storage::Database>().setting_or_insert("device.zcode", &random_id())
+        .map_err(|message| error("storage", message))?;
+    if !valid_device_id(&mid) { return Err(error("storage", "Saved ZCode device identity is unreadable.")); }
     Ok(mid)
 }
 
-fn device_id(app: &tauri::AppHandle, home: &Path) -> String {
-    client_device_id(home).unwrap_or_else(|| own_device_id(app).unwrap_or_else(|_| random_id()))
+fn device_id(app: &tauri::AppHandle, home: &Path) -> Result<String, QueryError> {
+    match client_device_id(home) { Some(mid) => Ok(mid), None => own_device_id(app) }
 }
 
 fn home_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
@@ -573,8 +533,8 @@ pub async fn zcode_query_quota(state: tauri::State<'_, ZcodeState>, app: tauri::
         *last = Some(Instant::now());
     }
     let device = match home_dir(&app) {
-        Some(home) => device_id(&app, &home),
-        None => own_device_id(&app).unwrap_or_else(|_| random_id()),
+        Some(home) => device_id(&app, &home)?,
+        None => own_device_id(&app)?,
     };
     let response = state
         .http

@@ -23,6 +23,9 @@ src/
 src-tauri/src/
   lib.rs            # Tauri 命令与共享状态注册
   account_store.rs  # 多账户连接信息的持久化
+  storage.rs        # SQLite 数据、事务及版本升级
+  storage_commands.rs # 前端设置与缓存命令
+  credential_protection.rs # Windows DPAPI 凭据保护
   codex.rs           # Codex 协议与查询进程管理
   codex_executable.rs # 本机 Codex 可执行文件发现
   workbuddy.rs      # WorkBuddy 授权、账户与额度查询
@@ -41,6 +44,8 @@ tests/              # 前端数据逻辑与卡片渲染测试
 失败时保留上次查询数据，并显示错误及上次成功时间。未知额度不生成虚假的 0% 或 100%；重置时间到期也不直接修改额度，需要再次查询确认。
 
 Codex 使用本机已有登录状态，目前只有一个本地连接；WorkBuddy 和 ZCode 的授权信息按账户独立保存。浏览器登录轮询在上一次请求结束后再安排下一次，隐藏面板不会取消登录；取消登录使用独立操作。
+
+所有 QuotaPeek 自有持久化数据集中保存到 SQLite。JSON 查询结果直接存入 `quota_cache.payload`，账户凭据加密后存入 `credentials.payload`；数据库保存 JSON 内容，不保存旧 JSON 文件路径。前端先加载数据库再挂载 React，写入串行排队。路径策略、备份和 schema 升级规则见 [数据存储文档](storage.md)。
 
 ## 窗口布局
 
@@ -114,11 +119,11 @@ initialize → initialized → account/read → account/rateLimits/read → acco
 
 请求使用 QuotaPeek 自身版本和平台信息，限制响应大小为 64 KiB，不跟随重定向。授权和完成页面只允许开放平台的固定路径；回调校验 state、路径和参数唯一性。单次网络请求超时 30 秒，登录流程最长 10 分钟；取消会阻止尚未提交的凭据写入，已提交的结果返回对应账户 ID。隐藏连接面板允许登录继续。
 
-账户按平台返回的稳定用户 ID 保存；再次登录同一账户更新原记录，不同账户独立保留。账户授权保存在本机应用数据目录的 `deepseek-platform-accounts.json`，设备身份在 `deepseek-device.json`。沿用现有明文 JSON 存储，前端缓存、轮询结果和错误信息不包含授权 token 或 PKCE verifier。HTTP 401 和会话过期业务码会提示重新登录，其他查询失败保留上次成功余额。
+账户按平台返回的稳定用户 ID 保存；再次登录同一账户更新原记录，不同账户独立保留。授权以 DPAPI 密文保存到 SQLite，设备身份保存在 settings 表。账户列表读取公开元数据，不依赖解密；查询时只解密对应账户。前端缓存、轮询结果和错误信息不包含授权 token 或 PKCE verifier。HTTP 401 和会话过期业务码会提示重新登录，其他查询失败保留上次成功余额。
 
 充值钱包和赠金钱包分别读取，同一币种内使用有界整数十进制运算精确合计，支持负数及科学计数法；不同币种保持独立。实现限制有效金额位数和指数范围，溢出拒绝解析而非舍入。余额不足不当作登录失败，不推算固定额度百分比；钱包接口没有提供赠金到期时间。
 
-之前的 API Key 账户继续通过 `src-tauri/src/deepseek.rs` 调用公开 `GET https://api.deepseek.com/user/balance`，保存在 `deepseek-accounts.json`。默认连接界面不再要求 Key，旧记录不会被删除。两种认证使用不同存储和查询路径，避免把 Key 当账户授权 token 使用。
+API Key 账户通过 `src-tauri/src/deepseek.rs` 调用公开 `GET https://api.deepseek.com/user/balance`，采用高熵 Key 的 SHA-256 摘要作为稳定账户 ID，Key 本身以 DPAPI 密文保存。默认连接界面使用浏览器授权。两种认证分别使用 `deepseek-api` 和 `deepseek-platform` namespace，查询路径保持独立。本次不导入以前的 JSON 记录。
 
 卡片图像使用独立的 `src/assets/models/deepseek/avatar.png` Q 版头像，侧栏和供应商切换继续使用 `src/assets/providers/deepseek/` 下的产品图标。新增余额型供应商时，应复用账户状态流程，分别定义余额与额度的侧栏含义。
 

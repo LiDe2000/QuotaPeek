@@ -25,3 +25,9 @@ dist-ssr
 *.sw?
 
 .workbuddy
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.db.v*.bak

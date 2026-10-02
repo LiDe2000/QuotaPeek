@@ -2,6 +2,28 @@
 
 [返回 README](../README.md) · [开发文档](development.md)
 
+## 找不到 Cargo
+
+运行 `npm run tauri dev` 或构建时，如果出现：
+
+```text
+failed to run 'cargo metadata' command
+program not found
+```
+
+说明当前启动进程找不到 `cargo`。Tauri 需要 Rust 工具链，`npm install` 不会安装它。
+
+先在同一个终端检查：
+
+```powershell
+cargo --version
+rustc --version
+```
+
+未安装 Rust 时，按 [README 的 Windows 首次配置](../README.md#windows-首次配置) 安装。已安装时，检查 `%USERPROFILE%\.cargo\bin` 是否在 PATH 中；使用自定义安装目录时检查对应的 `bin` 目录。安装或修改 PATH 后，重新打开终端，并重启启动开发命令的 IDE，让新进程获取环境变量。
+
+两个命令都能显示版本号后，重新运行 `npm run tauri dev`。这只确认 Rust 命令可用；Windows 编译仍需要 MSVC Build Tools 和 Windows SDK，完整要求见 [Tauri 官方前置依赖](https://v2.tauri.app/start/prerequisites/)。
+
 ## 无法连接本机 Codex
 
 ### 运行环境
@@ -18,7 +40,7 @@ QuotaPeek 按以下顺序寻找原生 Codex 可执行文件：
 2. `PATH` 中的原生可执行文件。
 3. Windows 的 `%LOCALAPPDATA%/OpenAI/Codex/bin`，包括其直接版本子目录。
 
-如果版本子目录存在多个可执行文件，使用可执行文件修改时间较新的项；不完整的目录会被忽略。
+安装目录根部和版本子目录中的可执行文件一起比较，使用可执行文件修改时间较新的项；不完整的目录会被忽略。这样更新 Codex 后残留的旧版 `bin/codex.exe` 不会覆盖新版。
 
 需要手动指定时，将 `QUOTAPEEK_CODEX_PATH` 设置为原生可执行文件的绝对路径，并重启 QuotaPeek。Windows 应指向 `codex.exe`，不能指向 npm 的 `.cmd` 或 `.ps1` 包装脚本。显式路径无效时，应用会报错，不会自动改用其他安装。
 
