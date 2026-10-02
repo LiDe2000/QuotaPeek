@@ -112,7 +112,7 @@ function App() {
   function shellDrag(event: React.MouseEvent) {
     if (!desktop || event.button !== 0) return;
     const target = event.target as Element | null;
-    if (target?.closest("button, a, input, select, textarea, .orb-pop, .orb-float")) return;
+    if (target?.closest("button, a, input, select, textarea, summary, .orb-pop, .orb-float")) return;
     void getCurrentWindow().startDragging();
   }
 
@@ -140,7 +140,7 @@ function App() {
     }
   }
   function navigate(event: KeyboardEvent<HTMLElement>) {
-    if (!groupAccounts.length || (event.target as Element).closest("button, input, select, textarea")) return;
+    if (!groupAccounts.length || (event.target as Element).closest("button, input, select, textarea, summary")) return;
     let next = page;
     if (event.key === "ArrowRight") next = (page + 1) % groupAccounts.length;
     else if (event.key === "ArrowLeft") next = (page + groupAccounts.length - 1) % groupAccounts.length;
@@ -243,7 +243,7 @@ function App() {
             {currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
             {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
               <div className="carousel-viewport" onPointerDown={event => {
-                if (!event.isPrimary || event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select, textarea")) return;
+                if (!event.isPrimary || event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select, textarea, summary")) return;
                 drag.current = { x: event.clientX, y: event.clientY };
                 event.currentTarget.setPointerCapture(event.pointerId);
               }} onPointerUp={finishSwipe} onPointerCancel={() => { drag.current = null; }}>

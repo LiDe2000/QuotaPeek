@@ -47,6 +47,30 @@ function TokenStats({ usage }: { usage: CodexAccount["tokenUsage"] }) {
     {!usage && <p className="codex-tokens-unavailable">Token usage unavailable from Codex</p>}
   </section>;
 }
+export function expiryStamp(timestamp: number): string {
+  const date = new Date(timestamp * 1000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  const offset = -date.getTimezoneOffset();
+  const zone = `GMT${offset >= 0 ? "+" : "-"}${Math.floor(Math.abs(offset) / 60)}${Math.abs(offset) % 60 ? `:${pad(Math.abs(offset) % 60)}` : ""}`;
+  return `${date.getMonth() + 1}/${date.getDate()}, ${date.getHours() % 12 || 12}:${pad(date.getMinutes())} ${date.getHours() >= 12 ? "PM" : "AM"} ${zone}`;
+}
+function ManualResets({ resets, now }: { resets: CodexAccount["rateLimitResetCredits"]; now: number }) {
+  const available = resets?.credits?.filter(reset => reset.status === "available" && (reset.expiresAt === null || (Number.isFinite(reset.expiresAt) && reset.expiresAt * 1000 > now)))
+    .sort((a, b) => (a.expiresAt ?? Infinity) - (b.expiresAt ?? Infinity));
+  const count = resets?.availableCount;
+  const badge = <span className={`codex-resets-badge${count ? " is-available" : ""}`}>{count === undefined ? "Unavailable" : count === 0 ? "None available" : `${count} available`}</span>;
+  const heading = <><span className="codex-resets-title">Manual resets</span>{badge}</>;
+  return <section className="codex-resets" aria-label="Codex manual resets">
+    {count ? <details>
+      <summary><span className="codex-resets-heading">{heading}<span className="codex-resets-toggle" aria-hidden="true"><svg className="codex-resets-chevron" viewBox="0 0 24 24" fill="none"><path d="m7 10 5 5 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></span></span></summary>
+      <ul className="codex-resets-list">{available?.map(reset => <li key={reset.id}>
+        <span className="codex-reset-scope">{reset.resetType === "codexRateLimits" ? <>Full reset <span>(Weekly + 5 hr)</span></> : reset.title ?? "Reset"}</span>
+        {reset.expiresAt === null ? <span className="codex-reset-expiry">No expiry</span> : <time className="codex-reset-expiry" dateTime={new Date(reset.expiresAt * 1000).toISOString()}>Expires {expiryStamp(reset.expiresAt)}</time>}
+      </li>)}</ul>
+      {(available?.length ?? 0) < (count ?? 0) && <p className="codex-resets-description">{available?.length ? "Showing reported reset details" : "Reset details unavailable"}</p>}
+    </details> : <div className="codex-resets-heading">{heading}</div>}
+  </section>;
+}
 export default function CodexAccountCard({ account, active, stale, loading, panelId }: { account: CodexAccount; active: boolean; stale: boolean; loading: boolean; panelId?: string }) {
   const [now, setNow] = useState(Date.now);
   useEffect(() => { const timer = window.setInterval(() => setNow(Date.now()), 10000); return () => window.clearInterval(timer); }, []);
@@ -68,6 +92,7 @@ export default function CodexAccountCard({ account, active, stale, loading, pane
       {bucket.individualLimit && <div className="codex-credit"><span>Individual spending limit</span><span>{bucket.individualLimit.remainingPercent}% remaining</span></div>}
       {bucket.credits && (bucket.credits.unlimited || bucket.credits.hasCredits) && <div className="codex-credit"><span>Credits</span><span>{bucket.credits.unlimited ? "Unlimited" : bucket.credits.balance ?? "Balance unavailable"}</span></div>}
     </div>)}
+    <ManualResets resets={account.rateLimitResetCredits} now={now} />
     <TokenStats usage={account.tokenUsage} />
   </article>;
 }

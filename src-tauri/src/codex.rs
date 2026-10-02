@@ -72,6 +72,23 @@ struct LimitsResponse {
     account_id: Option<String>,
     rate_limits: Bucket,
     rate_limits_by_limit_id: Option<BTreeMap<String, Bucket>>,
+    rate_limit_reset_credits: Option<ResetCredits>,
+}
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetCredit {
+    id: String,
+    reset_type: String,
+    status: String,
+    expires_at: Option<i64>,
+    title: Option<String>,
+    description: Option<String>,
+}
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetCredits {
+    available_count: u64,
+    credits: Option<Vec<ResetCredit>>,
 }
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -85,6 +102,7 @@ pub struct CodexAccount {
     fetched_at: u64,
     rate_limits: BTreeMap<String, Bucket>,
     token_usage: Option<TokenUsage>,
+    rate_limit_reset_credits: Option<ResetCredits>,
 }
 
 #[derive(Debug, Serialize)]
@@ -175,6 +193,7 @@ fn snapshot(account: &Value, limits: Value) -> Result<CodexAccount, QueryError> 
             .as_secs(),
         rate_limits: buckets,
         token_usage: None,
+        rate_limit_reset_credits: response.rate_limit_reset_credits,
     })
 }
 
@@ -404,6 +423,24 @@ mod tests {
         );
     }
     #[test]
+    fn preserves_reset_credit_count_even_without_all_details() {
+        for credits in [Value::Null, json!([]), json!([{"id":"credit-1","resetType":"codexRateLimits","status":"available","expiresAt":2000000000}])] {
+            let result = snapshot(&account(), json!({"rateLimits":{},"rateLimitResetCredits":{"availableCount":2,"credits":credits}})).unwrap();
+            let reset = result.rate_limit_reset_credits.unwrap();
+            assert_eq!(reset.available_count, 2);
+            assert_eq!(reset.credits.as_ref().map(Vec::len), credits.as_array().map(Vec::len));
+            if let Some(detail) = reset.credits.as_ref().and_then(|rows| rows.first()) {
+                assert_eq!(detail.id, "credit-1");
+                assert_eq!(detail.expires_at, Some(2000000000));
+            }
+        }
+        for value in [json!({"rateLimits":{}}), json!({"rateLimits":{},"rateLimitResetCredits":null})] {
+            assert!(snapshot(&account(), value).unwrap().rate_limit_reset_credits.is_none());
+        }
+        let result = snapshot(&account(), json!({"rateLimits":{},"rateLimitResetCredits":{"availableCount":0,"credits":[]}})).unwrap();
+        assert_eq!(result.rate_limit_reset_credits.unwrap().available_count, 0);
+    }
+    #[test]
     fn usage_summary_reads_lifetime_and_current_date_bucket() {
         let today = "2026-09-15";
         let usage = token_usage(json!({"summary":{"lifetimeTokens":1234567},"dailyUsageBuckets":[{"startDate":today,"tokens":34567}]}), today).unwrap();
@@ -451,5 +488,6 @@ mod tests {
             result.rate_limits.len(),
             result.token_usage.is_some()
         );
+        println!("Reset credits: {:?}", result.rate_limit_reset_credits.as_ref().map(|reset| (reset.available_count, reset.credits.as_ref().map(Vec::len))));
     }
 }

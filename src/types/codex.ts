@@ -24,6 +24,13 @@ export interface CodexAccount {
   fetchedAt: number;
   rateLimits: Record<string, CodexRateLimitBucket>;
   tokenUsage: CodexTokenUsage | null;
+  /** Undefined/null means unavailable, including snapshots cached by older versions. */
+  rateLimitResetCredits?: CodexResetCredits | null;
+}
+export interface CodexResetCredits {
+  /** Authoritative count; detail rows can be capped or unavailable. */
+  availableCount: number;
+  credits: { id: string; resetType: string; status: string; expiresAt: number | null; title: string | null; description: string | null }[] | null;
 }
 
 export interface CodexTokenUsage {
