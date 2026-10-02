@@ -98,7 +98,8 @@
 .provider-claude { --provider-color: var(--color-claude); --provider-soft: var(--color-claude-soft); }
 .provider-workbuddy { --provider-color: var(--color-workbuddy); --provider-soft: var(--color-workbuddy-soft); }
 .provider-zcode { --provider-color: var(--color-zcode); --provider-soft: var(--color-zcode-soft); }
+.provider-deepseek { --provider-color: #7d9cff; --provider-soft: #25365c; }
+:root[data-theme="light"] .provider-deepseek { --provider-color: #4168d8; --provider-soft: #e6edff; }
 .swatch-classic { --swatch-bg: #0c0d0f; --swatch-card: #12151a; --swatch-border: #303641; --swatch-bar: #809dff; }
 .swatch-dark { --swatch-bg: #1b1d22; --swatch-card: #282a30; --swatch-border: #ffffff12; --swatch-bar: #88a0ff; }
 .swatch-light { --swatch-bg: #f6f7f9; --swatch-card: #ffffff; --swatch-border: #dfe2ea; --swatch-bar: #607bdc; }
-

@@ -4,6 +4,7 @@ import type { Account } from "../types/quota";
 import { queryCodexQuota, queryErrorMessage } from "../services/codex";
 import { listWorkbuddyAccounts, queryWorkbuddyQuota } from "../services/workbuddy";
 import { listZcodeAccounts, queryZcodeQuota } from "../services/zcode";
+import { listDeepseekAccounts, queryDeepseekBalance } from "../services/deepseek";
 import { refreshCooldown } from "../lib/refreshCooldown";
 import { ACCOUNT_CACHE_KEY, cachedAccounts, mergeAccount, restoreAccounts } from "../lib/accountState";
 
@@ -43,7 +44,8 @@ export function useAccounts() {
     const task = (async () => {
       try {
         const next = provider === "codex" ? await queryCodexQuota()
-          : provider === "workbuddy" ? await queryWorkbuddyQuota(accountId) : await queryZcodeQuota(accountId);
+          : provider === "workbuddy" ? await queryWorkbuddyQuota(accountId)
+          : provider === "deepseek" ? await queryDeepseekBalance(accountId) : await queryZcodeQuota(accountId);
         merge(next);
         status(next.id, { loading: false, error: null, lastSuccess: next.fetchedAt });
         return next;
@@ -80,7 +82,8 @@ export function useAccounts() {
   async function connect(provider: Provider, accountId?: string, onRegistered?: (id: string) => void): Promise<Account | null> {
     if (provider !== "codex") {
       try {
-        const known = provider === "workbuddy" ? await listWorkbuddyAccounts() : await listZcodeAccounts();
+        const known = provider === "workbuddy" ? await listWorkbuddyAccounts()
+          : provider === "deepseek" ? await listDeepseekAccounts() : await listZcodeAccounts();
         for (const account of known) if (!accountsRef.current.some(old => old.id === account.id)) merge(account);
         if (accountId && known.some(account => account.id === accountId)) onRegistered?.(accountId);
       } catch (failure) {
@@ -112,12 +115,12 @@ export function useAccounts() {
     if (!isTauri()) return;
     // A single promise also prevents React StrictMode from issuing duplicate startup queries.
     if (!startup.current) startup.current = (async () => {
-      const results = await Promise.allSettled([listWorkbuddyAccounts(), listZcodeAccounts()]);
+      const results = await Promise.allSettled([listWorkbuddyAccounts(), listZcodeAccounts(), listDeepseekAccounts()]);
       const discovered: Account[] = [];
       const providers: Provider[] = [];
       const errors: string[] = [];
       results.forEach((result, index) => {
-        const provider = index === 0 ? "workbuddy" : "zcode";
+        const provider = (["workbuddy", "zcode", "deepseek"] as const)[index];
         if (result.status === "fulfilled") { providers.push(provider); discovered.push(...result.value); }
         else errors.push(`${provider}: ${queryErrorMessage(result.reason)}`);
       });

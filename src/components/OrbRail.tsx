@@ -5,10 +5,11 @@ import type { ProviderGroup, Provider } from "../lib/providerGroups";
 import { accountLabel } from "../types/quota";
 import { providerIcon } from "../lib/providerIcons";
 import { orbMeter } from "../lib/orb";
+import { providerName } from "../lib/providerGroups";
 import "./OrbRail.css";
 
-const names: Record<Account["providerId"], string> = { codex: "Codex", workbuddy: "WorkBuddy", zcode: "ZCode" };
-const marks: Record<Account["providerId"], string> = { codex: "O", workbuddy: "W", zcode: "Z" };
+const names = providerName;
+const marks: Record<Account["providerId"], string> = { codex: "O", workbuddy: "W", zcode: "Z", deepseek: "D" };
 
 interface OrbRailProps {
   groups: readonly ProviderGroup[];
@@ -88,6 +89,7 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
           {icon
             ? <img className="orb-logo" src={icon} alt="" draggable={false} />
             : <span className={`orb-logo provider-${account.providerId}`} aria-hidden="true">{marks[account.providerId]}</span>}
+          {account.providerId === "deepseek" && account.fetchedAt > 0 && <span className={`orb-balance-status${account.isAvailable ? "" : " is-empty"}`} role="img" aria-label={account.isAvailable ? "Balance available" : "No available balance"} />}
         </button>;
       })}
     <button type="button" className="orb-ring is-add" aria-label="Add account" title="Add account" onClick={onAddAccount}>

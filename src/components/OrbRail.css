@@ -26,6 +26,8 @@ span.orb-logo { display: grid; place-items: center; font-size: 13px; font-weight
 .is-main .orb-track { stroke: var(--color-border); }
 .is-add { border: 1px dashed var(--color-border); color: var(--color-text-subtle); }
 .orb-plus { font-size: 18px; line-height: 1; }
+.orb-balance-status { position: absolute; bottom: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-status); box-shadow: 0 0 0 2px var(--color-window); }
+.orb-balance-status.is-empty { background: var(--orb-hot); }
 
 /* The hover card: the provider's full account card, speech-bubble style — a little arrow
    points at the hovered ring. It floats beside the rail and is only as tall as the card it

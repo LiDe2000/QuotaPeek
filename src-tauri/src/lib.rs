@@ -25,6 +25,8 @@ pub fn run() {
         .manage(codex::QueryState::default())
         .manage(workbuddy::WorkbuddyState::default())
         .manage(zcode::ZcodeState::default())
+        .manage(deepseek::DeepseekState::default())
+        .manage(deepseek_login::LoginState::default())
         .invoke_handler(tauri::generate_handler![
             window_bounds::fit_window_bounds,
             codex::query_codex_quota,
@@ -37,12 +39,21 @@ pub fn run() {
             zcode::zcode_cancel_login,
             zcode::zcode_start_login,
             zcode::zcode_poll_login,
-            zcode::zcode_query_quota
+            zcode::zcode_query_quota,
+            deepseek::deepseek_connect,
+            deepseek::deepseek_list_accounts,
+            deepseek::deepseek_query_balance,
+            deepseek_login::deepseek_start_login,
+            deepseek_login::deepseek_poll_login,
+            deepseek_login::deepseek_cancel_login
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
 mod account_store;
+mod deepseek;
+mod deepseek_login;
+mod deepseek_wallet;
 mod window_bounds;
 #[cfg(windows)]
 mod window_drag;

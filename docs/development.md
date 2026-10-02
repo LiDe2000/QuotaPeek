@@ -104,6 +104,20 @@ initialize → initialized → account/read → account/rateLimits/read → acco
 
 查询不启动模型任务，也不读取或复制 Codex 登录令牌。Codex 管理自身登录状态与本地状态文件。查询超时为 45 秒，结束或超时后清理子进程。
 
+## DeepSeek 余额查询
+
+默认连接流程在 `src-tauri/src/deepseek_login.rs` 中实现，参考 [Harness 官方账户授权实现](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/credentials/deepseek-account-platform)。浏览器授权使用 S256 PKCE、随机 state 和仅绑定 `127.0.0.1` 的临时端口回调。通过 `auth_init` 获得授权页，回调后执行 `auth_exchange`，使用账户授权 token 查询 `/auth-api/v0/users/current` 和 `/api/v0/users/get_user_summary`，不发起模型任务。
+
+请求使用 QuotaPeek 自身版本和平台信息，限制响应大小为 64 KiB，不跟随重定向。授权和完成页面只允许开放平台的固定路径；回调校验 state、路径和参数唯一性。单次网络请求超时 30 秒，登录流程最长 10 分钟；取消会阻止尚未提交的凭据写入，已提交的结果返回对应账户 ID。隐藏连接面板允许登录继续。
+
+账户按平台返回的稳定用户 ID 保存；再次登录同一账户更新原记录，不同账户独立保留。账户授权保存在本机应用数据目录的 `deepseek-platform-accounts.json`，设备身份在 `deepseek-device.json`。沿用现有明文 JSON 存储，前端缓存、轮询结果和错误信息不包含授权 token 或 PKCE verifier。HTTP 401 和会话过期业务码会提示重新登录，其他查询失败保留上次成功余额。
+
+充值钱包和赠金钱包分别读取，同一币种内使用有界整数十进制运算精确合计，支持负数及科学计数法；不同币种保持独立。实现限制有效金额位数和指数范围，溢出拒绝解析而非舍入。余额不足不当作登录失败，不推算固定额度百分比；钱包接口没有提供赠金到期时间。
+
+之前的 API Key 账户继续通过 `src-tauri/src/deepseek.rs` 调用公开 `GET https://api.deepseek.com/user/balance`，保存在 `deepseek-accounts.json`。默认连接界面不再要求 Key，旧记录不会被删除。两种认证使用不同存储和查询路径，避免把 Key 当账户授权 token 使用。
+
+卡片图像使用独立的 `src/assets/models/deepseek/avatar.png` Q 版头像，侧栏和供应商切换继续使用 `src/assets/providers/deepseek/` 下的产品图标。新增余额型供应商时，应复用账户状态流程，分别定义余额与额度的侧栏含义。
+
 ## 测试与检查
 
 在项目根目录运行：

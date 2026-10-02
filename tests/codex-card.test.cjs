@@ -10,6 +10,7 @@ require.extensions['.tsx'] = (module, file) => module._compile(ts.transpileModul
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 },
 }).outputText, file);
 require.extensions['.css'] = () => {};
+require.extensions['.png'] = (module, file) => { module.exports = file; };
 const { default: Card, windowLabel } = require('../src/components/providers/CodexAccountCard.tsx');
 const account = { id: 'codex-local', providerId: 'codex', source: 'codex-app-server', email: 'test@example.com', planType: 'plus', fetchedAt: 1 };
 const render = (bucket, stale = false) => renderToStaticMarkup(React.createElement(Card, {

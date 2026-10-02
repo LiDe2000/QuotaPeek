@@ -20,3 +20,4 @@
 .add-account-submit.is-secondary { background: var(--color-control); border-color: var(--color-border); }
 .add-account-submit.is-secondary:hover { background: var(--color-surface-active); border-color: var(--color-accent); }
 .platform-option:disabled, .add-account-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.platform-mark img { width: 80%; height: 80%; object-fit: contain; }
