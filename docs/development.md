@@ -92,7 +92,7 @@ Windows 的 `window_drag.rs` 观察系统拖动循环的开始和结束。拖动
 
 ### 桌面权限
 
-Windows 透明窗口启用 `noRedirectionBitmap`。Tauri 文档说明它可避免透明窗口创建、WebView 内容尚未绘制时的白闪；它不保证展开和尺寸变化时不闪，此前单独启用后当前设备仍有整窗闪帧，随后稳定视口对照得到改善。此选项需要 Tauri 2.12 及对应 CLI；修改后必须重启开发应用，前端热更新无法改变原生窗口创建参数。进一步定位使用 [Windows 渲染对照入口](windows-rendering-investigation.md)。
+Windows 透明窗口启用 `noRedirectionBitmap`。Tauri 文档说明它可避免透明窗口创建、WebView 内容尚未绘制时的白闪；它不保证展开和尺寸变化时不闪，此前单独启用后当前设备仍有整窗闪帧，随后稳定视口对照得到改善。此选项需要 Tauri 2.12 及对应 CLI；修改后必须重启开发应用，前端热更新无法改变原生窗口创建参数。进一步定位使用 [Windows 渲染对照入口](troubleshooting.md#windows-整窗短暂消失或闪帧)。
 
 `src-tauri/capabilities/default.json` 显式声明窗口调整权限：
 

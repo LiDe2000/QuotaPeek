@@ -83,33 +83,28 @@ core:window:allow-set-position
 
 ## Windows 整窗短暂消失或闪帧
 
-2026-10-02：用户对照反馈，停用原生几何更新的 `--fixed` 模式暂未闪烁；恢复左右自适应、保持原生宽高稳定的 `--stable` 模式也暂未闪烁。Windows 默认开发和正式构建现已采用稳定视口，保持 GPU 渲染，只让可见裁剪区域随内容改变。进一步分析与复测入口见 [Windows 闪烁排查记录](windows-rendering-investigation.md)。现有结果支持原生高度变化是主要触发条件，不代表已确认某个底层驱动缺陷或所有设备均无闪烁。
+Windows 默认使用稳定的原生视口，保留 GPU 渲染和左右自适应，只让可见裁剪区域随内容改变。此前在当前设备上的对照支持原生高度变化是闪帧的重要触发条件；跨显示器、DPI 变化和其他设备仍需实际验证。
 
-整窗（包括侧栏）一起短暂消失与卡片内容过渡不同，需要检查 WebView2、透明窗口合成和原生尺寸更新。普通动画不能保证解决这类问题。
+复测前，从托盘 **Quit** 完全退出旧实例，并停止之前的 Vite/Tauri 开发进程。普通关闭只隐藏窗口。每次保持相同显示器、缩放和操作顺序，避免多个实例共用 WebView2 数据目录。
 
-更新后先完全退出旧进程，使用普通 `npm run tauri dev` 或重新构建的 exe 验证。仍有闪烁时，可以对照软件渲染模式：
+使用以下开发入口比较渲染方式：
 
-```powershell
-npm run tauri:software
-```
+| 命令 | 对照内容 |
+| --- | --- |
+| `npm run tauri:diagnose` | 当前默认稳定视口，保留 GPU 和左右自适应 |
+| `npm run tauri:diagnose -- --resize` | 恢复原生高度随内容变化，检查尺寸变化的影响 |
+| `npm run tauri:diagnose -- --fixed` | 固定 474 × 800 视口，停用自动尺寸、位置和裁剪更新 |
+| `npm run tauri:diagnose -- --redirection` | 关闭 `noRedirectionBitmap`，比较窗口呈现方式 |
+| `npm run tauri:diagnose -- --opaque` | 关闭透明窗口 |
+| `npm run tauri:diagnose -- --software` | 关闭 GPU，比较软件渲染 |
 
-该命令仅为这一次开发启动传入 `--disable-gpu`，不修改系统设置、账户数据或正式构建配置。窗口仍按内容自适应。对照运行 `npm run tauri dev` 时会恢复默认渲染。两个模式不要同时运行，以免共用 WebView2 数据目录的进程沿用旧参数。
+`--stable` 显式选择默认方案，与 `--fixed`、`--resize` 互斥。其他参数可组合，例如 `--fixed --software`。添加 `--print-config` 可只检查配置而不启动应用。脚本读取主配置生成临时覆盖，不修改正式配置或系统设置；已有 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 环境覆盖仍会生效，比较前应检查它。
 
-需要同样参数的 exe 时运行 `npm run tauri:build:software -- --no-bundle`，输出为 `src-tauri/target/release/quotapeek.exe`。普通构建不会继承软件开发模式的参数。此入口保留作兼容性回退；默认稳定视口方案无需关闭 GPU。
+固定视口仅供诊断：未使用的透明区域也拦截鼠标，贴边自适应停用。几何诊断覆盖仅在开发模式有效，正式构建保持默认稳定视口。
 
-如果只有软件渲染模式不闪，可进一步定位 GPU/DirectComposition 呈现路径；如果仍闪，应继续检查原生窗口和 WebView 尺寸更新的衔接。软件渲染可能增加 CPU 占用。这是诊断入口，不代表已经确认根因或完成修复；浏览器参数不作为正式发行版的长期保证。
+软件渲染也可通过 `npm run tauri:software` 启动。需要同样参数的便携 exe 时运行 `npm run tauri:build:software -- --no-bundle`，输出为 `src-tauri/target/release/quotapeek.exe`；重新运行 `npm run tauri:build:portable` 会覆盖为默认渲染版本。软件渲染可能增加 CPU 占用，保留作兼容性回退。
 
-### 2026-10-01 排查记录
-
-- 现象：开发模式下鼠标移入应用、悬停预览及切换账户/供应商时出现极短闪帧。
-- 录屏证据：24 fps 视频约 1.458 秒，ZCode 切换到 Codex 时整窗（包括侧栏）消失，露出桌面；约 1.500 秒恢复但底部短暂裁剪，约 1.542 秒完整恢复。录屏采样不足以排除更短的其他闪帧。
-- 前端调整：窗口拟合按已请求尺寸去重，观察器增量维护，尺寸未变化时跳过原生位置查询；展开面板内边距固定，避免视口变化引起二次拟合；卡片内容增加短暂过渡，背景保持连续；供应商圆环移除与预览重叠的原生 tooltip。
-- 原生调整：Rust Tauri 升级至 2.12.0，CLI/API 同步至 2.12.1，启用 `noRedirectionBitmap`。用户后续录屏仍有整窗闪帧，因此这一组合未单独解决问题。
-- 对照结果：加入 `tauri:software` 开发入口后，用户反馈“现在好像不闪了”。软件渲染在当前设备上暂时有效，支持进一步怀疑 GPU/DirectComposition 呈现路径，但尚未确认具体驱动、WebView2 或窗口更新环节的根因。
-- 检查：前端构建、38 项前端测试、31 项 Rust 测试通过（1 项需要真实 Codex 登录的集成测试跳过）；软件渲染配置通过 Rust 编译检查。
-- 当前状态：保留软件渲染作为开发排查/临时规避入口；普通 `npm run tauri dev` 和正式构建仍使用默认渲染，不宣称默认模式已修复。暂不继续改动，后续复现时再比较两个模式。
-
-再次排查时记录实际启动命令、是否完全退出旧进程、WebView2/系统/显卡驱动版本、显示器缩放，以及是整窗消失还是只有卡片内容闪动。优先附原始录屏，条件允许时使用 60 fps 或更高帧率。
+再次排查时记录启动命令、是否完全退出旧进程、WebView2/系统/显卡驱动版本、显示器缩放，以及是整窗消失还是只有卡片内容闪动。条件允许时附上 60 fps 或更高帧率的原始录屏。单元测试不能确认 Windows 最终呈现，也不能仅凭某组对照就归责于具体驱动。
 
 ## 退出时出现 Chrome_WidgetWin_0 / Error 1412
 
