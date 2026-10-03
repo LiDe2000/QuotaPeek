@@ -112,11 +112,11 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
           lastSize = { width: viewportWidth, height: viewportHeight };
           const physicalWidth = Math.round(viewportWidth * scaleFactor);
           const visibleWidth = Math.min(physicalWidth, Math.round(size.width * scaleFactor));
-          try { const applied = await invoke<boolean>("fit_window_bounds", { x: expectedPosition.x, y: expectedPosition.y,
+          try { const applied = await invoke<boolean>("fit_window_bounds", { bounds: { x: expectedPosition.x, y: expectedPosition.y,
             width: physicalWidth, height: Math.round(viewportHeight * scaleFactor),
             visibleHeight: Math.round(size.height * scaleFactor),
             clipLeft: side === "left" ? physicalWidth - visibleWidth : 0,
-            visibleWidth, sourceX: position.x, sourceY: position.y });
+            visibleWidth, sourceX: position.x, sourceY: position.y } });
             if (!applied) { lastSize = previousSize; placementDirty = true; pending = true; }
             else { lastClip = clip; lastContentWidth = size.width; lastContentHeight = size.height; } }
           catch (error) { lastSize = previousSize; throw error; }

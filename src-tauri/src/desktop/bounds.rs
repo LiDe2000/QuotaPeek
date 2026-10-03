@@ -1,8 +1,7 @@
 /// Physical screen coordinates and dimensions, captured using one window DPI.
-/// UI-thread geometry completion does not imply WebView2 has presented a frame.
-#[tauri::command]
-pub async fn fit_window_bounds(
-    window: tauri::WebviewWindow,
+#[derive(serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WindowBounds {
     x: i32,
     y: i32,
     width: i32,
@@ -12,8 +11,26 @@ pub async fn fit_window_bounds(
     source_x: i32,
     source_y: i32,
     visible_height: Option<i32>,
+}
+
+/// UI-thread geometry completion does not imply WebView2 has presented a frame.
+#[tauri::command]
+pub async fn fit_window_bounds(
+    window: tauri::WebviewWindow,
+    bounds: WindowBounds,
 ) -> Result<bool, String> {
-    // Older frontends can omit this and keep height-based clipping.
+    let WindowBounds {
+        x,
+        y,
+        width,
+        height,
+        clip_left,
+        visible_width,
+        source_x,
+        source_y,
+        visible_height,
+    } = bounds;
+    // Callers can omit the visible height and keep height-based clipping.
     let visible_height = visible_height.unwrap_or(height);
     if width <= 0
         || height <= 0
@@ -78,8 +95,12 @@ pub async fn fit_window_bounds(
                             }
                             // The unused viewport must neither paint nor intercept input.
                             // Windows owns the region after a successful SetWindowRgn.
-                            let region =
-                                CreateRectRgn(clip_left, 0, clip_left + visible_width, visible_height);
+                            let region = CreateRectRgn(
+                                clip_left,
+                                0,
+                                clip_left + visible_width,
+                                visible_height,
+                            );
                             if region.is_invalid() {
                                 return Err("Failed to create window region".into());
                             }
@@ -120,3 +141,7 @@ pub async fn fit_window_bounds(
         Ok(true)
     }
 }
+
+#[cfg(test)]
+#[path = "../../../tests/rust/window_bounds.rs"]
+mod tests;

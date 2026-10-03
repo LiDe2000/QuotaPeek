@@ -71,6 +71,8 @@ scripts/            # 开发期渲染诊断工具
 
 测试源码统一放在根目录 `tests`。Rust 单元测试通过各实现模块的 `#[cfg(test)]` 和 `#[path]` 引入，仍可测试私有函数；不要为方便测试扩大生产代码的可见性。新增测试沿用对应文件，并继续通过 Cargo 执行。桌面验证脚本使用隔离的合成数据，运行方法见 [数据存储文档](storage.md)。
 
+VS Code 从项目根目录打开时，使用共享的 `.vscode/settings.json`。`rust-analyzer.vfs.extraIncludes` 通过 `${workspaceFolder}/tests/rust` 将 Cargo 目录之外的 Rust 测试纳入索引；路径由编辑器展开为绝对路径，避免测试文件存在且 Cargo 编译正常时仍出现模块解析错误。保存 Rust 文件时运行 Clippy。修改该配置后若旧诊断仍存在，执行 **rust-analyzer: Restart server**。
+
 ## 账户与查询状态
 
 `Account` 使用 `providerId` 区分供应商，额度字段保留在各供应商的类型中。每种服务使用自己的卡片，避免把不同服务强行解释成相同的五小时或每周窗口。
@@ -111,6 +113,8 @@ Codex 使用本机已有登录状态，目前只有一个本地连接；WorkBudd
 原生窗口使用物理坐标定位和调整尺寸：`physicalHorizontalPlacement` 只按窗口当前 DPI 转换 CSS 宽度，工作区与窗口原点保持物理坐标。监听 DPI 变化重新拟合；热更新时沿用 DOM 已记录的展开方向。相关回归覆盖 200%/125% 缩放、负坐标和实际 hook 连续展开/收起。
 
 Windows 默认预留稳定的原生视口：宽度由 `--main-panel-width`、侧栏、间距和留白计算，高度预留至工作区高度减去 80 个逻辑像素。同一显示器与 DPI 下，展开、收起和切换卡片只更新可见区域，不反复改变 WebView2 的原生表面尺寸。向左展开时，内容对齐视口右边缘。`desktop/bounds.rs` 的 `fit_window_bounds` 在 UI 线程统一处理物理边界和可见区域，`visibleHeight` 与原生 `height` 分开；原生窗口区域裁掉未使用的视口，空白区域不绘制、不拦截鼠标。可见高度继续随内容自适应，跨显示器或 DPI 变化时重新拟合。非 Windows 平台沿用内容宽高拟合。
+
+前端通过 `invoke("fit_window_bounds", { bounds: { ... } })` 提交一个几何对象，对应 Rust 的 `WindowBounds`。内部字段使用 camelCase，保留物理坐标、来源位置和可见区域；未提供 `visibleHeight` 时回退到原生高度。变更该结构时需同步更新前端调用、窗口拟合测试和 Rust JSON 解析测试。
 
 开发和正式构建都使用稳定视口，保留 GPU 渲染与左右自适应。排查回归时使用 `npm run tauri:diagnose -- --resize` 恢复旧的原生高度拟合；`--fixed` 则停用全部自动几何更新，仅供隔离实验。诊断覆盖仅在开发模式有效，不能通过环境变量将旧模式带入正式构建。
 
@@ -172,10 +176,13 @@ API Key 账户通过 `src-tauri/src/providers/deepseek/mod.rs` 调用公开 `GET
 在项目根目录运行：
 
 ```sh
+npm run check
 npm run build
 npm test
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
+
+`npm run check` 检查前端与 Vite 配置的 TypeScript 类型，并对所有 Rust 目标和特性运行 Clippy；Rust 警告按错误处理。
 
 真实 Codex 集成测试默认跳过。需要本机 Codex 已登录且网络可用时，手动运行：
 

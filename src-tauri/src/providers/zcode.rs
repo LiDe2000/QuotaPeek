@@ -585,11 +585,7 @@ fn arch_name() -> &'static str {
     }
 }
 fn os_category() -> &'static str {
-    match std::env::consts::OS {
-        "macos" => "macos",
-        "windows" => "windows",
-        other => other,
-    }
+    std::env::consts::OS
 }
 /// The client sends its OS build here. The exact string is cosmetic to the route, so an
 /// environment-derived value is preferred over a guessed one.

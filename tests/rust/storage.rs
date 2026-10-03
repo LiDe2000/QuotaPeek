@@ -74,7 +74,7 @@ fn failed_removal_rolls_back_account_credentials_cache_and_settings() {
     let root = temp_root();
     let db = Database::open(&root.join("quotapeek.db")).unwrap();
     let account = json!({"id":"codex-local","providerId":"codex","fetchedAt":42});
-    db.save_cache(&[account.clone()]).unwrap();
+    db.save_cache(std::slice::from_ref(&account)).unwrap();
     db.connection.lock().unwrap().execute("INSERT INTO credentials(account_id,protection,payload) VALUES ('codex-local','fixture',X'01')", []).unwrap();
     db.save_settings(&[("quotapeek-selected-account".into(), "codex-local".into())].into())
         .unwrap();
@@ -129,7 +129,7 @@ fn settings_and_cache_survive_reopen_and_folder_move() {
         let db = Database::open(&path).unwrap();
         db.save_settings(&[("quotapeek-theme".into(), "light".into())].into())
             .unwrap();
-        db.save_cache(&[account.clone()]).unwrap();
+        db.save_cache(std::slice::from_ref(&account)).unwrap();
     }
     let moved = root.with_extension("moved");
     std::fs::rename(&root, &moved).unwrap();
@@ -250,7 +250,7 @@ fn invalid_cache_batch_is_atomic_and_cannot_replace_a_newer_snapshot() {
     let root = temp_root();
     let db = Database::open(&root.join("quotapeek.db")).unwrap();
     let first = json!({"id":"a", "providerId":"codex", "fetchedAt":42, "rateLimits":{}});
-    db.save_cache(&[first.clone()]).unwrap();
+    db.save_cache(std::slice::from_ref(&first)).unwrap();
     assert!(db
         .save_cache(&[
             json!({"id":"b","providerId":"codex","fetchedAt":50}),
@@ -409,7 +409,7 @@ fn future_cache_format_is_skipped_until_a_fresh_query_replaces_it() {
         .unwrap();
     assert!(db.load_state().unwrap().accounts.is_empty());
     let refreshed = json!({"id":"a", "providerId":"codex", "fetchedAt":43, "rateLimits":{}});
-    db.save_cache(&[refreshed.clone()]).unwrap();
+    db.save_cache(std::slice::from_ref(&refreshed)).unwrap();
     assert_eq!(db.load_state().unwrap().accounts, vec![refreshed]);
     drop(db);
     std::fs::remove_dir_all(root).unwrap();

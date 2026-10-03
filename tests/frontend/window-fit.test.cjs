@@ -51,8 +51,10 @@ for (const mode of ['baseline', 'fixed', 'stable']) test(mode === 'fixed'
     '@tauri-apps/api/event': { listen: async (name, handler) => {
       assert.equal(name, 'desktop-window-dragging'); listeners.drag = handler; return () => {};
     } },
-    '@tauri-apps/api/core': { invoke: async (command, bounds) => {
+    '@tauri-apps/api/core': { invoke: async (command, args) => {
       assert.equal(command, 'fit_window_bounds');
+      assert.deepEqual(Object.keys(args), ['bounds'], 'geometry is sent as one bounds object');
+      const bounds = args.bounds;
       assert.equal(bounds.sourceX, position.x, 'fit must use the latest position snapshot');
       assert.equal(bounds.sourceY, position.y);
       calls.push('bounds');
