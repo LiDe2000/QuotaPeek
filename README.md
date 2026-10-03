@@ -13,6 +13,7 @@
 
 <p align="center">
   <a href="https://github.com/LiDe2000/QuotaPeek/releases">Download</a> ·
+  <a href="#screenshots">Screenshots</a> ·
   <a href="#download-and-use">Quickstart</a> ·
   <a href="#develop-from-source">Develop</a> ·
   <a href="README.zh-CN.md">简体中文</a>
@@ -36,6 +37,34 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 - Hover to preview cached data, click to refresh, or refresh all accounts.
 - Keep the last result on query failure and show the error and last successful update time.
 - Adapt card height and expansion direction, with three themes and system tray controls.
+
+## Screenshots
+
+<table align="center">
+  <tr>
+    <td align="center" width="300">
+      <strong>Expands to the left</strong><br /><br />
+      <img src="docs/images/main-panel-left.png" height="280" alt="Main panel expanded to the left of the sidebar" /><br /><br />
+    </td>
+    <td align="center" width="300">
+      <strong>Expands to the right</strong><br /><br />
+      <img src="docs/images/main-panel-right.png" height="280" alt="Main panel expanded to the right of the sidebar" /><br /><br />
+    </td>
+  </tr>
+</table>
+
+<table align="center">
+  <tr>
+    <td align="center" width="300">
+      <strong>Sidebar</strong><br /><br />
+      <img src="docs/images/sidebar.png" height="280" alt="Collapsed sidebar with provider quota rings" /><br /><br />
+    </td>
+    <td align="center" width="300">
+      <strong>Hover preview</strong><br /><br />
+      <img src="docs/images/hover-preview.png" height="280" alt="DeepSeek balance card shown on hover" /><br /><br />
+    </td>
+  </tr>
+</table>
 
 ## Supported services
 

@@ -13,6 +13,7 @@
 
 <p align="center">
   <a href="https://github.com/LiDe2000/QuotaPeek/releases">下载</a> ·
+  <a href="#界面预览">界面预览</a> ·
   <a href="#下载安装与使用">快速使用</a> ·
   <a href="#从源码开发">开发指南</a> ·
   <a href="README.md">English</a>
@@ -36,6 +37,34 @@
 - 悬停预览缓存，单击刷新，支持刷新全部账户。
 - 查询失败时保留上次结果，显示错误和最后成功时间。
 - 自适应卡片高度与左右展开方向，支持三种主题和托盘驻留。
+
+## 界面预览
+
+<table align="center">
+  <tr>
+    <td align="center" width="300">
+      <strong>向左展开</strong><br /><br />
+      <img src="docs/images/main-panel-left.png" height="280" alt="主面板向侧栏左侧展开" /><br /><br />
+    </td>
+    <td align="center" width="300">
+      <strong>向右展开</strong><br /><br />
+      <img src="docs/images/main-panel-right.png" height="280" alt="主面板向侧栏右侧展开" /><br /><br />
+    </td>
+  </tr>
+</table>
+
+<table align="center">
+  <tr>
+    <td align="center" width="300">
+      <strong>侧栏</strong><br /><br />
+      <img src="docs/images/sidebar.png" height="280" alt="收起后的侧栏与平台额度环" /><br /><br />
+    </td>
+    <td align="center" width="300">
+      <strong>悬停预览</strong><br /><br />
+      <img src="docs/images/hover-preview.png" height="280" alt="悬停平台图标查看 DeepSeek 余额卡片" /><br /><br />
+    </td>
+  </tr>
+</table>
 
 ## 支持的服务
 
