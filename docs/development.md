@@ -1,24 +1,29 @@
 # 开发文档
 
-[返回 README](../README.md)
+[README](../README.md) · [数据存储](storage.md) · [常见问题](troubleshooting.md)
 
-本文说明项目的代码组织和实现约定。安装与基本使用请参阅 README。
+## 技术栈
 
-## 技术栈与代码结构
+| 层 | 技术 |
+| --- | --- |
+| 前端 | React、TypeScript、Vite |
+| 桌面与查询 | Tauri 2、Rust |
+| 持久化 | SQLite、Windows DPAPI |
+| 测试 | Node.js 测试运行器、Rust 单元测试、PowerShell 桌面验证 |
 
-- 前端：React、TypeScript、Vite。
-- 桌面：Tauri 2、Rust。
-- 测试：Node.js 测试运行器、Rust 单元测试。
+环境安装和启动命令见 [中文 README](../README.zh-CN.md#从源码开发)。
+
+## 代码结构
 
 ```text
 src/
   components/
-    accounts/       # 账户卡片入口、连接和移除操作
-    navigation/     # 侧栏、平台切换和拖拽排序界面
-    providers/      # 各供应商专属卡片
+    accounts/       # 账户入口、连接、移除和共用卡片样式
+    navigation/     # 侧栏、平台切换与排序
+    providers/      # 供应商专属卡片及样式
     settings/       # 外观设置
-    shared/         # 公共图标和平台标识
-  hooks/            # 账户、主题、悬停、排序和窗口状态
+    shared/         # 公共图标与平台标识
+  hooks/            # 账户、主题、悬停、排序与窗口状态
   lib/
     accounts/       # 账户合并与刷新冷却
     providers/      # 平台分组、图标与额度圆环
@@ -26,150 +31,107 @@ src/
     window/         # 高度和屏幕定位计算
     format/         # 金额与时间格式
   services/
-    providers/      # 各供应商的 Tauri 查询和登录封装
-    storage.ts      # 设置与缓存 IPC
+    providers/      # 供应商查询和登录的 Tauri 调用
+    storage.ts      # 设置与缓存调用
   types/
-    providers/      # 各供应商的数据类型
-    quota.ts        # Account 联合类型及公共账户工具
+    providers/      # 供应商数据类型
+    quota.ts        # Account 联合类型及公共工具
+  assets/           # 产品图标与卡片头像
   styles/           # 设计变量、主题与全局样式
-  App.tsx           # 主面板和账户切换的组合入口
-src-tauri/src/
-  providers/
-    codex/
-      mod.rs        # Codex 协议与查询进程
-      executable.rs # 本机 Codex 程序发现
-    deepseek/
-      mod.rs        # 公共余额模型与 API Key 查询
-      login.rs      # 浏览器授权与账户钱包查询
-      wallet.rs     # 精确金额计算
-    workbuddy.rs    # WorkBuddy 授权与额度查询
-    zcode.rs        # ZCode 授权与额度查询
-  storage/
-    mod.rs          # SQLite 数据库、事务及版本升级
-    accounts.rs     # 多账户读写入口和稳定 ID
-    credentials.rs  # Windows DPAPI 凭据保护
-    commands.rs     # 设置、缓存与账户移除命令
-  desktop/
-    window.rs       # 显示与隐藏窗口
-    bounds.rs       # 原生窗口边界与可见区域
-    drag.rs         # Windows 系统拖动事件
-    tray.rs         # 托盘菜单和动作
-  lib.rs            # 应用启动、状态与命令注册
-  main.rs           # 桌面进程入口
+  App.tsx           # 主面板组合入口
+  main.tsx          # 持久化初始化与 React 挂载
+src-tauri/
+  src/
+    providers/
+      codex/        # mod.rs：协议查询；executable.rs：程序发现
+      deepseek/     # mod.rs：余额模型与 API Key；login.rs：授权；wallet.rs：金额计算
+      workbuddy.rs  # WorkBuddy 授权与查询
+      zcode.rs      # ZCode 授权与查询
+    storage/        # mod.rs：数据库；accounts.rs：账户；credentials.rs：凭据；commands.rs：命令
+    desktop/        # window.rs：显示；bounds.rs：边界；drag.rs：拖动；tray.rs：托盘
+    lib.rs          # 启动、状态和命令注册
+    main.rs         # 进程入口
+  capabilities/     # 桌面权限
+  icons/            # 应用与安装包图标
 tests/
-  frontend/         # 前端逻辑、卡片渲染和交互测试
-  rust/             # Rust 数据解析、登录校验和存储测试
-  desktop/          # 便携 exe 启动、持久化和目录移动验证
-scripts/            # 开发期渲染诊断工具
+  frontend/         # 逻辑、渲染与交互测试
+  rust/             # 解析、授权、窗口参数与存储单元测试
+  desktop/          # 便携 exe 启动、持久化与目录移动验证
+scripts/            # 开发期渲染诊断
+.vscode/            # 共享索引与 Clippy 设置
 ```
 
-## 目录维护约定
+## 维护约定
 
-组件及其专属 CSS 放在同一目录。按功能查找文件：账户操作看 `components/accounts`，平台展示看 `components/providers`，侧栏和切换看 `components/navigation`。`AccountCard.css` 是所有平台卡片共用的基础样式，保留在 `components/accounts`；平台特有样式与对应卡片同放。
+- 按职责组织文件，组件与专属 CSS 同目录；平台共用的 `AccountCard.css` 位于 `components/accounts/`。
+- 同一供应商出现多个独立职责时建子目录，保留分文件实现；Rust 的 `mod.rs` 为模块入口。
+- 测试统一放在 `tests/`。Rust 通过 `#[cfg(test)]` 和 `#[path]` 引入单元测试，无需扩大生产代码可见性。
+- `.vscode/settings.json` 将 `${workspaceFolder}/tests/rust` 纳入 rust-analyzer 索引，并在保存时运行 Clippy；其他个人配置不提交。
+- 变更功能时同步更新调用方、相关测试和文档。
 
-供应商代码按职责分文件。Codex 的协议查询与程序发现、DeepSeek 的授权流程与金额计算分别维护，同一供应商放在同一目录。`mod.rs` 是 Rust 模块入口。WorkBuddy 和 ZCode 目前各只有一个实现文件，直接放在 `providers`；以后出现独立职责的多个文件时再建立子目录。`hooks` 和全局样式文件数量较少，保留现有层级。
+### Tauri 配置
 
-测试源码统一放在根目录 `tests`。Rust 单元测试通过各实现模块的 `#[cfg(test)]` 和 `#[path]` 引入，仍可测试私有函数；不要为方便测试扩大生产代码的可见性。新增测试沿用对应文件，并继续通过 Cargo 执行。桌面验证脚本使用隔离的合成数据，运行方法见 [数据存储文档](storage.md)。
+| 文件 | 用途 |
+| --- | --- |
+| `src-tauri/tauri.conf.json` | 通用配置，默认关闭安装包 |
+| `src-tauri/tauri.installed.conf.json` | 启用 NSIS、MSI，配合 `installed` 特性 |
+| `src-tauri/tauri.software-rendering.conf.json` | WebView2 软件渲染回退 |
 
-VS Code 从项目根目录打开时，使用共享的 `.vscode/settings.json`。`rust-analyzer.vfs.extraIncludes` 通过 `${workspaceFolder}/tests/rust` 将 Cargo 目录之外的 Rust 测试纳入索引；路径由编辑器展开为绝对路径，避免测试文件存在且 Cargo 编译正常时仍出现模块解析错误。保存 Rust 文件时运行 Clippy。修改该配置后若旧诊断仍存在，执行 **rust-analyzer: Restart server**。
+补充配置通过 `--config` 与主配置合并，数组会整体替换；覆盖 `app.windows` 时保留所需窗口属性。三个文件使用相同 `identifier` 和本地 `$schema`，兼顾构建与编辑器校验。变更应用标识时同步修改三处，并评估安装版数据目录的变化。合并规则见 [Tauri 配置文档](https://v2.tauri.app/zh-cn/develop/configuration-files/)。
 
 ## 账户与查询状态
 
-`Account` 使用 `providerId` 区分供应商，额度字段保留在各供应商的类型中。每种服务使用自己的卡片，避免把不同服务强行解释成相同的五小时或每周窗口。
+`main.tsx` 先加载数据库再挂载 React；`useAccounts` 管理账户、查询进度、错误和最后成功时间。前端 service 调用 Tauri 命令，Rust 查询供应商并返回结果，持久化写入按队列串行执行。
 
-账户按稳定 ID 更新，刷新不会改变账户顺序。侧栏每个供应商只有一个图标，该图标的额度和刷新操作对应供应商当前选中的账户。主面板可切换供应商，同一供应商的多个账户在卡片中切换；各供应商的选择独立保存。
+- `Account` 按 `providerId` 区分供应商，保留各服务的单位、币种和窗口时长。
+- 账户按稳定 ID 更新；刷新不改变账户顺序，同一账户并发查询复用已有请求。
+- 启动恢复账户后查询一次；悬停只读缓存，手动刷新在请求完成后有 10 秒冷却期。
+- 侧栏图标对应供应商当前选中账户。各供应商选择独立保存，平台顺序在侧栏与主面板同步。
+- 查询失败保留上次数据；未知值不转成零，重置时间到期后需重新查询。
+- 移除账户先阻止新查询、等待已有查询，再删除本地记录。失败保留账户；旧结果不能重新加入已移除账户。
+- 隐藏连接面板允许登录继续，取消通过独立操作完成。
 
-`useAccounts` 按账户记录查询进度、错误和最后成功时间，同一账户的并发查询复用已有请求。启动时恢复账户并查询一次额度；悬停只展示缓存数据。手动刷新在请求结束后有 10 秒冷却期，全部刷新逐个处理账户并汇总结果。
+存储事务与凭据规则见 [数据存储](storage.md)。
 
-失败时保留上次查询数据，并显示错误及上次成功时间。未知额度不生成虚假的 0% 或 100%；重置时间到期也不直接修改额度，需要再次查询确认。
+### Codex 查询
 
-账户卡片标题区右上角的叉号提供本地移除和确认提示，悬停预览不提供删除入口。移除期间阻止该账户的新查询，等待已有查询结束后按持久化写入顺序提交数据库删除；旧查询结果和排队缓存不能重新加入已移除账户。失败保留原账户，允许重试。优先切换同供应商剩余账户，否则切换其他账户；最后一个移除后显示连接入口。Codex 自身登录和供应商浏览器登录不受影响。
-
-Codex 使用本机已有登录状态，目前只有一个本地连接；WorkBuddy 和 ZCode 的授权信息按账户独立保存。浏览器登录轮询在上一次请求结束后再安排下一次，隐藏面板不会取消登录；取消登录使用独立操作。
-
-所有 QuotaPeek 自有持久化数据集中保存到 SQLite。JSON 查询结果直接存入 `quota_cache.payload`，账户凭据加密后存入 `credentials.payload`；数据库保存 JSON 内容，不保存旧 JSON 文件路径。前端先加载数据库再挂载 React，写入串行排队。路径策略、备份和 schema 升级规则见 [数据存储文档](storage.md)。
-
-## 窗口布局
-
-### 内容布局与滚动
-
-- `.app-shell` 使用固定的 `--window-inset` 留白。
-- `.window-body` 横向排列侧栏和当前展开的卡片。
-- `.orb-pop` 承载主面板；`.orb-float` 承载悬停预览。
-- 连接和主题面板参与正常文档流，保留主面板的标题栏和工具栏。
-- 只有当前选中的账户卡片参与高度计算，隐藏卡片不撑高窗口。
-- 主面板和悬停预览超过限高时各自在内部滚动；文档根节点不滚动。
-
-布局不依赖窗口当前高度撑开内容，避免尺寸测量被已经裁剪的窗口反向限制。
-
-### 原生窗口尺寸
-
-`useFittedWindowHeight` 观察内容尺寸与 DOM 变化，将可见区域调整到内容需要的宽高。Windows 将原生视口与可见区域分开，其他平台直接拟合原生尺寸。测量使用可见子元素的自然高度及边框、偏移、外层留白；内容高度通过 `scrollHeight` 获取。
-
-最大高度为当前显示器工作区高度减去 80 个逻辑像素。`fittedWindowHeight` 保留 4 像素余量和 2 像素误差容忍，减少取整造成的重复调整。`--window-max-height` 同步提供给 CSS，原生窗口和内部滚动区使用同一个上限。
-
-`horizontalPlacement` 保持侧栏的屏幕位置：右侧空间不足时向左展开，左侧则向右展开。计算使用当前显示器工作区及缩放比例，支持显示器原点为负坐标的情况。当前不根据底部空间自动调整纵向位置。
-
-原生窗口使用物理坐标定位和调整尺寸：`physicalHorizontalPlacement` 只按窗口当前 DPI 转换 CSS 宽度，工作区与窗口原点保持物理坐标。监听 DPI 变化重新拟合；热更新时沿用 DOM 已记录的展开方向。相关回归覆盖 200%/125% 缩放、负坐标和实际 hook 连续展开/收起。
-
-Windows 默认预留稳定的原生视口：宽度由 `--main-panel-width`、侧栏、间距和留白计算，高度预留至工作区高度减去 80 个逻辑像素。同一显示器与 DPI 下，展开、收起和切换卡片只更新可见区域，不反复改变 WebView2 的原生表面尺寸。向左展开时，内容对齐视口右边缘。`desktop/bounds.rs` 的 `fit_window_bounds` 在 UI 线程统一处理物理边界和可见区域，`visibleHeight` 与原生 `height` 分开；原生窗口区域裁掉未使用的视口，空白区域不绘制、不拦截鼠标。可见高度继续随内容自适应，跨显示器或 DPI 变化时重新拟合。非 Windows 平台沿用内容宽高拟合。
-
-前端通过 `invoke("fit_window_bounds", { bounds: { ... } })` 提交一个几何对象，对应 Rust 的 `WindowBounds`。内部字段使用 camelCase，保留物理坐标、来源位置和可见区域；未提供 `visibleHeight` 时回退到原生高度。变更该结构时需同步更新前端调用、窗口拟合测试和 Rust JSON 解析测试。
-
-开发和正式构建都使用稳定视口，保留 GPU 渲染与左右自适应。排查回归时使用 `npm run tauri:diagnose -- --resize` 恢复旧的原生高度拟合；`--fixed` 则停用全部自动几何更新，仅供隔离实验。诊断覆盖仅在开发模式有效，不能通过环境变量将旧模式带入正式构建。
-
-窗口尺寸与位置调整通过同一条串行路径处理，避免旧请求覆盖新尺寸。原生尺寸命令可能早于 WebView 的 resize 通知完成，因此后续拟合按已请求尺寸去重，不重复使用旧视口尺寸；内容未改变尺寸时不查询原生窗口位置。观察器增量维护已有节点，避免文字更新触发全部节点的初始尺寸通知。
-
-主面板和预览采用固定内容宽度，内边距不随原生视口宽度改变，避免展开后再次改变内容高度。账户切换的短暂过渡只作用于卡片内部内容，卡片底色保持连续；减少动态效果的系统偏好会关闭该过渡。`tauri.conf.json` 的初始宽高只用于启动，不能将最小高度设置到妨碍收缩的值。
-
-Windows 的 `desktop/drag.rs` 观察系统拖动循环的开始和结束。拖动期间自动拟合暂停，保持鼠标抓取点和展开方向；松开后再拟合。异步读取位置使用版本检查，原生提交还核对请求来源位置并拒绝拖动中的调整，避免旧请求把窗口拉回。`startDragging()` Promise 完成只代表请求已入队，不能用来判断鼠标松开。
-
-### 托盘与窗口生命周期
-
-`src-tauri/src/desktop/tray.rs` 负责托盘图标、原生菜单和动作分发；`desktop/window.rs` 提供可复用的显示/隐藏入口。前端通过 `desktop-show-main` 事件打开主面板，Rust 端不直接操作前端 DOM。增加托盘菜单项时，在 `desktop/tray.rs` 添加菜单和对应动作；其他入口也可复用窗口操作。
-
-托盘右键菜单的 `Always on Top` 是可勾选开关，控制主窗口是否始终显示在其他普通窗口前面。启动时默认关闭；隐藏后重新显示和展开/收起保留当前置顶状态，重启后恢复默认。菜单勾选状态与原生窗口状态同步，设置失败会恢复原勾选状态。
-
-主窗口不占任务栏，关闭请求只隐藏窗口，托盘菜单的 `Quit` 通过 `app.exit(0)` 退出。托盘随进程驻留，前端热更新不会重复创建图标。普通配置与软件渲染配置保持相同的任务栏行为。Windows 可以把新图标收进通知区域的折叠菜单，具体是否常显由系统设置控制。
-
-### 桌面权限
-
-Windows 透明窗口启用 `noRedirectionBitmap`。Tauri 文档说明它可避免透明窗口创建、WebView 内容尚未绘制时的白闪；它不保证展开和尺寸变化时不闪，此前单独启用后当前设备仍有整窗闪帧，随后稳定视口对照得到改善。此选项需要 Tauri 2.12 及对应 CLI；修改后必须重启开发应用，前端热更新无法改变原生窗口创建参数。进一步定位使用 [Windows 渲染对照入口](troubleshooting.md#windows-整窗短暂消失或闪帧)。
-
-`src-tauri/capabilities/default.json` 显式声明窗口调整权限：
-
-```text
-core:window:allow-set-size
-core:window:allow-set-position
-```
-
-修改 capability 或 Tauri 配置后，需要重启 `npm run tauri dev`。这些修改不会通过前端热更新生效。权限和尺寸调整的排查见 [排障文档](troubleshooting.md)。
-
-## Codex 查询
-
-查询使用本机 Codex app-server 的 stdio JSON-RPC 协议：
+使用本机 Codex app-server 的 stdio JSON-RPC：
 
 ```text
 initialize → initialized → account/read → account/rateLimits/read → account/read
 ```
 
-前后读取账户身份用于防止登录切换过程中将额度归到错误账户。额度优先读取 `rateLimitsByLimitId`，没有可用分组时回退到 `rateLimits`。圆环展示各额度窗口中最小的剩余比例。
+前后读取账户身份，防止登录切换时错误归属额度。优先读取 `rateLimitsByLimitId`，回退到 `rateLimits`；圆环展示额度窗口中最小的剩余比例。查询不启动模型任务，不读取或复制登录令牌；45 秒超时后清理子进程。
 
-查询不启动模型任务，也不读取或复制 Codex 登录令牌。Codex 管理自身登录状态与本地状态文件。查询超时为 45 秒，结束或超时后清理子进程。
+### DeepSeek 查询
 
-## DeepSeek 余额查询
+- 默认连接采用 S256 PKCE、随机 state 和 `127.0.0.1` 临时回调；流程为 `auth_init`、`auth_exchange`、账户信息与钱包查询。
+- 请求限制响应大小，不跟随重定向，校验授权路径与回调参数；单次请求超时 30 秒，登录最长 10 分钟。
+- 账户按稳定用户 ID 保存，授权仅在 Rust 查询时解密；前端状态与错误信息不包含 token 或 PKCE verifier。
+- 充值与赠金同币种精确合计，不同币种独立；负余额有效，金额溢出拒绝解析，不推算额度百分比或赠金到期时间。
+- 已有 API Key 账户使用公开余额接口，与平台账户分别使用 `deepseek-api`、`deepseek-platform` namespace。
 
-默认连接流程在 `src-tauri/src/providers/deepseek/login.rs` 中实现，参考 [Harness 官方账户授权实现](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/credentials/deepseek-account-platform)。浏览器授权使用 S256 PKCE、随机 state 和仅绑定 `127.0.0.1` 的临时端口回调。通过 `auth_init` 获得授权页，回调后执行 `auth_exchange`，使用账户授权 token 查询 `/auth-api/v0/users/current` 和 `/api/v0/users/get_user_summary`，不发起模型任务。
+## 窗口布局
 
-请求使用 QuotaPeek 自身版本和平台信息，限制响应大小为 64 KiB，不跟随重定向。授权和完成页面只允许开放平台的固定路径；回调校验 state、路径和参数唯一性。单次网络请求超时 30 秒，登录流程最长 10 分钟；取消会阻止尚未提交的凭据写入，已提交的结果返回对应账户 ID。隐藏连接面板允许登录继续。
+### 测量与定位
 
-账户按平台返回的稳定用户 ID 保存；再次登录同一账户更新原记录，不同账户独立保留。授权以 DPAPI 密文保存到 SQLite，设备身份保存在 settings 表。账户列表读取公开元数据，不依赖解密；查询时只解密对应账户。前端缓存、轮询结果和错误信息不包含授权 token 或 PKCE verifier。HTTP 401 和会话过期业务码会提示重新登录，其他查询失败保留上次成功余额。
+`useFittedWindowHeight` 观察内容和 DOM，使用自然内容高度测量；只有当前卡片参与计算，超出限高后在面板内滚动，根节点不滚动。最大高度为显示器工作区减去 80 个逻辑像素，保留 4 像素余量和 2 像素误差容忍。
 
-充值钱包和赠金钱包分别读取，同一币种内使用有界整数十进制运算精确合计，支持负数及科学计数法；不同币种保持独立。实现限制有效金额位数和指数范围，溢出拒绝解析而非舍入。余额不足不当作登录失败，不推算固定额度百分比；钱包接口没有提供赠金到期时间。
+定位保持侧栏屏幕位置，按可用空间选择左右展开。CSS 尺寸按当前 DPI 转为物理尺寸，屏幕原点保留物理坐标，支持负坐标。DPI 变化重新拟合，当前不按底部空间自动改变纵向位置。
 
-API Key 账户通过 `src-tauri/src/providers/deepseek/mod.rs` 调用公开 `GET https://api.deepseek.com/user/balance`，采用高熵 Key 的 SHA-256 摘要作为稳定账户 ID，Key 本身以 DPAPI 密文保存。默认连接界面使用浏览器授权。两种认证分别使用 `deepseek-api` 和 `deepseek-platform` namespace，查询路径保持独立。本次不导入以前的 JSON 记录。
+### 原生边界与拖动
 
-卡片图像使用独立的 `src/assets/models/deepseek/avatar.png` Q 版头像，侧栏和供应商切换继续使用 `src/assets/providers/deepseek/` 下的产品图标。新增余额型供应商时，应复用账户状态流程，分别定义余额与额度的侧栏含义。
+Windows 使用稳定原生视口，以裁剪区域适配内容，减少 WebView2 表面反复改变尺寸；裁掉区域不显示、不接收鼠标。其他平台直接拟合原生尺寸。
+
+前端发送 `invoke("fit_window_bounds", { bounds: { ... } })`，Rust 解析为 `WindowBounds`。字段采用 camelCase；`visibleHeight` 区别于原生 `height`，省略时使用原生高度。修改参数需同步前端调用、hook 测试和 Rust JSON 测试。
+
+几何请求串行提交，核对来源位置。系统拖动期间暂停拟合，松开后恢复；`startDragging()` 完成不代表鼠标已松开。固定视口和旧尺寸模式仅用于开发诊断，命令见 [渲染排障](troubleshooting.md#windows-整窗短暂消失或闪帧)。
+
+### 托盘与权限
+
+`desktop/tray.rs` 分发原生菜单动作，`desktop/window.rs` 管理显示与隐藏，通过 `desktop-show-main` 通知前端打开面板。置顶状态在本次运行中保留，重启默认关闭。
+
+窗口关闭时隐藏到托盘；**Quit** 调用 `app.exit(0)`。Windows 透明窗口启用 `noRedirectionBitmap`，前端窗口操作权限由 `src-tauri/capabilities/default.json` 声明。修改权限或原生配置后重启桌面进程。
 
 ## 测试与检查
 
@@ -177,27 +139,36 @@ API Key 账户通过 `src-tauri/src/providers/deepseek/mod.rs` 调用公开 `GET
 
 ```sh
 npm run check
-npm run build
 npm test
+npm run build
 cargo test --manifest-path src-tauri/Cargo.toml
 ```
 
-`npm run check` 检查前端与 Vite 配置的 TypeScript 类型，并对所有 Rust 目标和特性运行 Clippy；Rust 警告按错误处理。
+| 检查 | 覆盖内容 |
+| --- | --- |
+| `npm run check` | 前端、Vite 配置类型检查；所有 Rust 目标和特性的 Clippy，警告视为错误 |
+| `npm test` | `tests/frontend/` 的逻辑、渲染和交互 |
+| `npm run build` | 前端生产构建 |
+| `cargo test` | 通过实现模块引入的 `tests/rust/` 单元测试 |
 
-真实 Codex 集成测试默认跳过。需要本机 Codex 已登录且网络可用时，手动运行：
+真实服务测试默认跳过，按需单独执行：
 
 ```sh
+# 需本机 Codex 已使用 ChatGPT 登录及网络可用
 cargo test --manifest-path src-tauri/Cargo.toml live_codex_query -- --ignored --nocapture
+
+# 需网络；创建并立即取消 DeepSeek 授权，不完成登录
+cargo test --manifest-path src-tauri/Cargo.toml live_authorization_initialization -- --ignored --nocapture
 ```
 
-涉及窗口和交互的改动，还应在桌面应用中检查：悬停预览与关闭延迟、跨图标和卡片移动、单账户刷新、账户切换后的高度、屏幕左右边缘展开，以及连接面板隐藏期间的登录流程。
+桌面改动需实机检查悬停、刷新、账户切换、平台排序、缩放与屏幕边缘、登录取消，以及托盘隐藏和退出。便携数据验证见 [存储文档](storage.md#便携版验证)。单元测试和前端构建不能证明原生窗口呈现或安装包行为。
 
 ## 新增供应商
 
-1. 增加供应商数据类型，并扩展 `Account` 联合类型。
-2. 实现 Rust 端查询、必要的登录流程和 Tauri 命令注册。
-3. 添加前端 service 与专属卡片，并接入账户状态和供应商分组。
-4. 更新图标、圆环额度含义及连接入口。
-5. 补充数据解析、账户身份和卡片展示的测试。
+1. 在 `types/providers/` 定义类型，扩展 `Account`。
+2. 在 Rust `providers/` 实现查询与授权，并在 `lib.rs` 注册命令。
+3. 添加 `services/providers/` 调用与 `components/providers/` 卡片。
+4. 接入连接入口、稳定账户身份、平台分组、图标和圆环含义。
+5. 补充解析、身份、错误和展示测试，同步更新中英文 README 的服务表。
 
-不要默认假设所有服务都采用相同的额度周期；保留服务返回的单位、窗口时长和未知字段语义。
+新增设置或修改数据库结构时遵循 [存储维护规则](storage.md#维护规则)。
