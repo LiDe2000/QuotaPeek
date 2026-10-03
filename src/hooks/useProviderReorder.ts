@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent, MouseEvent, KeyboardEvent } from "react";
-import type { Provider } from "../lib/providerGroups";
+import type { Provider } from "../lib/providers/providerGroups";
 
 type Drag = { source: Provider; target: Provider | null; delta: number };
 type Gesture = {

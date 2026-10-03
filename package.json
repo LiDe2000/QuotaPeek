@@ -4,7 +4,8 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test": "node --test tests/*.test.cjs",
+    "test": "node --test tests/frontend/*.test.cjs",
+    "check": "tsc --noEmit && tsc --project tsconfig.node.json --noEmit --tsBuildInfoFile node_modules/.cache/tsconfig.node.tsbuildinfo && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --all-features -- -D warnings",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

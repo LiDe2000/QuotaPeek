@@ -1,132 +1,122 @@
-# 排障文档
+# 常见问题
 
-[返回 README](../README.md) · [开发文档](development.md)
+[README](../README.md) · [开发文档](development.md) · [数据存储](storage.md)
 
 ## 找不到 Cargo
 
-运行 `npm run tauri dev` 或构建时，如果出现：
-
-```text
-failed to run 'cargo metadata' command
-program not found
-```
-
-说明当前启动进程找不到 `cargo`。Tauri 需要 Rust 工具链，`npm install` 不会安装它。
-
-先在同一个终端检查：
+出现 `cargo metadata ... program not found` 时，在启动应用的同一终端检查：
 
 ```powershell
 cargo --version
 rustc --version
 ```
 
-未安装 Rust 时，按 [README 的 Windows 首次配置](../README.md#windows-首次配置) 安装。已安装时，检查 `%USERPROFILE%\.cargo\bin` 是否在 PATH 中；使用自定义安装目录时检查对应的 `bin` 目录。安装或修改 PATH 后，重新打开终端，并重启启动开发命令的 IDE，让新进程获取环境变量。
+未安装时按 [环境要求](../README.zh-CN.md#环境要求) 安装 Rust/rustup。已安装时检查 `%USERPROFILE%\.cargo\bin` 或自定义工具链目录是否在 PATH 中，然后重开终端和 IDE。`npm ci` 不安装 Rust/Cargo；Windows 编译还需 MSVC 和 Windows SDK。
 
-两个命令都能显示版本号后，重新运行 `npm run tauri dev`。这只确认 Rust 命令可用；Windows 编译仍需要 MSVC Build Tools 和 Windows SDK，完整要求见 [Tauri 官方前置依赖](https://v2.tauri.app/start/prerequisites/)。
+## 编辑器提示测试模块不存在
+
+若 `#[path]` 报 `unresolved module`，但 Cargo 编译正常：
+
+1. 从仓库根目录打开 VS Code，确认 `.vscode/settings.json` 存在。
+2. 检查 `rust-analyzer.vfs.extraIncludes` 包含 `${workspaceFolder}/tests/rust`。
+3. 执行 **rust-analyzer: Restart server**。
+4. 运行 `npm run check`，确认实际类型检查与 Clippy 结果。
+
+Rust 测试位于 Cargo 目录之外，需要共享索引配置。若 Cargo 也报告找不到模块，检查实现文件的 `#[path]` 相对路径。
+
+## Tauri 配置提示缺少 identifier
+
+主配置与补充配置均应保留本地 `$schema` 和 `identifier: "com.lide.quotapeek"`。编辑器单独校验各文件，不自动继承主配置字段。配置用途与合并规则见 [开发文档](development.md#tauri-配置)。
 
 ## 无法连接本机 Codex
 
-### 运行环境
+原生查询需运行桌面应用；源码开发使用 `npm run tauri dev`，`npm run dev` 仅提供浏览器界面。请先安装 Codex 并使用 ChatGPT 账户登录，API Key 登录不提供订阅额度。
 
-本机额度查询需要通过桌面应用运行。`npm run dev` 只启动浏览器界面，不能使用原生查询功能；开发时应运行 `npm run tauri dev`。
+可执行文件发现顺序：
 
-QuotaPeek 不捆绑 Codex。请先安装 Codex，并使用 ChatGPT 账户登录。API key 登录不提供订阅额度。
-
-### 可执行文件发现
-
-QuotaPeek 按以下顺序寻找原生 Codex 可执行文件：
-
-1. `QUOTAPEEK_CODEX_PATH` 指定的路径。
+1. `QUOTAPEEK_CODEX_PATH` 指定的绝对路径。
 2. `PATH` 中的原生可执行文件。
-3. Windows 的 `%LOCALAPPDATA%/OpenAI/Codex/bin`，包括其直接版本子目录。
+3. Windows `%LOCALAPPDATA%/OpenAI/Codex/bin` 及其直接版本子目录。
 
-安装目录根部和版本子目录中的可执行文件一起比较，使用可执行文件修改时间较新的项；不完整的目录会被忽略。这样更新 Codex 后残留的旧版 `bin/codex.exe` 不会覆盖新版。
+安装目录候选按可执行文件修改时间比较，忽略不完整目录。Windows 显式路径需指向 `codex.exe`，不能使用 `.cmd` 或 `.ps1` 包装脚本；显式路径无效时直接报错。修改环境变量后重启 QuotaPeek。
 
-需要手动指定时，将 `QUOTAPEEK_CODEX_PATH` 设置为原生可执行文件的绝对路径，并重启 QuotaPeek。Windows 应指向 `codex.exe`，不能指向 npm 的 `.cmd` 或 `.ps1` 包装脚本。显式路径无效时，应用会报错，不会自动改用其他安装。
+应用沿用 `CODEX_HOME`，未设置时使用用户目录 `.codex`。登录或网络错误时先检查 Codex 登录和代理，再刷新；查询最多等待 45 秒，失败保留上次结果。
 
-应用沿用已有的 `CODEX_HOME`；未设置时使用用户主目录中的 `.codex`。macOS 的图形启动环境可能使用不同的 PATH，也可使用显式路径设置；该平台仍需实机验证。
+## 账户过期或数据无法写入
 
-### 登录或网络错误
+| 情况 | 处理 |
+| --- | --- |
+| 授权过期，或复制数据后凭据无法解密 | 在连接面板重新授权对应账户 |
+| 便携目录不可写 | 完全退出后，将 exe 和 `data/` 移到可写目录 |
+| 数据库由更高版本创建 | 使用相同或更新版本应用，不手动降级数据库 |
+| 升级备份校验失败 | 完全退出，备份整个数据目录，保留原库与备份供排查 |
 
-先在 Codex 中确认登录有效，并检查网络或代理连接，再回到 QuotaPeek 刷新。单次查询最多等待 45 秒。失败时卡片保留上次数据，上次成功时间不会被失败时间覆盖。
+路径和凭据保护规则见 [数据存储](storage.md)。
 
 ## Windows 安装包构建失败
 
-构建安装包与生成应用可执行文件是两个步骤。当前打包目标为 `all`，Windows 打包可能需要下载 WiX 等工具。出现 `wix314-binaries.zip` 下载失败或 `Peer disconnected` 时，应先确认失败发生在打包阶段。
-
-如果只需要本地运行，可跳过安装包：
+先区分 Rust 编译失败与安装包打包失败。NSIS/MSI 打包可能需要下载额外工具；WiX 下载失败或 `Peer disconnected` 时检查网络和代理，恢复后重试：
 
 ```powershell
-npm run tauri -- build --no-bundle
-.src-tauri	arget
-eleasequotapeek.exe
+npm run tauri:build:installed
 ```
 
-该可执行文件包含界面，但不会创建安装向导、快捷方式或卸载入口。
+只需要便携 exe 时运行：
 
-需要安装包时，解决相关工具的下载问题后重新运行 `npm run tauri -- build`。首次 Rust 编译耗时较长，后续构建会复用已编译依赖。
+```powershell
+npm run tauri:build:portable
+.\src-tauri\target\release\quotapeek.exe
+```
+
+便携命令不生成安装向导、快捷方式或卸载入口。两种构建使用不同数据策略，发布时不要混用 exe。
 
 ## 窗口尺寸不更新或卡片被裁剪
 
-首先检查开发控制台是否出现 `Window fit was refused`。原生尺寸和位置调整依赖以下权限：
+检查控制台错误、`tauri.conf.json` 最小尺寸，以及 `src-tauri/capabilities/default.json` 的窗口权限：
 
 ```text
 core:window:allow-set-size
 core:window:allow-set-position
 ```
 
-确认这些权限位于 `src-tauri/capabilities/default.json`，并检查 `tauri.conf.json` 的最小尺寸是否妨碍窗口收缩。
-
-修改权限或 Tauri 配置后，重启桌面开发进程；仅刷新前端页面不能应用这些配置。继续检查时，应区分自然内容高度、CSS 限高和原生窗口尺寸，避免使用已经裁剪的高度作为内容高度。
-
-具体测量与滚动机制见 [开发文档中的窗口布局](development.md#窗口布局)。
+修改权限或原生配置后重启桌面进程。确认自然内容高度、CSS 限高和原生尺寸分别正确；不要将已裁剪的高度用作自然高度。实现规则见 [窗口布局](development.md#窗口布局)。
 
 ## Windows 整窗短暂消失或闪帧
 
-2026-10-02：用户对照反馈，停用原生几何更新的 `--fixed` 模式暂未闪烁；恢复左右自适应、保持原生宽高稳定的 `--stable` 模式也暂未闪烁。Windows 默认开发和正式构建现已采用稳定视口，保持 GPU 渲染，只让可见裁剪区域随内容改变。进一步分析与复测入口见 [Windows 闪烁排查记录](windows-rendering-investigation.md)。现有结果支持原生高度变化是主要触发条件，不代表已确认某个底层驱动缺陷或所有设备均无闪烁。
+默认稳定原生视口保留 GPU 和左右展开，以可见区域裁剪适配内容。复测前从托盘 **Quit** 退出旧实例，并停止旧 Vite/Tauri 进程；保持相同显示器、缩放和操作顺序。
 
-整窗（包括侧栏）一起短暂消失与卡片内容过渡不同，需要检查 WebView2、透明窗口合成和原生尺寸更新。普通动画不能保证解决这类问题。
+| 命令 | 对照内容 |
+| --- | --- |
+| `npm run tauri:diagnose` | 默认稳定视口 |
+| `npm run tauri:diagnose -- --resize` | 原生高度随内容变化 |
+| `npm run tauri:diagnose -- --fixed` | 固定 474 × 800，停用自动几何更新 |
+| `npm run tauri:diagnose -- --redirection` | 关闭 `noRedirectionBitmap` |
+| `npm run tauri:diagnose -- --opaque` | 关闭透明窗口 |
+| `npm run tauri:diagnose -- --software` | 关闭 GPU，使用软件渲染 |
 
-更新后先完全退出旧进程，使用普通 `npm run tauri dev` 或重新构建的 exe 验证。仍有闪烁时，可以对照软件渲染模式：
+`--stable`、`--resize`、`--fixed` 互斥；其他参数可组合。追加 `--print-config` 只输出配置。脚本不修改正式配置，比较前检查已有 `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS` 环境覆盖。
 
-```powershell
+固定视口仅供诊断，未使用的透明区域也拦截鼠标，且停用贴边自适应。几何诊断覆盖仅在开发模式生效。
+
+软件渲染可单独启动或构建：
+
+```sh
 npm run tauri:software
+npm run tauri:build:software -- --no-bundle
 ```
 
-该命令仅为这一次开发启动传入 `--disable-gpu`，不修改系统设置、账户数据或正式构建配置。窗口仍按内容自适应。对照运行 `npm run tauri dev` 时会恢复默认渲染。两个模式不要同时运行，以免共用 WebView2 数据目录的进程沿用旧参数。
+构建会覆盖 release exe；恢复默认渲染使用 `npm run tauri:build:portable`。软件渲染可能增加 CPU 占用。记录 WebView2、系统、显卡驱动版本、显示器缩放和录屏；单元测试不能确认最终原生呈现。
 
-需要同样参数的 exe 时运行 `npm run tauri:build:software -- --no-bundle`，输出为 `src-tauri/target/release/quotapeek.exe`。普通构建不会继承软件开发模式的参数。此入口保留作兼容性回退；默认稳定视口方案无需关闭 GPU。
-
-如果只有软件渲染模式不闪，可进一步定位 GPU/DirectComposition 呈现路径；如果仍闪，应继续检查原生窗口和 WebView 尺寸更新的衔接。软件渲染可能增加 CPU 占用。这是诊断入口，不代表已经确认根因或完成修复；浏览器参数不作为正式发行版的长期保证。
-
-### 2026-10-01 排查记录
-
-- 现象：开发模式下鼠标移入应用、悬停预览及切换账户/供应商时出现极短闪帧。
-- 录屏证据：24 fps 视频约 1.458 秒，ZCode 切换到 Codex 时整窗（包括侧栏）消失，露出桌面；约 1.500 秒恢复但底部短暂裁剪，约 1.542 秒完整恢复。录屏采样不足以排除更短的其他闪帧。
-- 前端调整：窗口拟合按已请求尺寸去重，观察器增量维护，尺寸未变化时跳过原生位置查询；展开面板内边距固定，避免视口变化引起二次拟合；卡片内容增加短暂过渡，背景保持连续；供应商圆环移除与预览重叠的原生 tooltip。
-- 原生调整：Rust Tauri 升级至 2.12.0，CLI/API 同步至 2.12.1，启用 `noRedirectionBitmap`。用户后续录屏仍有整窗闪帧，因此这一组合未单独解决问题。
-- 对照结果：加入 `tauri:software` 开发入口后，用户反馈“现在好像不闪了”。软件渲染在当前设备上暂时有效，支持进一步怀疑 GPU/DirectComposition 呈现路径，但尚未确认具体驱动、WebView2 或窗口更新环节的根因。
-- 检查：前端构建、38 项前端测试、31 项 Rust 测试通过（1 项需要真实 Codex 登录的集成测试跳过）；软件渲染配置通过 Rust 编译检查。
-- 当前状态：保留软件渲染作为开发排查/临时规避入口；普通 `npm run tauri dev` 和正式构建仍使用默认渲染，不宣称默认模式已修复。暂不继续改动，后续复现时再比较两个模式。
-
-再次排查时记录实际启动命令、是否完全退出旧进程、WebView2/系统/显卡驱动版本、显示器缩放，以及是整窗消失还是只有卡片内容闪动。优先附原始录屏，条件允许时使用 60 fps 或更高帧率。
-
-## 退出时出现 Chrome_WidgetWin_0 / Error 1412
-
-开发模式退出时可能出现：
+## 退出时出现 Error 1412
 
 ```text
 Failed to unregister class Chrome_WidgetWin_0. Error = 1412
 ```
 
-该日志来自 Chromium/WebView2。Windows 的 `1412` 是 `ERROR_CLASS_HAS_WINDOWS`，表示注销窗口类时仍有该类窗口存在。仅凭这一行不能判定应用崩溃或退出失败。[微软错误码说明](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-)
+Windows [错误码 1412](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--1300-1699-) 表示注销窗口类时仍有该类窗口存在。此 WebView2 日志也可能出现在正常退出时，见 [Tauri 维护者答复](https://github.com/orgs/tauri-apps/discussions/8503)。
 
-托盘 `Quit` 使用 Tauri 的 `AppHandle::exit(0)`，由框架触发退出和清理；普通窗口关闭则隐藏到托盘，两者不同。Tauri 维护者说明，同类窗口类注销日志也可能出现在正常退出时，逐个关闭窗口也不保证消除。[Tauri 维护者答复](https://github.com/orgs/tauri-apps/discussions/8503)
-
-如果日志只在主动退出时出现，且应用进程和托盘图标正常消失，可先保留现有退出流程。如果伴随 Rust panic、异常退出码、应用运行期间闪退，或退出后进程一直残留，应保留完整前后日志继续排查；不要仅通过屏蔽 WebView2 日志判断修复成功。
+若仅在退出时出现，且进程与托盘正常消失，可保留现有退出流程。若同时出现 panic、异常退出码、运行中闪退或进程残留，保留前后日志继续排查。
 
 ## 报告问题
 
-提交 Issue 时，请附上系统版本、应用版本、涉及的供应商、复现步骤和截图；开发环境的问题也可附上相关错误输出。
-
-不要在公开 Issue 中附带登录令牌、授权链接、账户凭据文件或未经检查的完整日志。
+提交 [Issue](https://github.com/LiDe2000/QuotaPeek/issues) 时附上系统与应用版本、启动命令、涉及供应商、复现步骤、截图和相关错误。公开前移除登录令牌、授权链接、凭据及敏感日志。

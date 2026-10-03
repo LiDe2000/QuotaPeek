@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import workbuddyAvatar from "../../assets/models/workbuddy/avatar.svg";
-import type { WorkbuddyAccount, WorkbuddyPackage } from "../../types/workbuddy";
-import "../AccountCard.css";
+import type { WorkbuddyAccount, WorkbuddyPackage } from "../../types/providers/workbuddy";
+import "../accounts/AccountCard.css";
 import "./WorkbuddyAccountCard.css";
 
 /** Parses the billing API's "YYYY-MM-DD HH:mm:ss" stamp as local time. */

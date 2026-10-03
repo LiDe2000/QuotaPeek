@@ -1,0 +1,4 @@
+{
+  "rust-analyzer.vfs.extraIncludes": ["${workspaceFolder}/tests/rust"],
+  "rust-analyzer.check.command": "clippy"
+}

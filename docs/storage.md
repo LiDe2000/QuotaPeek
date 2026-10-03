@@ -1,55 +1,87 @@
-# SQLite 与便携数据目录
+# 数据存储
 
-此实现采用已确认的 SQLite 方案，不导入本机旧 JSON 或 localStorage。
+[README](../README.md) · [开发文档](development.md) · [常见问题](troubleshooting.md)
 
 ## 数据位置
 
-- 默认便携模式：根据运行 exe 的绝对路径，使用同级 `data/quotapeek.db` 和 `data/webview/`。
-- 安装版通过 `installed` 编译特性选择 Tauri 的 `app_local_data_dir()`，Windows 对应 `%LOCALAPPDATA%/com.lide.quotapeek/`。也支持便携 exe 的 `--installed` 启动参数。
-- 两种模式均先确认数据库可用，再创建 WebView；不可写或数据库版本过新时明确报错，禁止静默换目录。
-- 开发构建也使用 exe 同级目录，因此不会写入发布版本的数据。
+| 模式 | 目录 | 选择方式 |
+| --- | --- | --- |
+| 便携版 | exe 同级 `data/` | 默认构建 |
+| 安装版 | `%LOCALAPPDATA%/com.lide.quotapeek/` | `installed` 编译特性，或 `--installed` 启动参数 |
 
-## 存储边界
+目录包含 `quotapeek.db` 和 `webview/`。路径以运行 exe 为准，不依赖启动工作目录；开发构建也使用自身 exe 同级目录。数据库可用后才创建 WebView，无法写入或版本不兼容时报告错误，不静默切换目录。
 
-Rust 后端统一管理 accounts、credentials、quota_cache、settings、schema_migrations。前端启动时先加载数据库，再挂载 React；后续更新串行保存，失败显示在应用内。当前账户与各供应商的选中账户以同一个设置事务保存。
+软件渲染模式使用 `webview/` 内独立配置目录，SQLite 数据库保持一致。不导入早期 JSON 或 localStorage 数据。
 
-账户 ID 和排序保持稳定。各服务额度结构继续保存为 JSON，查询时间单独存列。凭据与账户公开元数据通过一个事务更新。公开元数据仅保留显示、身份和站点字段，不含令牌或 API Key。
+## 数据结构
 
-| 表 | 主要字段与关联 |
+Rust 的 `storage/` 统一管理数据库，前端先加载状态再挂载 React，后续写入串行排队。
+
+| 表 | 内容 |
 | --- | --- |
-| accounts | id 主键、namespace、provider_id、public_auth JSON、position、创建与更新时间 |
-| credentials | account_id 外键、protection 版本标记、payload 密文 BLOB、更新时间 |
-| quota_cache | account_id 外键、fetched_at、format_version、payload JSON |
-| settings | key 主键、value；主题和账户选择与设备标识采用不同 key |
-| schema_migrations | version 主键、applied_at；与 user_version 同事务推进 |
+| `accounts` | 稳定 ID、namespace、供应商、公开身份 JSON、排序和时间戳 |
+| `credentials` | 账户外键、保护格式标记、凭据密文 BLOB |
+| `quota_cache` | 账户外键、查询时间、缓存格式版本、供应商结果 JSON |
+| `settings` | 主题、账户选择、平台顺序、设备标识等键值 |
+| `schema_migrations` | 已执行的数据库升级版本和时间 |
 
-新增供应商通常无需改表：定义 namespace、供应商数据类型和公开元数据字段即可。新增设置无需改表，在后端 UI 设置白名单注册 key。需要新的列、索引或表时，在 MIGRATIONS 末尾追加 SQL；当前 schema 版本自动取升级步骤数量，不手动修改旧步骤。credentials 与 quota_cache 的外键启用级联删除，账户移除时同步清理关联数据。
+公开身份不含 token 或 API Key。供应商结果直接存入 JSON 字段，不保存旧文件路径。
 
-账户移除通过 `storage_remove_account` 在同一事务中删除账户及其关联凭据、缓存，并修复当前账户与供应商选择；失败整体回滚。前端先等待该账户已有查询结束，避免凭据轮换重新写入账户；已移除 ID 在本次运行中阻止旧缓存和查询重新加入，仅显式重新连接解除此限制。全部移除后保存空选择并展示连接入口。该操作不调用供应商退出接口，不更改外部 Codex 登录状态。此功能使用现有表和外键，无需追加 schema 升级。
+### 事务与账户移除
 
-Windows 使用当前用户范围 DPAPI，密文 BLOB 存在 credentials 中。其他平台在尚无安全存储实现时拒绝保存凭据，不回退为明文。账户列表不依赖解密，因此跨电脑或跨用户打开数据库仍可看到账户；查询提示重新授权，重新登录覆盖该账户凭据。Codex 授权始终由外部 Codex 管理。
+- 账户公开信息与凭据一起提交，保证稳定 ID 和排序。
+- 当前账户及各供应商选择在同一设置事务中保存。
+- `storage_remove_account` 删除账户，外键级联清理凭据和缓存，同时修复选择；失败整体回滚。
+- 前端等待已有查询结束后删除，阻止旧结果或排队缓存重新加入；显式重新连接后解除限制。
 
-## 后续升级与移动
+账户移除不调用供应商退出接口，不修改本机 Codex 登录。
 
-数据库使用 application_id 和 user_version 识别格式，顺序执行版本化 SQL，并记录 schema_migrations。已有版本升级前通过 SQLite backup API 保存版本备份，升级及版本号更新在事务中一起提交。重复启动不会重跑已完成升级；失败回滚，版本过新拒绝打开，禁止清空或降级。
+## 凭据保护
 
-版本备份先写临时文件，成功后再改为 `quotapeek.db.v<旧版本>.bak`。已有同版本备份保留，并先检查其完整性、application_id 和版本号；备份不完整时停止升级，保留原库。
+Windows 使用当前用户范围 DPAPI 加密。账户列表读取公开信息，查询时解密对应凭据；无法解密时提示重新授权，再次登录覆盖该账户凭据。其他平台尚无安全存储实现时拒绝保存凭据，不回退为明文。
 
-初始两次升级分别创建账户、凭据、设置表以及额度缓存表，验证已有数据库的升级路径。今后改表新增升级步骤，保留现有步骤不变。
+跨电脑或 Windows 用户复制数据库可保留账户、设置和缓存，但通常需重新授权。Codex 登录由外部 Codex 管理。
 
-采用 DELETE 日志模式和短事务，适合当前低频读写；正常完全退出后可复制整个目录。关闭窗口只隐藏到托盘，搬迁前必须从托盘退出。替换 exe 保留 data 目录；跨机器保留设置与额度缓存，Windows 凭据通常需重新授权。
+## 数据库升级
 
-额度缓存有独立 format_version，不支持的缓存格式跳过，后续成功查询再写入可读格式；不影响凭据和设置。备用软件渲染模式的 WebView 配置不同，因此在 webview 目录内使用独立子目录，SQLite 数据库保持一致。
+数据库通过 `application_id` 识别格式，使用 `user_version` 和 `schema_migrations` 跟踪版本。
 
-## 实施与验证
+1. 检查数据库身份和版本；拒绝其他格式及未来版本。
+2. 已有数据库升级前使用 SQLite backup API 生成 `quotapeek.db.v<旧版本>.bak`。
+3. 在事务中执行未完成升级，同步更新版本记录；失败回滚。
 
-1. 存储层：路径定位、SQLite 事务、版本备份、失败回滚和拒绝未来版本测试。
-2. 服务接入：四类授权入口和设备 ID 改用数据库；凭据加密、账户顺序和重新授权测试。
-3. 前端接入：启动加载、设置与缓存串行保存，验证重启恢复及写入失败后的重试。
-4. 运行 Rust 和前端测试、前端构建及 Windows 桌面构建；记录验证限制。
+备份先写临时文件，成功后改名。已有同版本备份需通过完整性、身份和版本检查，否则停止升级。重复启动不重跑已完成步骤，不清空或降级数据库。
 
-便携构建：`npm run tauri:build:portable`。安装包构建：`npm run tauri:build:installed`。默认 Tauri 配置关闭安装包，安装版使用 `tauri.installed.conf.json` 开启 NSIS/MSI。两个命令生成的 exe 路径相同、数据策略不同，发布时分别收集对应产物。
+额度缓存单独使用 `format_version`。不支持的缓存跳过，成功查询后替换；不影响账户凭据和设置。
 
-Windows 便携启动验证：构建后运行 `powershell -ExecutionPolicy Bypass -File scripts/verify-portable-storage.ps1`。脚本在工作区 `.tmp/` 下创建隔离副本，从不同的工作目录启动，写入合成数据后移动整个应用目录再启动，并通过数据库触发器确认 React 已读取原主题和账户选择、经 IPC 保存缓存。合成凭据在解密阶段失败，不执行实际账户网络查询；测试进程结束后关闭，目录保留供检查。
+## 备份、升级与移动
 
-2026-10-02 验证结果：前端 66 项测试通过，Rust 53 项通过、2 项真实服务集成测试按默认设置跳过；前端构建、便携 release exe 构建和 `installed` 特性编译检查通过。正常 Windows 权限下的实际便携启动、IPC 保存、目录移动和重启恢复通过。沙箱中 WebView2 未完成启动，因此实际启动验证使用正常权限。安装包生成、安装/卸载与真实账户重新授权尚未实测；DPAPI、无法解密时重新保存、稳定账户排序和迁移回滚使用合成数据测试。
+1. 从托盘 **Quit** 完全退出，关闭窗口只会隐藏。
+2. 备份整个数据目录；移动便携版时同时复制 exe 与 `data/`。
+3. 升级便携版只替换 exe，保留原 `data/`。
+4. 跨电脑或用户运行后，按提示重新授权。
+
+数据库使用 DELETE 日志模式和短事务。不要在应用运行时直接复制数据库文件。
+
+## 维护规则
+
+- 新增供应商：定义 namespace、数据类型和公开身份，通常无需改表。
+- 新增 UI 设置：在 `storage/mod.rs` 的 `UI_SETTING_KEYS` 注册，设备内部标识保持独立。
+- 改表：仅在 `MIGRATIONS` 末尾追加 SQL，不修改已发布步骤；当前版本自动取升级步骤数量。
+- 改缓存结构：评估 `format_version`，兼容旧缓存或跳过，保留账户与凭据。
+- 涉及写入的改动补充事务回滚、重启恢复和旧查询结果的回归检查。
+
+## 便携版验证
+
+先构建便携版，再在 Windows PowerShell 运行：
+
+```powershell
+npm run tauri:build:portable
+powershell -ExecutionPolicy Bypass -File tests/desktop/verify-portable-storage.ps1
+```
+
+自定义 exe 可追加 `-Executable "C:\path\quotapeek.exe"`。
+
+脚本在工作区 `.tmp/` 创建隔离副本，验证不同工作目录启动、IPC 保存、合成状态、目录移动和重启恢复。测试使用不可解密的合成凭据，不查询真实账户，结束后关闭测试进程并保留目录供检查。
+
+单元测试命令见 [开发文档](development.md#测试与检查)。此脚本不验证安装/卸载或真实账户重新授权，这些行为需独立实测。

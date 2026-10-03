@@ -3,9 +3,9 @@ import type { RefObject } from "react";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { fittedWindowHeight, SCREEN_RESERVE } from "../lib/windowHeight";
-import { physicalHorizontalPlacement } from "../lib/windowPlacement";
-import type { ExpandSide } from "../lib/windowPlacement";
+import { fittedWindowHeight, SCREEN_RESERVE } from "../lib/window/windowHeight";
+import { physicalHorizontalPlacement } from "../lib/window/windowPlacement";
+import type { ExpandSide } from "../lib/window/windowPlacement";
 
 /** One serialized resize path owns dimensions and keeps the rail anchored at screen edges. */
 export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabled: boolean, fixedViewport = false, stableHeight = true): void {
@@ -112,11 +112,11 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
           lastSize = { width: viewportWidth, height: viewportHeight };
           const physicalWidth = Math.round(viewportWidth * scaleFactor);
           const visibleWidth = Math.min(physicalWidth, Math.round(size.width * scaleFactor));
-          try { const applied = await invoke<boolean>("fit_window_bounds", { x: expectedPosition.x, y: expectedPosition.y,
+          try { const applied = await invoke<boolean>("fit_window_bounds", { bounds: { x: expectedPosition.x, y: expectedPosition.y,
             width: physicalWidth, height: Math.round(viewportHeight * scaleFactor),
             visibleHeight: Math.round(size.height * scaleFactor),
             clipLeft: side === "left" ? physicalWidth - visibleWidth : 0,
-            visibleWidth, sourceX: position.x, sourceY: position.y });
+            visibleWidth, sourceX: position.x, sourceY: position.y } });
             if (!applied) { lastSize = previousSize; placementDirty = true; pending = true; }
             else { lastClip = clip; lastContentWidth = size.width; lastContentHeight = size.height; } }
           catch (error) { lastSize = previousSize; throw error; }

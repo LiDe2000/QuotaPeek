@@ -1,3 +1,5 @@
+use providers::{codex, deepseek, workbuddy, zcode};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -24,11 +26,11 @@ pub fn run() {
                 .build()?;
             #[cfg(windows)]
             {
-                app.manage(window_drag::DragState::default());
-                window_drag::setup(app)?;
+                app.manage(desktop::drag::DragState::default());
+                desktop::drag::setup(app)?;
             }
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
-            tray::setup(app)?;
+            desktop::tray::setup(app)?;
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -44,13 +46,13 @@ pub fn run() {
         .manage(workbuddy::WorkbuddyState::default())
         .manage(zcode::ZcodeState::default())
         .manage(deepseek::DeepseekState::default())
-        .manage(deepseek_login::LoginState::default())
+        .manage(deepseek::login::LoginState::default())
         .invoke_handler(tauri::generate_handler![
-            storage_commands::storage_load,
-            storage_commands::storage_save_settings,
-            storage_commands::storage_save_cache,
-            storage_commands::storage_remove_account,
-            window_bounds::fit_window_bounds,
+            storage::commands::storage_load,
+            storage::commands::storage_save_settings,
+            storage::commands::storage_save_cache,
+            storage::commands::storage_remove_account,
+            desktop::bounds::fit_window_bounds,
             codex::query_codex_quota,
             workbuddy::workbuddy_list_accounts,
             workbuddy::workbuddy_cancel_login,
@@ -65,9 +67,9 @@ pub fn run() {
             deepseek::deepseek_connect,
             deepseek::deepseek_list_accounts,
             deepseek::deepseek_query_balance,
-            deepseek_login::deepseek_start_login,
-            deepseek_login::deepseek_poll_login,
-            deepseek_login::deepseek_cancel_login
+            deepseek::login::deepseek_start_login,
+            deepseek::login::deepseek_poll_login,
+            deepseek::login::deepseek_cancel_login
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| {
@@ -92,21 +94,6 @@ pub fn run() {
             }
         });
 }
-mod account_store;
-mod codex;
-mod codex_executable;
-mod credential_protection;
-mod deepseek;
-mod deepseek_login;
-mod deepseek_wallet;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod desktop_window;
+mod desktop;
+mod providers;
 mod storage;
-mod storage_commands;
-#[cfg(not(any(target_os = "android", target_os = "ios")))]
-mod tray;
-mod window_bounds;
-#[cfg(windows)]
-mod window_drag;
-mod workbuddy;
-mod zcode;

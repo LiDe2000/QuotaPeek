@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import gptAvatar from "../../assets/models/gpt/avatar.png";
-import type { CodexAccount, CodexRateLimitWindow } from "../../types/codex";
-import "../AccountCard.css";
+import type { CodexAccount, CodexRateLimitWindow } from "../../types/providers/codex";
+import "../accounts/AccountCard.css";
 import "./CodexAccountCard.css";
 
 export function windowLabel(minutes: number | null, fallback: string): string {
