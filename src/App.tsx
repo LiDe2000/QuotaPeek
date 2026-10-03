@@ -11,8 +11,8 @@ import AccountCard from "./components/AccountCard";
 import AppearanceSettings from "./components/AppearanceSettings";
 import OrbRail from "./components/OrbRail";
 import ProviderSwitcher from "./components/ProviderSwitcher";
-import { PROVIDER_SELECTION_KEY, providerGroups, readProviderSelection } from "./lib/providerGroups";
-import type { ProviderSelection } from "./lib/providerGroups";
+import { PROVIDER_SELECTION_KEY, PROVIDER_ORDER_KEY, providerGroups, readProviderSelection, readProviderOrder, moveProvider } from "./lib/providerGroups";
+import type { ProviderSelection, Provider } from "./lib/providerGroups";
 import { useHoverPreview } from "./hooks/useHoverPreview";
 import { useAppearance } from "./hooks/useAppearance";
 import { useFittedWindowHeight } from "./hooks/useFittedWindowHeight";
@@ -35,6 +35,7 @@ function App() {
     return readProviderSelection(storage.getSetting(PROVIDER_SELECTION_KEY));
   });
   const { theme, setTheme } = useAppearance();
+  const [providerOrder, setProviderOrder] = useState(() => readProviderOrder(storage.getSetting(PROVIDER_ORDER_KEY)));
   const storageError = useStorageStatus();
   const [popup, setPopup] = useState<Popup>(null);
   const preview = useHoverPreview();
@@ -42,7 +43,12 @@ function App() {
   const body = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
   const currentAccount = accounts.find(account => account.id === selectedId) ?? accounts[0];
-  const groups = providerGroups(accounts, providerSelection);
+  const groups = providerGroups(accounts, providerSelection, providerOrder);
+  function reorderProviders(source: Provider, target: Provider) {
+    const next = moveProvider(groups.map(group => group.providerId), source, target);
+    setProviderOrder(next);
+    saveSettings({ [PROVIDER_ORDER_KEY]: JSON.stringify(next) });
+  }
   const currentGroup = groups.find(group => group.providerId === currentAccount?.providerId);
   const groupAccounts = currentGroup?.accounts ?? [];
   const page = currentAccount ? groupAccounts.findIndex(account => account.id === currentAccount.id) : 0;
@@ -210,6 +216,7 @@ function App() {
       <section className="quota-window" aria-label="QuotaPeek AI usage">
         <div className="window-body" ref={body} role="region" aria-label="AI account quota details" tabIndex={0} onMouseLeave={preview.leave}>
           <OrbRail groups={groups} selectedProvider={currentAccount?.providerId} cardOpen={popup !== null} refreshingIds={Object.keys(statuses).filter(id => statuses[id].loading)}
+            onReorder={reorderProviders} onReorderPress={preview.hide}
             onToggleHome={() => { preview.hide(); setPopup(open => open ? null : "home"); }}
             onHover={provider => { if (!popup) preview.enter(provider); }}
             onLeave={preview.leave}
@@ -252,7 +259,7 @@ function App() {
               onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}
               onConnectDeepseek={id => connectAccount("deepseek", id)}
               onClose={() => setPopup("home")} />
-            {groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} />}
+            {groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} onReorder={reorderProviders} />}
             {currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
             {!currentAccount && !restoring && popup === "home" && <div className="empty-accounts">
               <p>No accounts connected.</p>

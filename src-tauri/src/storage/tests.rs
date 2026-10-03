@@ -6,6 +6,21 @@ fn temp_root() -> PathBuf {
 }
 
 #[test]
+fn provider_order_survives_reopening_database() {
+    let root = temp_root();
+    let path = root.join("quotapeek.db");
+    let order = "[\"deepseek\",\"codex\",\"workbuddy\",\"zcode\"]";
+    {
+        let db = Database::open(&path).unwrap();
+        db.save_settings(&[("quotapeek-provider-order-v1".into(), order.into())].into()).unwrap();
+    }
+    let db = Database::open(&path).unwrap();
+    assert_eq!(db.load_state().unwrap().settings["quotapeek-provider-order-v1"], order);
+    drop(db);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn removal_deletes_credentials_and_cache_and_repairs_selection_across_restarts() {
     let root = temp_root();
     let path = root.join("quotapeek.db");

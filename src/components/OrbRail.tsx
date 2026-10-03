@@ -6,6 +6,7 @@ import { accountLabel } from "../types/quota";
 import { providerIcon } from "../lib/providerIcons";
 import { orbMeter } from "../lib/orb";
 import { providerName } from "../lib/providerGroups";
+import { useProviderReorder } from "../hooks/useProviderReorder";
 import "./OrbRail.css";
 
 const names = providerName;
@@ -22,10 +23,13 @@ interface OrbRailProps {
   onLeave(): void;
   onRefresh(accountId: string): void;
   onAddAccount(): void;
+  onReorder(source: Provider, target: Provider): void;
+  onReorderPress(): void;
 }
 
-export default function OrbRail({ groups, selectedProvider, cardOpen, refreshingIds, onToggleHome, onHover, onLeave, onRefresh, onAddAccount }: OrbRailProps) {
+export default function OrbRail({ groups, selectedProvider, cardOpen, refreshingIds, onToggleHome, onHover, onLeave, onRefresh, onAddAccount, onReorder, onReorderPress }: OrbRailProps) {
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
+  const reorder = useProviderReorder("y", onReorder, onReorderPress);
   function navigate(event: KeyboardEvent<HTMLElement>) {
     if (!groups.length || !event.target || !(event.target as Element).closest("[data-provider]")) return;
     const focused = tabs.current.findIndex(node => node === document.activeElement);
@@ -40,6 +44,7 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
     tabs.current[next]?.focus();
   }
   return <nav
+    ref={reorder.container}
     className="orb-rail"
     aria-label="Provider rings"
     onKeyDown={navigate}
@@ -62,14 +67,14 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
           ref={node => { tabs.current[index] = node; }}
           type="button"
           id={`provider-${group.providerId}`}
-          data-provider={group.providerId}
+          {...reorder.itemProps(group.providerId)}
           aria-current={active ? "true" : undefined}
           aria-busy={refreshing}
-          aria-description="Click to refresh this account. Hover to preview."
+          aria-description="Click to refresh. Hover to preview. Hold and drag to reorder, or use Alt+Up/Down."
           aria-controls={`panel-${account.id}`}
           className={`orb-ring ${level}${active ? " is-active" : ""}${refreshing ? " is-refreshing" : ""}`}
             aria-label={`${names[account.providerId]}${accountLabel(account) ? ` · ${accountLabel(account)}` : ""}`}
-          onMouseEnter={() => onHover(group.providerId)}
+          onMouseEnter={() => { if (!reorder.isPressed()) onHover(group.providerId); }}
           onMouseLeave={onLeave}
           onFocus={event => { if (event.currentTarget.matches(":focus-visible")) onHover(group.providerId); }}
           onBlur={event => { if (!(event.relatedTarget as Element | null)?.closest(".orb-float, .orb-ring[data-provider]")) onLeave(); }}

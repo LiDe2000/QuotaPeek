@@ -1,14 +1,17 @@
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect } from "react";
+import { useProviderReorder } from "../hooks/useProviderReorder";
 import type { Provider, ProviderGroup } from "../lib/providerGroups";
 import { providerName } from "../lib/providerGroups";
 import { providerIcon } from "../lib/providerIcons";
 
-export default function ProviderSwitcher({ groups, selected, onSelect }: {
+export default function ProviderSwitcher({ groups, selected, onSelect, onReorder }: {
   groups: readonly ProviderGroup[];
   selected?: Provider;
   onSelect: (accountId: string) => void;
+  onReorder: (source: Provider, target: Provider) => void;
 }) {
-  const strip = useRef<HTMLElement>(null);
+  const reorder = useProviderReorder("x", onReorder);
+  const strip = reorder.container;
 
   useLayoutEffect(() => {
     const element = strip.current;
@@ -47,6 +50,9 @@ export default function ProviderSwitcher({ groups, selected, onSelect }: {
 
   return <nav ref={strip} className="provider-switcher" aria-label="Select provider">
     {groups.map(group => <button type="button" key={group.providerId}
+      {...reorder.itemProps(group.providerId)}
+      title="Hold and drag to reorder"
+      aria-description="Hold and drag to reorder, or use Alt+Left/Right."
       className={`provider-choice provider-${group.providerId}`}
       aria-pressed={selected === group.providerId} onClick={() => onSelect(group.selected.id)}>
       <img src={providerIcon(group.providerId) ?? undefined} alt="" draggable={false} />

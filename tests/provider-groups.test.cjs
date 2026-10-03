@@ -34,3 +34,28 @@ test('manual refresh cooldown starts after completion and handles clock rollback
   assert.equal(refreshCooldown(15000, 0), 0);
   assert.equal(refreshCooldown(0, 100), 10000);
 });
+
+test('saved provider order controls both surfaces without changing accounts or selection', () => {
+  const accounts = [account('w1', 'workbuddy'), account('c1', 'codex'), account('w2', 'workbuddy'), account('d1', 'deepseek')];
+  const groups = providerGroups(accounts, { workbuddy: 'w2' }, ['deepseek', 'workbuddy']);
+  assert.deepEqual(groups.map(group => group.providerId), ['deepseek', 'workbuddy', 'codex']);
+  assert.deepEqual(groups[1].accounts.map(account => account.id), ['w1', 'w2']);
+  assert.equal(groups[1].selected.id, 'w2');
+  assert.deepEqual(accounts.map(account => account.id), ['w1', 'c1', 'w2', 'd1']);
+});
+
+test('saved order ignores duplicates, unknown providers and damaged settings', () => {
+  const { readProviderOrder } = require('../src/lib/providerGroups.ts');
+  for (const raw of [null, 'null', '{}', '{bad']) assert.deepEqual(readProviderOrder(raw), []);
+  assert.deepEqual(readProviderOrder('["zcode","unknown",4,"codex","zcode"]'), ['zcode', 'codex']);
+});
+
+test('moving a provider inserts it in either direction and ignores invalid drops', () => {
+  const { moveProvider } = require('../src/lib/providerGroups.ts');
+  const order = ['workbuddy', 'codex', 'deepseek', 'zcode'];
+  assert.deepEqual(moveProvider(order, 'workbuddy', 'deepseek'), ['codex', 'deepseek', 'workbuddy', 'zcode']);
+  assert.deepEqual(moveProvider(order, 'zcode', 'codex'), ['workbuddy', 'zcode', 'codex', 'deepseek']);
+  assert.deepEqual(moveProvider(order, 'codex', 'codex'), order);
+  assert.deepEqual(moveProvider(order, 'missing', 'codex'), order);
+  assert.deepEqual(moveProvider(order, 'codex', 'missing'), order);
+});
