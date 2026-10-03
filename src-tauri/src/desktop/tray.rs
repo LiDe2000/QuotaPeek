@@ -34,6 +34,14 @@ fn handle_action(
 }
 
 pub fn setup(app: &mut tauri::App) -> tauri::Result<()> {
+    let version = MenuItem::with_id(
+        app,
+        "tray-version",
+        format!("v{}", app.package_info().version),
+        false,
+        None::<&str>,
+    )?;
+    let version_separator = PredefinedMenuItem::separator(app)?;
     let show = MenuItem::with_id(app, "tray-show", "Show", true, None::<&str>)?;
     let hide = MenuItem::with_id(app, "tray-hide", "Hide", true, None::<&str>)?;
     let window = app.get_webview_window("main");
@@ -52,7 +60,18 @@ pub fn setup(app: &mut tauri::App) -> tauri::Result<()> {
     )?;
     let separator = PredefinedMenuItem::separator(app)?;
     let quit = MenuItem::with_id(app, "tray-quit", "Quit", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &hide, &always_on_top, &separator, &quit])?;
+    let menu = Menu::with_items(
+        app,
+        &[
+            &version,
+            &version_separator,
+            &show,
+            &hide,
+            &always_on_top,
+            &separator,
+            &quit,
+        ],
+    )?;
     let mut tray = TrayIconBuilder::with_id("quotapeek-tray")
         .tooltip("QuotaPeek")
         .menu(&menu)

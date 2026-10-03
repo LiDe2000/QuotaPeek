@@ -13,6 +13,7 @@
 .orb-pop .panel { position: static; max-height: none; overflow: visible; }
 .window-header, .brand, .window-actions, .window-footer { display: flex; align-items: center; }
 .window-header { flex: 0 0 auto; flex-wrap: wrap; justify-content: space-between; gap: var(--space-medium); margin-bottom: var(--space-section); }
+.orb-pop[data-compact="true"] .window-header { margin-bottom: 0; }
 .brand { gap: var(--space-medium); }
 .brand h1 { font-size: var(--font-size-title); font-weight: 650; letter-spacing: -0.4px; }
 .app-icon { display: block; width: var(--control-size); height: var(--control-size); pointer-events: none; }
@@ -63,7 +64,6 @@
 .account-removal h2 { font-size: var(--font-size-body); }
 .account-removal p { margin-top: var(--space-small); font-size: var(--font-size-small); line-height: 1.6; color: var(--color-text-muted); }
 .removal-buttons { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: var(--space-small); margin-top: var(--space-medium); }
-.removal-buttons button, .connect-empty-button { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-control); color: var(--color-text); background: var(--color-control); }
+.removal-buttons button { padding: 8px 12px; border: 1px solid var(--color-border); border-radius: var(--radius-control); color: var(--color-text); background: var(--color-control); }
 .removal-buttons .remove-account-button { border-color: var(--color-accent); background: var(--color-surface-active); }
 .account-remove-trigger:disabled, .removal-buttons button:disabled { opacity: 0.5; cursor: not-allowed; }
-.empty-accounts { display: grid; justify-items: center; gap: var(--space-medium); padding: var(--space-large) 0; color: var(--color-text-muted); }
