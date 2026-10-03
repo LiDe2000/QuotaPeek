@@ -50,6 +50,6 @@ Windows 使用当前用户范围 DPAPI，密文 BLOB 存在 credentials 中。�
 
 便携构建：`npm run tauri:build:portable`。安装包构建：`npm run tauri:build:installed`。默认 Tauri 配置关闭安装包，安装版使用 `tauri.installed.conf.json` 开启 NSIS/MSI。两个命令生成的 exe 路径相同、数据策略不同，发布时分别收集对应产物。
 
-Windows 便携启动验证：构建后运行 `powershell -ExecutionPolicy Bypass -File scripts/verify-portable-storage.ps1`。脚本在工作区 `.tmp/` 下创建隔离副本，从不同的工作目录启动，写入合成数据后移动整个应用目录再启动，并通过数据库触发器确认 React 已读取原主题和账户选择、经 IPC 保存缓存。合成凭据在解密阶段失败，不执行实际账户网络查询；测试进程结束后关闭，目录保留供检查。
+Windows 便携启动验证：构建后运行 `powershell -ExecutionPolicy Bypass -File tests/desktop/verify-portable-storage.ps1`。脚本在工作区 `.tmp/` 下创建隔离副本，从不同的工作目录启动，写入合成数据后移动整个应用目录再启动，并通过数据库触发器确认 React 已读取原主题和账户选择、经 IPC 保存缓存。合成凭据在解密阶段失败，不执行实际账户网络查询；测试进程结束后关闭，目录保留供检查。
 
 2026-10-02 验证结果：前端 66 项测试通过，Rust 53 项通过、2 项真实服务集成测试按默认设置跳过；前端构建、便携 release exe 构建和 `installed` 特性编译检查通过。正常 Windows 权限下的实际便携启动、IPC 保存、目录移动和重启恢复通过。沙箱中 WebView2 未完成启动，因此实际启动验证使用正常权限。安装包生成、安装/卸载与真实账户重新授权尚未实测；DPAPI、无法解密时重新保存、稳定账户排序和迁移回滚使用合成数据测试。

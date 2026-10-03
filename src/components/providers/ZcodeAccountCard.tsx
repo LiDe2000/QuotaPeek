@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import glmAvatar from "../../assets/models/glm/avatar.png";
-import type { ZcodeAccount, ZcodeWindow } from "../../types/zcode";
-import "../AccountCard.css";
+import type { ZcodeAccount, ZcodeWindow } from "../../types/providers/zcode";
+import "../accounts/AccountCard.css";
 import "./ZcodeAccountCard.css";
 
 const compact = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });

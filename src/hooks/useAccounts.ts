@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { isTauri } from "@tauri-apps/api/core";
 import type { Account } from "../types/quota";
-import { queryCodexQuota, queryErrorMessage } from "../services/codex";
-import { listWorkbuddyAccounts, queryWorkbuddyQuota } from "../services/workbuddy";
-import { listZcodeAccounts, queryZcodeQuota } from "../services/zcode";
-import { listDeepseekAccounts, queryDeepseekBalance } from "../services/deepseek";
-import { refreshCooldown } from "../lib/refreshCooldown";
-import { mergeAccount, restoreAccounts } from "../lib/accountState";
+import { queryCodexQuota, queryErrorMessage } from "../services/providers/codex";
+import { listWorkbuddyAccounts, queryWorkbuddyQuota } from "../services/providers/workbuddy";
+import { listZcodeAccounts, queryZcodeQuota } from "../services/providers/zcode";
+import { listDeepseekAccounts, queryDeepseekBalance } from "../services/providers/deepseek";
+import { refreshCooldown } from "../lib/accounts/refreshCooldown";
+import { mergeAccount, restoreAccounts } from "../lib/accounts/accountState";
 import { storage } from "../services/storage";
 
 type Provider = Account["providerId"];

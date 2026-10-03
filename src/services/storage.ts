@@ -1,7 +1,7 @@
 import { invoke, isTauri } from "@tauri-apps/api/core";
-import { createPersistentState } from "../lib/persistentState";
-import type { SavedState } from "../lib/persistentState";
-import { cachedAccounts } from "../lib/accountState";
+import { createPersistentState } from "../lib/storage/persistentState";
+import type { SavedState } from "../lib/storage/persistentState";
+import { cachedAccounts } from "../lib/accounts/accountState";
 
 export const storage = createPersistentState({
   async load() {

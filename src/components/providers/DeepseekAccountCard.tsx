@@ -1,8 +1,8 @@
-import { formatMoney } from "../../lib/money";
+import { formatMoney } from "../../lib/format/money";
 import type { ReactNode } from "react";
-import type { DeepseekAccount } from "../../types/deepseek";
+import type { DeepseekAccount } from "../../types/providers/deepseek";
 import deepseekAvatar from "../../assets/models/deepseek/avatar.png";
-import "../AccountCard.css";
+import "../accounts/AccountCard.css";
 import "./DeepseekAccountCard.css";
 
 export default function DeepseekAccountCard({ account, active, stale, loading, panelId, actions }: {

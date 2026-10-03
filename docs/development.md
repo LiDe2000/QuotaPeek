@@ -12,26 +12,64 @@
 
 ```text
 src/
-  components/       # 侧栏、连接面板、主题设置与供应商卡片
-    providers/      # Codex、WorkBuddy、ZCode 的专属卡片
-  hooks/            # 账户状态、悬停预览、主题与窗口尺寸
-  lib/              # 账户合并、供应商分组、额度圆环与窗口定位
-  services/         # Tauri 查询与登录命令的前端封装
+  components/
+    accounts/       # 账户卡片入口、连接和移除操作
+    navigation/     # 侧栏、平台切换和拖拽排序界面
+    providers/      # 各供应商专属卡片
+    settings/       # 外观设置
+    shared/         # 公共图标和平台标识
+  hooks/            # 账户、主题、悬停、排序和窗口状态
+  lib/
+    accounts/       # 账户合并与刷新冷却
+    providers/      # 平台分组、图标与额度圆环
+    storage/        # 前端持久化状态与写入队列
+    window/         # 高度和屏幕定位计算
+    format/         # 金额与时间格式
+  services/
+    providers/      # 各供应商的 Tauri 查询和登录封装
+    storage.ts      # 设置与缓存 IPC
+  types/
+    providers/      # 各供应商的数据类型
+    quota.ts        # Account 联合类型及公共账户工具
   styles/           # 设计变量、主题与全局样式
-  types/            # Account 联合类型与各供应商数据类型
-  App.tsx           # 面板、供应商与账户切换的组合入口
+  App.tsx           # 主面板和账户切换的组合入口
 src-tauri/src/
-  lib.rs            # Tauri 命令与共享状态注册
-  account_store.rs  # 多账户连接信息的持久化
-  storage.rs        # SQLite 数据、事务及版本升级
-  storage_commands.rs # 前端设置与缓存命令
-  credential_protection.rs # Windows DPAPI 凭据保护
-  codex.rs           # Codex 协议与查询进程管理
-  codex_executable.rs # 本机 Codex 可执行文件发现
-  workbuddy.rs      # WorkBuddy 授权、账户与额度查询
-  zcode.rs          # ZCode 授权、账户与额度查询
-tests/              # 前端数据逻辑与卡片渲染测试
+  providers/
+    codex/
+      mod.rs        # Codex 协议与查询进程
+      executable.rs # 本机 Codex 程序发现
+    deepseek/
+      mod.rs        # 公共余额模型与 API Key 查询
+      login.rs      # 浏览器授权与账户钱包查询
+      wallet.rs     # 精确金额计算
+    workbuddy.rs    # WorkBuddy 授权与额度查询
+    zcode.rs        # ZCode 授权与额度查询
+  storage/
+    mod.rs          # SQLite 数据库、事务及版本升级
+    accounts.rs     # 多账户读写入口和稳定 ID
+    credentials.rs  # Windows DPAPI 凭据保护
+    commands.rs     # 设置、缓存与账户移除命令
+  desktop/
+    window.rs       # 显示与隐藏窗口
+    bounds.rs       # 原生窗口边界与可见区域
+    drag.rs         # Windows 系统拖动事件
+    tray.rs         # 托盘菜单和动作
+  lib.rs            # 应用启动、状态与命令注册
+  main.rs           # 桌面进程入口
+tests/
+  frontend/         # 前端逻辑、卡片渲染和交互测试
+  rust/             # Rust 数据解析、登录校验和存储测试
+  desktop/          # 便携 exe 启动、持久化和目录移动验证
+scripts/            # 开发期渲染诊断工具
 ```
+
+## 目录维护约定
+
+组件及其专属 CSS 放在同一目录。按功能查找文件：账户操作看 `components/accounts`，平台展示看 `components/providers`，侧栏和切换看 `components/navigation`。`AccountCard.css` 是所有平台卡片共用的基础样式，保留在 `components/accounts`；平台特有样式与对应卡片同放。
+
+供应商代码按职责分文件。Codex 的协议查询与程序发现、DeepSeek 的授权流程与金额计算分别维护，同一供应商放在同一目录。`mod.rs` 是 Rust 模块入口。WorkBuddy 和 ZCode 目前各只有一个实现文件，直接放在 `providers`；以后出现独立职责的多个文件时再建立子目录。`hooks` 和全局样式文件数量较少，保留现有层级。
+
+测试源码统一放在根目录 `tests`。Rust 单元测试通过各实现模块的 `#[cfg(test)]` 和 `#[path]` 引入，仍可测试私有函数；不要为方便测试扩大生产代码的可见性。新增测试沿用对应文件，并继续通过 Cargo 执行。桌面验证脚本使用隔离的合成数据，运行方法见 [数据存储文档](storage.md)。
 
 ## 账户与查询状态
 
@@ -72,7 +110,7 @@ Codex 使用本机已有登录状态，目前只有一个本地连接；WorkBudd
 
 原生窗口使用物理坐标定位和调整尺寸：`physicalHorizontalPlacement` 只按窗口当前 DPI 转换 CSS 宽度，工作区与窗口原点保持物理坐标。监听 DPI 变化重新拟合；热更新时沿用 DOM 已记录的展开方向。相关回归覆盖 200%/125% 缩放、负坐标和实际 hook 连续展开/收起。
 
-Windows 默认预留稳定的原生视口：宽度由 `--main-panel-width`、侧栏、间距和留白计算，高度预留至工作区高度减去 80 个逻辑像素。同一显示器与 DPI 下，展开、收起和切换卡片只更新可见区域，不反复改变 WebView2 的原生表面尺寸。向左展开时，内容对齐视口右边缘。`window_bounds.rs` 的 `fit_window_bounds` 在 UI 线程统一处理物理边界和可见区域，`visibleHeight` 与原生 `height` 分开；原生窗口区域裁掉未使用的视口，空白区域不绘制、不拦截鼠标。可见高度继续随内容自适应，跨显示器或 DPI 变化时重新拟合。非 Windows 平台沿用内容宽高拟合。
+Windows 默认预留稳定的原生视口：宽度由 `--main-panel-width`、侧栏、间距和留白计算，高度预留至工作区高度减去 80 个逻辑像素。同一显示器与 DPI 下，展开、收起和切换卡片只更新可见区域，不反复改变 WebView2 的原生表面尺寸。向左展开时，内容对齐视口右边缘。`desktop/bounds.rs` 的 `fit_window_bounds` 在 UI 线程统一处理物理边界和可见区域，`visibleHeight` 与原生 `height` 分开；原生窗口区域裁掉未使用的视口，空白区域不绘制、不拦截鼠标。可见高度继续随内容自适应，跨显示器或 DPI 变化时重新拟合。非 Windows 平台沿用内容宽高拟合。
 
 开发和正式构建都使用稳定视口，保留 GPU 渲染与左右自适应。排查回归时使用 `npm run tauri:diagnose -- --resize` 恢复旧的原生高度拟合；`--fixed` 则停用全部自动几何更新，仅供隔离实验。诊断覆盖仅在开发模式有效，不能通过环境变量将旧模式带入正式构建。
 
@@ -80,11 +118,11 @@ Windows 默认预留稳定的原生视口：宽度由 `--main-panel-width`、侧
 
 主面板和预览采用固定内容宽度，内边距不随原生视口宽度改变，避免展开后再次改变内容高度。账户切换的短暂过渡只作用于卡片内部内容，卡片底色保持连续；减少动态效果的系统偏好会关闭该过渡。`tauri.conf.json` 的初始宽高只用于启动，不能将最小高度设置到妨碍收缩的值。
 
-Windows 的 `window_drag.rs` 观察系统拖动循环的开始和结束。拖动期间自动拟合暂停，保持鼠标抓取点和展开方向；松开后再拟合。异步读取位置使用版本检查，原生提交还核对请求来源位置并拒绝拖动中的调整，避免旧请求把窗口拉回。`startDragging()` Promise 完成只代表请求已入队，不能用来判断鼠标松开。
+Windows 的 `desktop/drag.rs` 观察系统拖动循环的开始和结束。拖动期间自动拟合暂停，保持鼠标抓取点和展开方向；松开后再拟合。异步读取位置使用版本检查，原生提交还核对请求来源位置并拒绝拖动中的调整，避免旧请求把窗口拉回。`startDragging()` Promise 完成只代表请求已入队，不能用来判断鼠标松开。
 
 ### 托盘与窗口生命周期
 
-`src-tauri/src/tray.rs` 负责托盘图标、原生菜单和动作分发；`desktop_window.rs` 提供可复用的显示/隐藏入口。前端通过 `desktop-show-main` 事件打开主面板，Rust 端不直接操作前端 DOM。增加托盘菜单项时，在 `tray.rs` 添加菜单和对应动作；其他入口也可复用窗口操作。
+`src-tauri/src/desktop/tray.rs` 负责托盘图标、原生菜单和动作分发；`desktop/window.rs` 提供可复用的显示/隐藏入口。前端通过 `desktop-show-main` 事件打开主面板，Rust 端不直接操作前端 DOM。增加托盘菜单项时，在 `desktop/tray.rs` 添加菜单和对应动作；其他入口也可复用窗口操作。
 
 托盘右键菜单的 `Always on Top` 是可勾选开关，控制主窗口是否始终显示在其他普通窗口前面。启动时默认关闭；隐藏后重新显示和展开/收起保留当前置顶状态，重启后恢复默认。菜单勾选状态与原生窗口状态同步，设置失败会恢复原勾选状态。
 
@@ -117,7 +155,7 @@ initialize → initialized → account/read → account/rateLimits/read → acco
 
 ## DeepSeek 余额查询
 
-默认连接流程在 `src-tauri/src/deepseek_login.rs` 中实现，参考 [Harness 官方账户授权实现](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/credentials/deepseek-account-platform)。浏览器授权使用 S256 PKCE、随机 state 和仅绑定 `127.0.0.1` 的临时端口回调。通过 `auth_init` 获得授权页，回调后执行 `auth_exchange`，使用账户授权 token 查询 `/auth-api/v0/users/current` 和 `/api/v0/users/get_user_summary`，不发起模型任务。
+默认连接流程在 `src-tauri/src/providers/deepseek/login.rs` 中实现，参考 [Harness 官方账户授权实现](https://github.com/deepseek-ai/deepseek-harness/tree/master/packages/credentials/deepseek-account-platform)。浏览器授权使用 S256 PKCE、随机 state 和仅绑定 `127.0.0.1` 的临时端口回调。通过 `auth_init` 获得授权页，回调后执行 `auth_exchange`，使用账户授权 token 查询 `/auth-api/v0/users/current` 和 `/api/v0/users/get_user_summary`，不发起模型任务。
 
 请求使用 QuotaPeek 自身版本和平台信息，限制响应大小为 64 KiB，不跟随重定向。授权和完成页面只允许开放平台的固定路径；回调校验 state、路径和参数唯一性。单次网络请求超时 30 秒，登录流程最长 10 分钟；取消会阻止尚未提交的凭据写入，已提交的结果返回对应账户 ID。隐藏连接面板允许登录继续。
 
@@ -125,7 +163,7 @@ initialize → initialized → account/read → account/rateLimits/read → acco
 
 充值钱包和赠金钱包分别读取，同一币种内使用有界整数十进制运算精确合计，支持负数及科学计数法；不同币种保持独立。实现限制有效金额位数和指数范围，溢出拒绝解析而非舍入。余额不足不当作登录失败，不推算固定额度百分比；钱包接口没有提供赠金到期时间。
 
-API Key 账户通过 `src-tauri/src/deepseek.rs` 调用公开 `GET https://api.deepseek.com/user/balance`，采用高熵 Key 的 SHA-256 摘要作为稳定账户 ID，Key 本身以 DPAPI 密文保存。默认连接界面使用浏览器授权。两种认证分别使用 `deepseek-api` 和 `deepseek-platform` namespace，查询路径保持独立。本次不导入以前的 JSON 记录。
+API Key 账户通过 `src-tauri/src/providers/deepseek/mod.rs` 调用公开 `GET https://api.deepseek.com/user/balance`，采用高熵 Key 的 SHA-256 摘要作为稳定账户 ID，Key 本身以 DPAPI 密文保存。默认连接界面使用浏览器授权。两种认证分别使用 `deepseek-api` 和 `deepseek-platform` namespace，查询路径保持独立。本次不导入以前的 JSON 记录。
 
 卡片图像使用独立的 `src/assets/models/deepseek/avatar.png` Q 版头像，侧栏和供应商切换继续使用 `src/assets/providers/deepseek/` 下的产品图标。新增余额型供应商时，应复用账户状态流程，分别定义余额与额度的侧栏含义。
 

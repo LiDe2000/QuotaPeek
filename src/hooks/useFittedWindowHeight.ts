@@ -3,9 +3,9 @@ import type { RefObject } from "react";
 import { currentMonitor, getCurrentWindow } from "@tauri-apps/api/window";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { fittedWindowHeight, SCREEN_RESERVE } from "../lib/windowHeight";
-import { physicalHorizontalPlacement } from "../lib/windowPlacement";
-import type { ExpandSide } from "../lib/windowPlacement";
+import { fittedWindowHeight, SCREEN_RESERVE } from "../lib/window/windowHeight";
+import { physicalHorizontalPlacement } from "../lib/window/windowPlacement";
+import type { ExpandSide } from "../lib/window/windowPlacement";
 
 /** One serialized resize path owns dimensions and keeps the rail anchored at screen edges. */
 export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabled: boolean, fixedViewport = false, stableHeight = true): void {
