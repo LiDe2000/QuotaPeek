@@ -1,6 +1,11 @@
 /* Themes. Dark (near-black) is the default; data-theme on <html> selects a theme. */
 :root,
 :root[data-theme="dark"] {
+  /* Dominant colours from src/assets/models; theme variants adjust contrast. */
+  --model-workbuddy: #0ec8a9;
+  --model-deepseek: #475a86;
+  --model-codex: #fbede4;
+  --model-zcode: #453d44;
   color-scheme: dark;
   --color-background: #202020;
   --color-window: #0c0d0f;
@@ -18,12 +23,14 @@
   --color-token-surface: #1a1d23;
   --color-accent: #819fff;
   --color-error: #f18a88;
-  --color-codex: #809dff;
-  --color-codex-soft: #243253;
-  --color-workbuddy: #55a8f0;
-  --color-workbuddy-soft: #20364e;
-  --color-zcode: #9d86e8;
-  --color-zcode-soft: #322a52;
+  --color-codex: var(--model-codex);
+  --color-codex-soft: color-mix(in srgb, var(--model-codex) 30%, var(--color-surface));
+  --color-workbuddy: var(--model-workbuddy);
+  --color-workbuddy-soft: color-mix(in srgb, var(--model-workbuddy) 30%, var(--color-surface));
+  --color-deepseek: color-mix(in srgb, var(--model-deepseek) 60%, #fff);
+  --color-deepseek-soft: color-mix(in srgb, var(--model-deepseek) 30%, var(--color-surface));
+  --color-zcode: color-mix(in srgb, var(--model-zcode) 40%, #fff);
+  --color-zcode-soft: color-mix(in srgb, var(--model-zcode) 30%, var(--color-surface));
   --color-positive: #5fd5a0;
   --color-caution: #e2b34c;
   --color-critical: #e2604f;
@@ -50,12 +57,14 @@
   --color-token-surface: #f7f8fa;
   --color-accent: #3d5bd9;
   --color-error: #bd4141;
-  --color-codex: #5468d4;
-  --color-codex-soft: #e9edfd;
-  --color-workbuddy: #1f74cc;
-  --color-workbuddy-soft: #e6f1fc;
-  --color-zcode: #7048c8;
-  --color-zcode-soft: #efe9fb;
+  --color-codex: color-mix(in srgb, var(--model-codex) 25%, #3e3028);
+  --color-codex-soft: color-mix(in srgb, var(--model-codex) 10%, var(--color-surface));
+  --color-workbuddy: color-mix(in srgb, var(--model-workbuddy) 60%, #000);
+  --color-workbuddy-soft: color-mix(in srgb, var(--model-workbuddy) 10%, var(--color-surface));
+  --color-deepseek: var(--model-deepseek);
+  --color-deepseek-soft: color-mix(in srgb, var(--model-deepseek) 10%, var(--color-surface));
+  --color-zcode: var(--model-zcode);
+  --color-zcode-soft: color-mix(in srgb, var(--model-zcode) 10%, var(--color-surface));
   --color-positive: #1f7f58;
   --color-caution: #9d6b10;
   --color-critical: #b7402f;
@@ -82,12 +91,14 @@
   --color-token-surface: #ffffff08;
   --color-accent: #97aefc;
   --color-error: #ef8b87;
-  --color-codex: #8fa4ff;
-  --color-codex-soft: #313a55;
-  --color-workbuddy: #63b6f6;
-  --color-workbuddy-soft: #24384f;
-  --color-zcode: #ad95f5;
-  --color-zcode-soft: #3a3459;
+  --color-codex: var(--model-codex);
+  --color-codex-soft: color-mix(in srgb, var(--model-codex) 30%, var(--color-surface));
+  --color-workbuddy: var(--model-workbuddy);
+  --color-workbuddy-soft: color-mix(in srgb, var(--model-workbuddy) 30%, var(--color-surface));
+  --color-deepseek: color-mix(in srgb, var(--model-deepseek) 60%, #fff);
+  --color-deepseek-soft: color-mix(in srgb, var(--model-deepseek) 30%, var(--color-surface));
+  --color-zcode: color-mix(in srgb, var(--model-zcode) 40%, #fff);
+  --color-zcode-soft: color-mix(in srgb, var(--model-zcode) 30%, var(--color-surface));
   --color-positive: #6ad9a6;
   --color-caution: #e5b95e;
   --color-critical: #e56a58;
@@ -114,12 +125,14 @@
   --color-token-surface: #f6f1e8;
   --color-accent: #9a5a2b;
   --color-error: #b0432f;
-  --color-codex: #5a6fc4;
-  --color-codex-soft: #e8e9f8;
-  --color-workbuddy: #2a72b8;
-  --color-workbuddy-soft: #e5eef8;
-  --color-zcode: #7d4bb8;
-  --color-zcode-soft: #efe6f6;
+  --color-codex: color-mix(in srgb, var(--model-codex) 25%, #3e3028);
+  --color-codex-soft: color-mix(in srgb, var(--model-codex) 10%, var(--color-surface));
+  --color-workbuddy: color-mix(in srgb, var(--model-workbuddy) 60%, #000);
+  --color-workbuddy-soft: color-mix(in srgb, var(--model-workbuddy) 10%, var(--color-surface));
+  --color-deepseek: var(--model-deepseek);
+  --color-deepseek-soft: color-mix(in srgb, var(--model-deepseek) 10%, var(--color-surface));
+  --color-zcode: var(--model-zcode);
+  --color-zcode-soft: color-mix(in srgb, var(--model-zcode) 10%, var(--color-surface));
   --color-positive: #4a7c3f;
   --color-caution: #9c6c12;
   --color-critical: #b4452f;
@@ -146,12 +159,14 @@
   --color-token-surface: #ffffff08;
   --color-accent: #7fa9e8;
   --color-error: #ef8a86;
-  --color-codex: #86a3ff;
-  --color-codex-soft: #22304d;
-  --color-workbuddy: #59b6f5;
-  --color-workbuddy-soft: #163448;
-  --color-zcode: #a78bfa;
-  --color-zcode-soft: #2e2a52;
+  --color-codex: var(--model-codex);
+  --color-codex-soft: color-mix(in srgb, var(--model-codex) 30%, var(--color-surface));
+  --color-workbuddy: var(--model-workbuddy);
+  --color-workbuddy-soft: color-mix(in srgb, var(--model-workbuddy) 30%, var(--color-surface));
+  --color-deepseek: color-mix(in srgb, var(--model-deepseek) 60%, #fff);
+  --color-deepseek-soft: color-mix(in srgb, var(--model-deepseek) 30%, var(--color-surface));
+  --color-zcode: color-mix(in srgb, var(--model-zcode) 40%, #fff);
+  --color-zcode-soft: color-mix(in srgb, var(--model-zcode) 30%, var(--color-surface));
   --color-positive: #5fd3a2;
   --color-caution: #e2b34c;
   --color-critical: #e2604f;
@@ -163,9 +178,7 @@
 .provider-codex { --provider-color: var(--color-codex); --provider-soft: var(--color-codex-soft); }
 .provider-workbuddy { --provider-color: var(--color-workbuddy); --provider-soft: var(--color-workbuddy-soft); }
 .provider-zcode { --provider-color: var(--color-zcode); --provider-soft: var(--color-zcode-soft); }
-.provider-deepseek { --provider-color: #7d9cff; --provider-soft: #25365c; }
-:root[data-theme="light"] .provider-deepseek,
-:root[data-theme="warm"] .provider-deepseek { --provider-color: #4168d8; --provider-soft: #e6edff; }
+.provider-deepseek { --provider-color: var(--color-deepseek); --provider-soft: var(--color-deepseek-soft); }
 
 /* Quota level → colour, shared by the rail rings and the account cards. */
 [data-quota="idle"] { --quota-color: var(--provider-color); }

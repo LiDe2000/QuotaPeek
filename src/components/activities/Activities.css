@@ -41,7 +41,7 @@
 .activity-state-marker { display: grid; place-items: center; flex-shrink: 0; width: 16px; height: 16px; color: var(--color-text-subtle); }
 .activity-state-marker > span { display: block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .activity-state-marker.is-available { color: #f07878; }
-.activity-state-marker.is-claimed { color: var(--color-status); }
+.activity-state-marker.is-claimed { color: var(--color-positive); }
 .activity-state-marker.is-pending, .activity-state-marker.is-verification, .activity-state-marker.is-failed { color: #d7a748; }
 .activity-state-marker.is-pending > span, .activity-state-marker.is-verification > span, .activity-state-marker.is-failed > span { border-radius: 2px; transform: rotate(45deg); }
 .activity-state-marker.is-claiming > span { width: 10px; height: 10px; border: 2px solid var(--color-border); border-top-color: var(--color-accent); background: transparent; animation: activity-spin .8s linear infinite; }

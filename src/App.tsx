@@ -209,10 +209,9 @@ function App() {
           const name = accountLabel(member) || `Account ${position + 1}`;
           const region = member.providerId === "deepseek" ? (member.source === "deepseek-api" ? "API" : null) : member.providerId === "codex" ? null : member.region === "cn" ? "CN" : "Global";
           return <button type="button" key={member.id} className="account-choice" aria-pressed={member.id === id}
-            aria-label={`Switch to ${name}${region ? ` · ${region}` : ""}`} title={`${name}${region ? ` · ${region}` : ""}`}
+            aria-label={`Switch to account ${position + 1}: ${name}${region ? ` · ${region}` : ""}`} title={`${name}${region ? ` · ${region}` : ""}`}
             onClick={() => selectAccount(member.id)}>
-            <span className="account-choice-name">{name}</span>
-            {region && <span className="account-choice-region">{region}</span>}
+            {position + 1}
           </button>;
         })}
       </div>
