@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Theme } from "../../hooks/useAppearance";
 import { useStripScroll } from "../../hooks/useStripScroll";
@@ -23,7 +23,25 @@ interface AppearanceSettingsProps {
 
 export default function AppearanceSettings({ theme, onThemeChange, scale, onScaleChange, onClose }: AppearanceSettingsProps) {
   const themeOptions = useRef<HTMLFieldSetElement>(null);
-  const position = (scale - INTERFACE_SCALE.min) / (INTERFACE_SCALE.max - INTERFACE_SCALE.min);
+  const [draftScale, setDraftScale] = useState(scale);
+  const draft = useRef(scale);
+  const pointer = useRef<number | null>(null);
+  const position = (draftScale - INTERFACE_SCALE.min) / (INTERFACE_SCALE.max - INTERFACE_SCALE.min);
+
+  function preview(value: number) {
+    draft.current = value;
+    setDraftScale(value);
+  }
+  function commit() {
+    if (draft.current !== scale) onScaleChange(draft.current);
+  }
+  function cancel() {
+    if (pointer.current === null) return;
+    pointer.current = null;
+    preview(scale);
+  }
+
+  useEffect(() => { preview(scale); }, [scale]);
 
   useEffect(() => { themeOptions.current?.querySelector<HTMLInputElement>("input:checked")?.focus(); }, []);
   useStripScroll(themeOptions, "input:checked", theme);
@@ -38,13 +56,23 @@ export default function AppearanceSettings({ theme, onThemeChange, scale, onScal
       <div className="scale-setting" style={{ "--scale-fill": `${position * 100}%`, "--scale-position": position } as CSSProperties}>
         <div className="scale-heading">
           <label htmlFor="interface-scale">Interface scale</label>
-          <button type="button" className="scale-reset" disabled={scale === INTERFACE_SCALE.default} onClick={() => onScaleChange(INTERFACE_SCALE.default)}>Reset</button>
+          <button type="button" className="scale-reset" disabled={scale === INTERFACE_SCALE.default && draftScale === INTERFACE_SCALE.default}
+            onClick={() => { preview(INTERFACE_SCALE.default); if (scale !== INTERFACE_SCALE.default) onScaleChange(INTERFACE_SCALE.default); }}>Reset</button>
         </div>
         <div className="scale-slider-control">
-          <input id="interface-scale" className="scale-slider" type="range" min={INTERFACE_SCALE.min} max={INTERFACE_SCALE.max} step={INTERFACE_SCALE.step} value={scale}
-            aria-valuetext={`${scale}%`}
-            onChange={event => onScaleChange(Number(event.target.value))} />
-          <output htmlFor="interface-scale" className="scale-value" aria-hidden="true">{scale}%</output>
+          <input id="interface-scale" className="scale-slider" type="range" min={INTERFACE_SCALE.min} max={INTERFACE_SCALE.max} step={INTERFACE_SCALE.step} value={draftScale}
+            aria-valuetext={`${draftScale}%`}
+            onChange={event => preview(Number(event.currentTarget.value))}
+            onPointerDown={event => {
+              if (!event.isPrimary || event.button !== 0) return;
+              pointer.current = event.pointerId;
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerUp={event => { if (pointer.current === event.pointerId) { pointer.current = null; commit(); } }}
+            onPointerCancel={cancel} onLostPointerCapture={cancel}
+            onKeyUp={event => { if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End", "PageUp", "PageDown"].includes(event.key)) commit(); }}
+            onBlur={() => { if (pointer.current === null) commit(); }} />
+          <output htmlFor="interface-scale" className="scale-value" aria-hidden="true">{draftScale}%</output>
         </div>
       </div>
     </section>

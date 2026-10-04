@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import { storage, saveSetting } from "../services/storage";
 import { INTERFACE_SCALE_KEY, normalizeInterfaceScale } from "../lib/appearance/interfaceScale";
+import { transitionScale } from "../lib/appearance/scaleTransition";
 
 export type Theme = "dark" | "light" | "dimmed" | "warm" | "navy";
 
@@ -22,8 +23,15 @@ export function useAppearance() {
   function setScale(value: number) { updateScale(normalizeInterfaceScale(value)); }
 
   useLayoutEffect(() => {
-    document.documentElement.style.setProperty("--interface-scale", String(scale / 100));
-    window.dispatchEvent(new Event("interface-scale-changed"));
+    const style = document.documentElement.style;
+    const previous = Number.parseFloat(style.getPropertyValue("--interface-scale"));
+    const target = scale / 100;
+    // Restore startup size directly; animate subsequent user changes without
+    // changing the layout scale on every animation frame.
+    return transitionScale(Number.isFinite(previous) ? previous : target, target, value => {
+      style.setProperty("--interface-scale", String(value));
+      window.dispatchEvent(new Event("interface-scale-changed"));
+    }, window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }, [scale]);
 
   useEffect(() => {

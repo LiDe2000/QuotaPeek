@@ -185,6 +185,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 | 文档 | 内容 |
 | --- | --- |
 | [开发文档](docs/development.md) | 目录职责、状态流程、窗口实现、测试和扩展 |
+| [整体界面缩放设计](docs/interface-scale.md) | 滑块交互、缩放过渡与原生窗口稳定性 |
 | [数据存储](docs/storage.md) | 数据位置、凭据保护、数据库升级和便携验证 |
 | [常见问题](docs/troubleshooting.md) | 运行、编辑器、构建和渲染问题 |
 

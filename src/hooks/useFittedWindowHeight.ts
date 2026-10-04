@@ -42,6 +42,7 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       if (!node || !shell) return null;
       const style = getComputedStyle(shell);
       const zoom = parseFloat(style.zoom) || 1;
+      const fitRatio = Number(node.dataset.scaleFitRatio) || 1;
       const verticalPadding = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
       const horizontalPadding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
       const availableHeight = fixedViewport ? Math.min(window.innerHeight, screenHeight - SCREEN_RESERVE)
@@ -59,9 +60,10 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
         width = Math.max(width, child.getBoundingClientRect().right - origin);
       }
       return {
-        width: Math.ceil(width + horizontalPadding * zoom),
-        height: fittedWindowHeight({ content: content * zoom, panel: 0, chrome: 0, padding: verticalPadding * zoom,
+        width: Math.ceil(((Number(node.dataset.scaleLayoutWidth) || width) + horizontalPadding * zoom) * fitRatio),
+        height: fittedWindowHeight({ content: content * zoom * fitRatio, panel: 0, chrome: 0, padding: verticalPadding * zoom * fitRatio,
           current: lastContentHeight, screen: screenHeight }) ?? lastContentHeight,
+        // Reserved clipping space must not change the rail's layout anchor.
         inset: parseFloat(style.paddingLeft) * zoom,
         railWidth: (node.querySelector<HTMLElement>(".orb-rail")?.offsetWidth ?? 62) * zoom,
         panelWidth: (parseFloat(getComputedStyle(node).getPropertyValue("--main-panel-width")) || 384) * zoom,
@@ -69,14 +71,19 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
       };
     }
 
+    function fitted() {
+      window.dispatchEvent?.(new Event("interface-scale-fitted"));
+    }
+
     async function fit() {
       frame = 0;
       if (disposed) return;
       if (dragging) { placementDirty = true; return; }
       if (busy) { pending = true; return; }
-      if (!nativeFitEnabled) { measure(); return; }
+      if (!nativeFitEnabled) { measure(); fitted(); return; }
       const measured = measure();
-      if (!measured || (!placementDirty && measured.width === lastContentWidth && measured.height === lastContentHeight)) return;
+      if (!measured) return;
+      if (!placementDirty && measured.width === lastContentWidth && measured.height === lastContentHeight) { fitted(); return; }
       busy = true;
       try {
         const appWindow = getCurrentWindow();
@@ -89,9 +96,12 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
         const size = measure();
         if (!size || !node) return;
         // WebView2 can present its old surface after a leftward native resize.
-        // Reserve the main-panel width; the native region clips unused pixels.
+        // Retain the largest surface used on this monitor. Shrinking the native
+        // surface after an animation can present stale WebView2 frames; only
+        // the visible region should shrink. The region still clips input.
         const viewportWidth = stableViewport
-          ? Math.max(size.width, size.panelWidth + size.railWidth + size.gap + size.inset * 2) : size.width;
+          ? Math.max(size.width, size.panelWidth + size.railWidth + size.gap + size.inset * 2,
+            Math.min(lastSize.width, monitor ? monitor.workArea.size.width / scaleFactor : lastSize.width)) : size.width;
         // Keep WebView2's surface height stable when cards change. Only the native
         // visible region follows content; monitor/DPI changes can resize the surface.
         const viewportHeight = stableViewport && stableHeight
@@ -125,9 +135,10 @@ export function useFittedWindowHeight(body: RefObject<HTMLElement | null>, enabl
             clipLeft: side === "left" ? physicalWidth - visibleWidth : 0,
             visibleWidth, sourceX: position.x, sourceY: position.y } });
             if (!applied) { lastSize = previousSize; placementDirty = true; pending = true; }
-            else { lastClip = clip; lastContentWidth = size.width; lastContentHeight = size.height; } }
+            else { lastClip = clip; lastContentWidth = size.width; lastContentHeight = size.height;
+              if (revision === geometryRevision) fitted(); } }
           catch (error) { lastSize = previousSize; throw error; }
-        }
+        } else fitted();
       } catch (error) { placementDirty = true; console.warn("Window fit was refused", error); }
       finally {
         busy = false;

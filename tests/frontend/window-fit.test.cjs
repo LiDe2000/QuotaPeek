@@ -79,7 +79,8 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
       calls.push('bounds');
       position = { x: bounds.x, y: bounds.y }; nativeWidth = bounds.width;
       nativeHeight = bounds.height; visibleHeight = bounds.visibleHeight;
-      assert.equal(bounds.visibleWidth, Math.ceil((expanded ? 430 : 78) * uiZoom + renderedOverflow) * 2);
+      const width = Number(node.dataset.scaleLayoutWidth) || (expanded ? 414 : 62) * uiZoom + renderedOverflow;
+      assert.equal(bounds.visibleWidth, Math.ceil((width + 16 * uiZoom) * (Number(node.dataset.scaleFitRatio) || 1)) * 2);
       if (assertRightEdge) assert.equal(bounds.clipLeft + bounds.visibleWidth, 948, 'visible region stays against the same right edge');
       assert.ok(position.x + nativeWidth <= 3840, 'combined bounds must remain on the current monitor');
       listeners.moved?.({ payload: position }); listeners.resize?.();
@@ -166,12 +167,14 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
   listeners.drag({ payload: false }); await flush();
   assert.equal(position.x, 900, 'release must never restore the obsolete position');
   if (mode === 'stable') {
+    let widestSurface = 948;
     for (const zoom of [0.75, 1.5, 1]) {
       calls.length = 0;
       uiZoom = zoom;
       listeners['interface-scale-changed'](); await flush();
       assert.deepEqual(calls, ['bounds'], 'scale changes schedule native fitting without a browser resize');
-      assert.equal(nativeWidth, Math.round(474 * zoom * 2), 'UI zoom and monitor DPI multiply independently');
+      widestSurface = Math.max(widestSurface, Math.round(474 * zoom * 2));
+      assert.equal(nativeWidth, widestSurface, 'shrinking keeps the WebView2 surface stable and only changes its visible region');
       assert.equal(visibleHeight, Math.ceil(296 * zoom + 4) * 2, 'visible region follows scaled content');
       assert.equal(nativeHeight, 2000, 'screen ceiling stays in monitor units');
       assert.equal(Number.parseFloat(properties.get('--window-max-height')), 1000 / zoom, 'CSS height ceiling compensates for UI zoom');
@@ -185,6 +188,25 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
     uiZoom = 1.5;
     listeners['interface-scale-changed'](); await flush();
     assert.ok(position.y + visibleHeight <= 2160, 'enlarging near the bottom keeps the entire visible region on screen');
+    calls.length = 0;
+    uiZoom = 0.75;
+    node.dataset.scaleLayoutWidth = String(62 * uiZoom);
+    node.dataset.scaleFitRatio = '2';
+    listeners['interface-scale-changed'](); await flush();
+    assert.equal(nativeWidth, 1422, 'shrinking reserves the original size during the composited transition');
+    const reservedHeight = visibleHeight;
+    const initialFits = calls.length;
+    const reservedPosition = { ...position };
+    assert.ok(initialFits <= 1);
+    for (let i = 0; i < 10; i++) { observerCallbacks[0](); await flush(); }
+    assert.equal(calls.length, initialFits, 'animation frames must not repeatedly adjust native geometry');
+    delete node.dataset.scaleLayoutWidth;
+    delete node.dataset.scaleFitRatio;
+    listeners['interface-scale-changed'](); await flush();
+    assert.equal(nativeWidth, 1422, 'the final fit keeps the native surface stable');
+    assert.deepEqual(position, reservedPosition, 'releasing reserved space must not move the window at the animation endpoint');
+    assert.ok(visibleHeight < reservedHeight);
+    assert.equal(calls.length, initialFits + 1);
   }
   cleanup();
 });
