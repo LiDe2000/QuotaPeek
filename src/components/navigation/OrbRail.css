@@ -1,7 +1,7 @@
 /* The provider rail: a dark capsule hugging the window's edge. The app icon opens the
    accounts card; every signed-in provider stacks a status ring under it. The bare capsule —
    gaps included — drags the window. */
-:root { --orb-warn: #e2b34c; --orb-hot: #e2604f; --orb-section-extra: 15px; }
+:root { --orb-section-extra: 15px; }
 .orb-rail { max-height: calc(var(--window-max-height) - 2 * var(--window-inset)); overflow-y: auto; scrollbar-width: none; flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 8px; border-radius: 999px; background: var(--color-window); border: 1px solid var(--color-window-border); cursor: grab; user-select: none; }
 .orb-rail:active { cursor: grabbing; }
 .orb-rail::-webkit-scrollbar { display: none; }
@@ -18,17 +18,14 @@
 .orb-ring.is-refreshing svg { animation: orb-spin 800ms linear infinite; }
 @keyframes orb-spin { from { transform: rotate(-90deg); } to { transform: rotate(270deg); } }
 .orb-track { fill: none; stroke: var(--color-track); stroke-width: 3.5; }
-.orb-value { fill: none; stroke: var(--color-status); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset var(--duration-page) var(--ease-page); }
-.is-warn .orb-value { stroke: var(--orb-warn); }
-.is-hot .orb-value { stroke: var(--orb-hot); }
-.is-idle .orb-value { stroke: transparent; }
+.orb-value { fill: none; stroke: var(--quota-color, var(--color-positive)); stroke-width: 3.5; stroke-linecap: round; transition: stroke-dashoffset var(--duration-page) var(--ease-page); }
 .orb-logo { width: 24px; height: 24px; object-fit: contain; border-radius: 50%; pointer-events: none; }
 span.orb-logo { display: grid; place-items: center; font-size: 13px; font-weight: 650; color: var(--provider-color); background: var(--provider-soft); }
 .is-main .orb-logo { width: 36px; height: 36px; border-radius: 0; }
 .is-add { border: 1px dashed var(--color-border); color: var(--color-text-subtle); }
 .orb-plus { font-size: 18px; line-height: 1; }
-.orb-balance-status { position: absolute; bottom: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-status); box-shadow: 0 0 0 2px var(--color-window); }
-.orb-balance-status.is-empty { background: var(--orb-hot); }
+.orb-balance-status { position: absolute; bottom: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-positive); box-shadow: 0 0 0 2px var(--color-window); }
+.orb-balance-status.is-empty { background: var(--color-critical); }
 
 /* The hover card: the provider's full account card, speech-bubble style — a little arrow
    points at the hovered ring. It floats beside the rail and is only as tall as the card it
@@ -43,7 +40,7 @@ span.orb-logo { display: grid; place-items: center; font-size: 13px; font-weight
 
 .orb-float .account-card { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 .orb-preview-status { display: grid; gap: var(--space-xs); padding: var(--space-small) var(--space-medium); border: 1px solid var(--color-border); border-top: 0; border-radius: 0 0 var(--radius-card) var(--radius-card); background: var(--color-surface); color: var(--color-text-subtle); font-size: var(--font-size-caption); overflow-wrap: anywhere; }
-.orb-preview-error { color: var(--orb-hot); }
+.orb-preview-error { color: var(--color-critical); }
 
 /* Compact navigation shares the footer with the last update timestamp. */
 .preview-account-switcher { display: flex; flex: 0 1 auto; align-items: center; gap: 2px; max-width: 140px; min-width: 0; padding: 2px; border: 1px solid var(--color-border); border-radius: 7px; background: var(--color-window); overflow-x: auto; scrollbar-width: none; }

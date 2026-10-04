@@ -21,7 +21,7 @@ svg { display: block; width: 100%; height: 100%; }
 /* Shared controls used by the toolbar and the overlay panels. */
 .icon-button { width: var(--control-size); height: var(--control-size); padding: 7px; border: 1px solid var(--color-control-border); border-radius: 50%; background: var(--color-control); color: var(--color-text-muted); transition: background var(--duration-fast), color var(--duration-fast); }
 .icon-button:hover, .icon-button[aria-expanded="true"] { background: var(--color-surface-active); color: var(--color-text); }
-:root[data-theme="classic"] .icon-button { border-radius: var(--radius-control); }
+:root[data-theme="dark"] .icon-button { border-radius: var(--radius-control); }
 
 /* Overlay panels sit outside the flow: the window measures the open one itself
    instead of letting the panel push the card below it. */
@@ -36,8 +36,7 @@ svg { display: block; width: 100%; height: 100%; }
 .codex-tokens-values { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-medium); }
 .codex-tokens-values > div { min-width: 0; padding: var(--space-medium); border: 1px solid var(--color-border); border-radius: var(--radius-control); background: var(--color-token-surface); }
 .codex-tokens-values > div > span { display: block; color: var(--color-text-subtle); font-size: var(--font-size-small); }
-.codex-tokens-values strong { display: block; margin-top: var(--space-xs); color: var(--color-text); font-size: var(--font-size-title); font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-.codex-tokens-values > div:last-child strong { color: var(--color-codex); }
+.codex-tokens-values strong { display: block; margin-top: var(--space-xs); color: var(--color-caution); font-size: var(--font-size-title); font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .codex-tokens-unavailable { margin-top: var(--space-small); color: var(--color-text-subtle); font-size: var(--font-size-caption); }
 
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

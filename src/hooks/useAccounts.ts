@@ -25,6 +25,7 @@ export function useAccounts() {
   const accountsRef = useRef(accounts);
   const lastFinished = useRef(new Map<string, number>());
   const noticeTimers = useRef(new Map<string, number>());
+  const summaryTimer = useRef<number | null>(null);
   const requests = useRef(new Map<string, Promise<Account | null>>());
   const startup = useRef<Promise<void> | null>(null);
   const allRefresh = useRef<Promise<void> | null>(null);
@@ -37,6 +38,15 @@ export function useAccounts() {
   function merge(next: Account) { commit(mergeAccount(accountsRef.current, next)); }
   function status(id: string, patch: Partial<AccountStatus>) {
     setStatuses(previous => ({ ...previous, [id]: { ...idle, ...previous[id], ...patch } }));
+  }
+  // The summary is a transient status: it holds while a refresh runs and retires
+  // itself afterwards, so a finished run never outlives its own result.
+  function showSummary(message: string | null, clearAfter = 0) {
+    if (summaryTimer.current !== null) window.clearTimeout(summaryTimer.current);
+    summaryTimer.current = clearAfter > 0
+      ? window.setTimeout(() => { summaryTimer.current = null; setSummary(null); }, clearAfter)
+      : null;
+    setSummary(message);
   }
   function refresh(provider: Provider, accountId?: string): Promise<Account | null> {
     const id = accountId ?? "codex-local";
@@ -93,6 +103,7 @@ export function useAccounts() {
   useEffect(() => () => {
     for (const timer of noticeTimers.current.values()) window.clearTimeout(timer);
     noticeTimers.current.clear();
+    if (summaryTimer.current !== null) window.clearTimeout(summaryTimer.current);
   }, []);
 
   async function connect(provider: Provider, accountId?: string, onRegistered?: (id: string) => void): Promise<Account | null> {
@@ -132,7 +143,7 @@ export function useAccounts() {
         noticeTimers.current.delete(id);
         lastFinished.current.delete(id);
         setStatuses(previous => { const next = { ...previous }; delete next[id]; return next; });
-        setSummary(null);
+        showSummary(null);
         return true;
       } catch (failure) {
         status(id, { removing: false, loading: false, error: typeof failure === "string" ? failure : queryErrorMessage(failure) });
@@ -146,11 +157,11 @@ export function useAccounts() {
   function refreshAll(): Promise<void> {
     if (allRefresh.current) return allRefresh.current;
     const targets = [...accountsRef.current];
-    setSummary("Refreshing all accounts…");
+    showSummary("Refreshing all accounts…");
     const task = (async () => {
       let succeeded = 0;
       for (const account of targets) if (await refresh(account.providerId, account.id)) succeeded++;
-      setSummary(`Refresh complete · ${succeeded}/${targets.length} succeeded${succeeded < targets.length ? ` · ${targets.length - succeeded} failed` : ""}`);
+      showSummary(`Refresh complete · ${succeeded}/${targets.length} succeeded${succeeded < targets.length ? ` · ${targets.length - succeeded} failed` : ""}`, 4000);
     })().finally(() => { allRefresh.current = null; });
     allRefresh.current = task;
     return task;

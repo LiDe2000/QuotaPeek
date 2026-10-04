@@ -270,7 +270,7 @@ function App() {
                   onClick={() => void refreshAll()}>
                   <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
                 </button>
-                <button className="icon-button" aria-label="Add account" disabled={activityPreview} aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
+                <button className="icon-button" aria-label="Add account" disabled={activityPreview} aria-expanded={popup === "add"} aria-controls="add-account" title="Add account" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
                 <button className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} title="Appearance" onClick={() => setPopup(open => open === "appearance" ? "home" : "appearance")}><Icon name="theme" /></button>
                 <button type="button" className="icon-button activities-trigger" aria-label={`Activities${readyRewards ? ` · ${readyRewards} rewards ready to claim` : ""}`} aria-expanded={popup === "activities"} aria-controls="activities-panel" title={readyRewards ? `Activities · ${readyRewards} ${readyRewards === 1 ? "reward" : "rewards"} available` : "Activities"} onClick={() => { preview.hide(); setPopup(open => open === "activities" ? "home" : "activities"); }}>
                   <Icon name="gift" />

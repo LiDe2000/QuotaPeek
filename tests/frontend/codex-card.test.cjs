@@ -6,7 +6,7 @@ const React = require('react');
 const { renderToStaticMarkup } = require('react-dom/server');
 
 // Transpile the actual card for Node's test runner; no browser or new dependency required.
-require.extensions['.tsx'] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
+for (const extension of ['.ts', '.tsx']) require.extensions[extension] = (module, file) => module._compile(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2020 },
 }).outputText, file);
 require.extensions['.css'] = () => {};

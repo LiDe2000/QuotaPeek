@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import glmAvatar from "../../assets/models/glm/avatar.png";
 import type { ZcodeAccount, ZcodeWindow } from "../../types/providers/zcode";
+import { quotaLevel } from "../../lib/quota/level";
 import "../accounts/AccountCard.css";
 import "./ZcodeAccountCard.css";
 
@@ -56,15 +57,16 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
   const unit = unitLabel(account.windows);
   const aggregate = totals(account.windows);
   const usedPercent = aggregate ? Math.min(100, aggregate.used / aggregate.total * 100) : 0;
+  const remainingPercent = aggregate ? 100 - usedPercent : null;
   // Nothing to break down means the deck stops pretending to be a toggle.
   const expandable = account.windows.length > 0;
-  const identity = account.email ?? "ZCode account";
   const region = account.region === "global" ? "Global" : "CN";
+  const identity = `${account.email ?? "ZCode account"} · ${region}`;
   const plan = [account.planName ?? "Plan unavailable", account.planDescription].filter(Boolean).join(" · ");
   return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-zcode" aria-busy={loading}>
     <div className="account-header">
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={glmAvatar} alt="" draggable={false} /></span>
-      <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity} · {region}</p></div>
+      <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
       {actions}
     </div>
@@ -75,6 +77,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
         the per-model breakdown. */}
     <div
       className={`zc-deck${expanded ? " is-expanded" : ""}${expandable ? "" : " is-static"}`}
+      data-quota={quotaLevel(remainingPercent)}
       onClick={expandable ? () => setExpanded(open => !open) : undefined}
     >
       <button type="button" className="zc-balance" aria-expanded={expandable ? expanded : undefined} aria-controls={expandable ? `zcode-windows-${panelId ?? account.id}` : undefined}>
@@ -87,7 +90,7 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
       {aggregate
         ? <>
             <div className="zc-total"><span>{count(aggregate.used)}/{count(aggregate.total)}</span></div>
-            <progress max={100} value={usedPercent} aria-label="ZCode quota used">{usedPercent}%</progress>
+            <progress max={100} value={remainingPercent ?? 0} aria-label="ZCode quota remaining">{remainingPercent ?? 0}%</progress>
             <div className="zc-remaining">Remaining: {percent(100 - usedPercent)}%</div>
           </>
         : <span className="zc-deck-sub">No quota bucket reported.</span>}
@@ -96,12 +99,13 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
     {expanded && expandable && <ul id={`zcode-windows-${panelId ?? account.id}`} className="zc-windows">
       {account.windows.map(quota => {
         const [reset, time] = resetText(quota.resetsAt, now, quota.oneTime);
-        return <li className="zc-window" key={quota.key}>
+        const remaining = 100 - quota.usedPercent;
+        return <li className="zc-window" key={quota.key} data-quota={quotaLevel(remaining)}>
           <div className="zc-window-summary">
             <span className="zc-window-name" title={quota.label}>{quota.label}</span>
             <span className="zc-window-usage">{count(quota.used)}/{count(quota.total)}</span>
           </div>
-          <progress max={100} value={quota.usedPercent} aria-label={`${quota.label} used`}>{quota.usedPercent}%</progress>
+          <progress max={100} value={remaining} aria-label={`${quota.label} remaining`}>{remaining}%</progress>
           <p className="zc-window-reset"><span>{reset}</span><span>{time}</span></p>
         </li>;
       })}
