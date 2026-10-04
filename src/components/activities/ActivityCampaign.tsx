@@ -14,7 +14,7 @@ const statusLabel: Record<ActivityStatus, string> = {
 export default function ActivityCampaign({ activity, accounts, claim, batchRunning }: {
   activity: Activity;
   accounts: readonly Account[];
-  claim: (activityId: string, accountId: string) => Promise<void>;
+  claim: (activityId: string, accountId: string) => Promise<ActivityStatus | void>;
   batchRunning: boolean;
 }) {
   return <section aria-label={activity.title} className="activity-campaign">

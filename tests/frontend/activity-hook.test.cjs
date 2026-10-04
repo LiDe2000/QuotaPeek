@@ -23,7 +23,12 @@ function setup(options = {}) {
   const runtime = {
     async loadActivities() {loadCount++; return {catalog:currentCatalog,source:'server',session:'s'+loadCount,notice:null};},
     async requestActivity(session,definition,account,claiming) {
-      if(!claiming) return {status:options.queryStatus ?? 'available'};
+      if(!claiming) return {status:options.queryResults?.[account] ?? options.queryStatus ?? 'available'};
+      if(options.claimResults) {
+        const status=options.claimResults[account];
+        if(status === 'timeout') throw Error('timeout');
+        return {status};
+      }
       return new Promise(resolve => {releaseClaim=() => resolve({status:options.claimStatus ?? 'claimed'});});
     },
   };
@@ -36,13 +41,32 @@ function setup(options = {}) {
   vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,context);
   function render(visible=true) {
     cursor=0; effects=[];
-    const controller=context.exports.useActivities([{id:'preview-wb-0',providerId:'workbuddy',region:'cn'}],options.demo ?? true,visible,options.onClaimed);
+    const controller=context.exports.useActivities(options.accounts ?? [{id:'preview-wb-0',providerId:'workbuddy',region:'cn'}],options.demo ?? true,visible,options.onClaimed);
     for(const effect of effects) effect();
     return controller;
   }
   return {render, count:()=>loadCount, delist:()=>{currentCatalog={schemaVersion:2,revision:'empty',activities:[]};}, release:()=>releaseClaim()};
 }
 const settle = () => new Promise(resolve=>setImmediate(resolve));
+test('batch feedback counts only this batch and distinguishes uncertain and verification results', async () => {
+  fixture.activities[0].adapterId='workbuddy-checkin-v1';
+  try {
+    const h=setup({demo:false,
+      accounts:Array.from({length:6},(_,i)=>({id:`preview-wb-${i}`,providerId:'workbuddy',region:'cn'})),
+      queryResults:{'preview-wb-5':'claimed'},
+      claimResults:{'preview-wb-0':'claimed','preview-wb-1':'pending','preview-wb-2':'failed','preview-wb-3':'verification','preview-wb-4':'timeout'},
+    });
+    h.render(); await settle();
+    await h.render().claimAll();
+    assert.equal(h.render().message,'1 claimed · 2 unconfirmed · 1 failed · 1 needs verification');
+  } finally { fixture.activities[0].adapterId='mock-http-v1'; }
+});
+test('demo batch feedback includes the counts and the no-real-rewards notice', async () => {
+  const h=setup({claimResults:{'preview-wb-0':'claimed'}});
+  h.render(); await settle();
+  await h.render().claimAll();
+  assert.equal(h.render().message,'Preview · 1 claimed · No real rewards were issued.');
+});
 test('confirmed real claim refreshes only its account and keeps claimed state if quota refresh fails', async () => {
   const refreshed = [];
   const h=setup({demo:false, onClaimed:async id => {refreshed.push(id); throw Error('quota offline');}});

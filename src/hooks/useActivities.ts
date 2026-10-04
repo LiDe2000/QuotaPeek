@@ -129,9 +129,11 @@ export function useActivities(accounts: readonly Account[], demo: boolean, visib
       if (!demo && state.status === "claimed") {
         await refreshClaimedAccount(activityId, accountId);
       }
+      return state.status;
     } catch {
       // A timeout may occur after issuance. Do not retry or assume success.
       if (alive.current) publish(updateActivityEntry(latest.current, activityId, accountId, "pending", "Claim result unconfirmed. Refresh before retrying."));
+      return "pending" as const;
     } finally {
       busy.current.delete(key);
       if (alive.current) setClaimRunning(busy.current.size > 0);
@@ -142,12 +144,28 @@ export function useActivities(accounts: readonly Account[], demo: boolean, visib
     if (batch.current || busy.current.size || refreshing) return;
     batch.current = true;
     setBatchRunning(true);
+    setMessage(null);
+    const counts = { claimed: 0, unconfirmed: 0, failed: 0, verification: 0, skipped: 0 };
     try {
       for (const target of claimableEntries(latest.current)) {
         if (!alive.current) break;
-        await claim(target.activityId, target.accountId);
+        const status = await claim(target.activityId, target.accountId);
+        if (status === "claimed") counts.claimed++;
+        else if (status === "pending" || status === "unknown" || status === "claiming") counts.unconfirmed++;
+        else if (status === "failed") counts.failed++;
+        else if (status === "verification") counts.verification++;
+        else counts.skipped++;
       }
-      if (alive.current) setMessage(demo ? "Mock claims completed. No real rewards were issued." : "Claims completed. Check each account's status.");
+      if (alive.current) {
+        const summary = [
+          counts.claimed && `${counts.claimed} claimed`,
+          counts.unconfirmed && `${counts.unconfirmed} unconfirmed`,
+          counts.failed && `${counts.failed} failed`,
+          counts.verification && `${counts.verification} needs verification`,
+          counts.skipped && `${counts.skipped} skipped`,
+        ].filter(Boolean).join(" · ") || "No rewards available to claim.";
+        setMessage(demo ? `Preview · ${summary} · No real rewards were issued.` : summary);
+      }
     } finally {
       batch.current = false;
       if (alive.current) setBatchRunning(false);
