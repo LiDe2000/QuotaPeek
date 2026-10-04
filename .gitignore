@@ -31,3 +31,12 @@ data/
 *.db-wal
 *.db-shm
 *.db.v*.bak
+
+# Python environments and generated artifacts
+**/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# User-specific local activity fallback (the distributable example is in activity-service)
+/activities.json

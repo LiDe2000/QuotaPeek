@@ -90,6 +90,7 @@ const UI_SETTING_KEYS: &[&str] = &[
     "quotapeek-selected-account",
     "quotapeek-provider-selection-v1",
     "quotapeek-provider-order-v1",
+    "quotapeek-activity-service-url",
 ];
 
 fn backup_before_upgrade(conn: &Connection, path: &Path, version: i64) -> Result<(), String> {

@@ -7,11 +7,25 @@ require.extensions['.ts'] = (module, file) => module._compile(ts.transpileModule
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
 }).outputText, file);
 
-for (const mode of ['baseline', 'fixed', 'stable']) test(mode === 'fixed'
+for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mode === 'fixed'
   ? 'fixed viewport comparison renders content without native fitting or movement listeners'
   : `${mode}: right-edge fits commit physical position and size together without crossing DPI boundaries`, async () => {
-  const fixedViewport = mode === 'fixed';
-  const stableHeight = mode === 'stable';
+  let fixedViewport = mode === 'fixed';
+  const stableHeight = mode === 'stable' || mode === 'activity-preview';
+  if (mode === 'activity-preview') {
+    // Sample activities must still resize the native window: use App's actual argument.
+    const source = ts.createSourceFile('App.tsx', fs.readFileSync('src/App.tsx','utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+    let argument;
+    function find(node) {
+      if (ts.isCallExpression(node) && node.expression.getText(source) === 'useFittedWindowHeight') argument = node.arguments[2];
+      ts.forEachChild(node,find);
+    }
+    find(source);
+    assert.ok(argument);
+    const expression = argument.getText(source).replaceAll('import.meta.env','env');
+    fixedViewport = vm.runInNewContext(expression, {activityPreview:true,env:{DEV:true}});
+    assert.equal(fixedViewport,false,'Native sample activities must retain automatic window fitting');
+  }
   let expanded = false;
   let position = { x: 3684, y: 80 };
   let nativeWidth = 156;

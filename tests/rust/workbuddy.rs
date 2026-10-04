@@ -39,7 +39,9 @@ fn cycle_metrics_win_and_derive_used() {
         "CycleCapacityRemainPrecise":"69.69","CycleCapacityUsedPrecise":"30.31"
     });
     let (remain, used, size) = package_remain_used(&explicit);
-    assert!((remain - 69.69).abs() < 1e-6 && (used - 30.31).abs() < 1e-6 && (size - 100.0).abs() < 1e-6);
+    assert!(
+        (remain - 69.69).abs() < 1e-6 && (used - 30.31).abs() < 1e-6 && (size - 100.0).abs() < 1e-6
+    );
 }
 
 #[test]
@@ -56,26 +58,38 @@ fn lifetime_metrics_back_the_cycle_free_shape() {
 fn expiry_reads_all_reported_spellings() {
     // Real responses put the cycle window first, mirroring the site's 到期时间.
     assert_eq!(
-        package_end_time(&json!({"CycleEndTime":"2026-09-30 23:59:59", "DeductionEndTime":2044672449000_u64})).as_deref(),
+        package_end_time(
+            &json!({"CycleEndTime":"2026-09-30 23:59:59", "DeductionEndTime":2044672449000_u64})
+        )
+        .as_deref(),
         Some("2026-09-30 23:59:59")
     );
     // Without a cycle window the deduction cutoff in millis wins.
-    let millis = package_end_time(&json!({"DeductionEndTime": 1793367204000_u64, "PackageEndTime":"2026-10-01 14:20:18"}));
+    let millis = package_end_time(
+        &json!({"DeductionEndTime": 1793367204000_u64, "PackageEndTime":"2026-10-01 14:20:18"}),
+    );
     assert!(millis.is_some());
     assert_eq!(
         package_end_time(&json!({"PackageEndTime":"2026-10-01 14:20:18"})).as_deref(),
         Some("2026-10-01 14:20:18")
     );
-    assert_eq!(package_end_time(&json!({"ExpireTime":"0000-00-00 00:00:00"})), None);
+    assert_eq!(
+        package_end_time(&json!({"ExpireTime":"0000-00-00 00:00:00"})),
+        None
+    );
     assert_eq!(package_end_time(&json!({})), None);
 }
 
 #[test]
 fn accounts_keep_identity_when_tokens_rotate_and_separate_users() {
     let auth = StoredAuth {
-        access_token: "old".into(), refresh_token: "refresh".into(), expires_at: 0,
-        domain: "www.workbuddy.cn".into(), uid: "one".into(),
-        nickname: "Same display name".into(), enterprise_id: String::new(),
+        access_token: "old".into(),
+        refresh_token: "refresh".into(),
+        expires_at: 0,
+        domain: "www.workbuddy.cn".into(),
+        uid: "one".into(),
+        nickname: "Same display name".into(),
+        enterprise_id: String::new(),
     };
     let mut rotated = auth.clone();
     rotated.access_token = "new".into();
@@ -107,6 +121,9 @@ fn snapshot_aggregates_packages_and_fills_used() {
     assert_eq!(account.total_size, 350.0);
     assert_eq!(account.total_used, 100.0);
     assert_eq!(account.packages[0].name, "平台奖励积分");
-    assert_eq!(account.packages[0].end_time.as_deref(), Some("2026-10-01 14:20:18"));
+    assert_eq!(
+        account.packages[0].end_time.as_deref(),
+        Some("2026-10-01 14:20:18")
+    );
     assert_eq!(account.region, "cn");
 }

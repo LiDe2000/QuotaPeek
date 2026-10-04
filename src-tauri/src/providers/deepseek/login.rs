@@ -1,7 +1,7 @@
 //! Browser account authorization and read-only wallet queries.
 //! Protocol reference: deepseek-ai/deepseek-harness, deepseek-account-platform.
-use super::{error, Account, Balance, DeepseekState, Error};
 use super::wallet::Decimal;
+use super::{error, Account, Balance, DeepseekState, Error};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
@@ -249,19 +249,15 @@ fn balances(value: Value) -> Result<Vec<Balance>, Error> {
         .collect()
 }
 pub(super) fn list_accounts(app: &tauri::AppHandle) -> Result<Vec<Account>, Error> {
-    Ok(crate::storage::accounts::read::<Grant>(app, "deepseek-platform")
-        .map_err(|message| error(&message))?
-        .into_iter()
-        .map(|entry| {
-            super::platform_snapshot(
-                entry.id,
-                entry.auth.label,
-                entry.auth.contact,
-                vec![],
-                0,
-            )
-        })
-        .collect())
+    Ok(
+        crate::storage::accounts::read::<Grant>(app, "deepseek-platform")
+            .map_err(|message| error(&message))?
+            .into_iter()
+            .map(|entry| {
+                super::platform_snapshot(entry.id, entry.auth.label, entry.auth.contact, vec![], 0)
+            })
+            .collect(),
+    )
 }
 pub(super) async fn query_account(app: &tauri::AppHandle, id: &str) -> Result<Account, Error> {
     let entry = {
@@ -433,11 +429,13 @@ pub async fn deepseek_start_login(
         let task = async {
             let (code, stream) = receive(&listener, &csrf).await?;
             browser = Some(stream);
-            let device_id = app.state::<crate::storage::Database>()
+            let device_id = app
+                .state::<crate::storage::Database>()
                 .setting_or_insert("device.deepseek", &uuid::Uuid::new_v4().to_string())
                 .map_err(|message| error(&message))?;
             let device_id = uuid::Uuid::parse_str(&device_id)
-                .map_err(|_| error("Saved DeepSeek device identity is unreadable."))?.to_string();
+                .map_err(|_| error("Saved DeepSeek device identity is unreadable."))?
+                .to_string();
             let exchange = auth(&client, "auth_exchange", json!({ "code": code, "code_verifier": verifier, "redirect_uri": redirect_uri, "device_id": device_id,
                 "device_model": format!("{}-{}", std::env::consts::OS, std::env::consts::ARCH), "os_version": std::env::consts::OS })).await?;
             let token = exchange

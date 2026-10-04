@@ -47,7 +47,12 @@ pub fn run() {
         .manage(zcode::ZcodeState::default())
         .manage(deepseek::DeepseekState::default())
         .manage(deepseek::login::LoginState::default())
+        .manage(activities::ActivityState::default())
         .invoke_handler(tauri::generate_handler![
+            activities::activity_load_catalog,
+            activities::activity_execute,
+            activities::zcode::activity_prepare_zcode_claim,
+            activities::zcode::activity_submit_zcode_claim,
             storage::commands::storage_load,
             storage::commands::storage_save_settings,
             storage::commands::storage_save_cache,
@@ -94,6 +99,7 @@ pub fn run() {
             }
         });
 }
+mod activities;
 mod desktop;
 mod providers;
 mod storage;

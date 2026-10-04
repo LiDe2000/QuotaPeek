@@ -68,7 +68,9 @@ fn summary_projects_cumulative_cost_by_currency_without_inventing_zero() {
         "normal_wallets": [{"currency":"CNY","balance":"-0.02"}, {"currency":"USD","balance":"2"}],
         "bonus_wallets": [{"currency":"CNY","balance":"6"}],
         "total_costs": [{"currency":"CNY","amount":"1.005"}, {"currency":"CNY","amount":"0.005"}]
-    })).ok().unwrap();
+    }))
+    .ok()
+    .unwrap();
     assert_eq!(value[0].total_cost.as_deref(), Some("1.01"));
     assert!(value[1].total_cost.is_none());
     for amount in ["NaN", "-1"] {

@@ -52,20 +52,41 @@ fn rejects_missing_login_and_api_keys() {
 }
 #[test]
 fn preserves_reset_credit_count_even_without_all_details() {
-    for credits in [Value::Null, json!([]), json!([{"id":"credit-1","resetType":"codexRateLimits","status":"available","expiresAt":2000000000}])] {
-        let result = snapshot(&account(), json!({"rateLimits":{},"rateLimitResetCredits":{"availableCount":2,"credits":credits}})).unwrap();
+    for credits in [
+        Value::Null,
+        json!([]),
+        json!([{"id":"credit-1","resetType":"codexRateLimits","status":"available","expiresAt":2000000000}]),
+    ] {
+        let result = snapshot(
+            &account(),
+            json!({"rateLimits":{},"rateLimitResetCredits":{"availableCount":2,"credits":credits}}),
+        )
+        .unwrap();
         let reset = result.rate_limit_reset_credits.unwrap();
         assert_eq!(reset.available_count, 2);
-        assert_eq!(reset.credits.as_ref().map(Vec::len), credits.as_array().map(Vec::len));
+        assert_eq!(
+            reset.credits.as_ref().map(Vec::len),
+            credits.as_array().map(Vec::len)
+        );
         if let Some(detail) = reset.credits.as_ref().and_then(|rows| rows.first()) {
             assert_eq!(detail.id, "credit-1");
             assert_eq!(detail.expires_at, Some(2000000000));
         }
     }
-    for value in [json!({"rateLimits":{}}), json!({"rateLimits":{},"rateLimitResetCredits":null})] {
-        assert!(snapshot(&account(), value).unwrap().rate_limit_reset_credits.is_none());
+    for value in [
+        json!({"rateLimits":{}}),
+        json!({"rateLimits":{},"rateLimitResetCredits":null}),
+    ] {
+        assert!(snapshot(&account(), value)
+            .unwrap()
+            .rate_limit_reset_credits
+            .is_none());
     }
-    let result = snapshot(&account(), json!({"rateLimits":{},"rateLimitResetCredits":{"availableCount":0,"credits":[]}})).unwrap();
+    let result = snapshot(
+        &account(),
+        json!({"rateLimits":{},"rateLimitResetCredits":{"availableCount":0,"credits":[]}}),
+    )
+    .unwrap();
     assert_eq!(result.rate_limit_reset_credits.unwrap().available_count, 0);
 }
 #[test]
@@ -116,5 +137,11 @@ async fn live_codex_query() {
         result.rate_limits.len(),
         result.token_usage.is_some()
     );
-    println!("Reset credits: {:?}", result.rate_limit_reset_credits.as_ref().map(|reset| (reset.available_count, reset.credits.as_ref().map(Vec::len))));
+    println!(
+        "Reset credits: {:?}",
+        result
+            .rate_limit_reset_credits
+            .as_ref()
+            .map(|reset| (reset.available_count, reset.credits.as_ref().map(Vec::len)))
+    );
 }

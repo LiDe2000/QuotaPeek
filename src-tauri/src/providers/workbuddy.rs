@@ -30,10 +30,16 @@ pub struct QueryError {
     message: String,
 }
 fn error(code: &'static str, message: impl Into<String>) -> QueryError {
-    QueryError { code, message: message.into() }
+    QueryError {
+        code,
+        message: message.into(),
+    }
 }
 fn protocol_error() -> QueryError {
-    error("protocol", "WorkBuddy returned an unsupported response. Retry later.")
+    error(
+        "protocol",
+        "WorkBuddy returned an unsupported response. Retry later.",
+    )
 }
 
 pub struct WorkbuddyState {
@@ -47,12 +53,20 @@ pub struct WorkbuddyState {
 }
 impl Default for WorkbuddyState {
     fn default() -> Self {
-        Self { lock: Mutex::default(), last_query: Mutex::default(), flows: Mutex::default(), storage: Mutex::default(), completed: Mutex::default(), http: Self::client() }
+        Self {
+            lock: Mutex::default(),
+            last_query: Mutex::default(),
+            flows: Mutex::default(),
+            storage: Mutex::default(),
+            completed: Mutex::default(),
+            http: Self::client(),
+        }
     }
 }
 impl WorkbuddyState {
     fn client() -> reqwest::Client {
         reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
             .user_agent(CLIENT_UA)
             .timeout(Duration::from_secs(20))
             .build()
@@ -115,38 +129,68 @@ pub struct WorkbuddyAccount {
 }
 
 fn now_secs() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 fn account_id(auth: &StoredAuth) -> String {
-    crate::storage::accounts::key("workbuddy", &format!("{}:{}:{}", region_of(&auth.domain), auth.uid, auth.enterprise_id))
+    crate::storage::accounts::key(
+        "workbuddy",
+        &format!(
+            "{}:{}:{}",
+            region_of(&auth.domain),
+            auth.uid,
+            auth.enterprise_id
+        ),
+    )
 }
 
-fn stored_accounts(app: &tauri::AppHandle) -> Result<Vec<crate::storage::accounts::Entry<StoredAuth>>, QueryError> {
+fn stored_accounts(
+    app: &tauri::AppHandle,
+) -> Result<Vec<crate::storage::accounts::Entry<StoredAuth>>, QueryError> {
     crate::storage::accounts::read(app, "workbuddy").map_err(|message| error("storage", message))
 }
 
-fn load_auth(app: &tauri::AppHandle, requested: Option<&str>) -> Result<Option<StoredAuth>, QueryError> {
-    Ok(crate::storage::accounts::load::<StoredAuth>(app, "workbuddy", requested).map_err(|message| error("storage", message))?.map(|entry| entry.auth))
+fn load_auth(
+    app: &tauri::AppHandle,
+    requested: Option<&str>,
+) -> Result<Option<StoredAuth>, QueryError> {
+    Ok(
+        crate::storage::accounts::load::<StoredAuth>(app, "workbuddy", requested)
+            .map_err(|message| error("storage", message))?
+            .map(|entry| entry.auth),
+    )
 }
 
 fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
-    crate::storage::accounts::upsert(app, "workbuddy", account_id(auth), auth.clone()).map_err(|message| error("storage", message))
+    crate::storage::accounts::upsert(app, "workbuddy", account_id(auth), auth.clone())
+        .map_err(|message| error("storage", message))
 }
 
 #[tauri::command]
-pub async fn workbuddy_list_accounts(state: tauri::State<'_, WorkbuddyState>, app: tauri::AppHandle) -> Result<Vec<WorkbuddyAccount>, QueryError> {
+pub async fn workbuddy_list_accounts(
+    state: tauri::State<'_, WorkbuddyState>,
+    app: tauri::AppHandle,
+) -> Result<Vec<WorkbuddyAccount>, QueryError> {
     let _storage = state.storage.lock().await;
-    Ok(stored_accounts(&app)?.into_iter().map(|entry| {
-        let mut account = snapshot(&json!({}), &entry.auth);
-        account.id = entry.id;
-        account.fetched_at = 0;
-        account
-    }).collect())
+    Ok(stored_accounts(&app)?
+        .into_iter()
+        .map(|entry| {
+            let mut account = snapshot(&json!({}), &entry.auth);
+            account.id = entry.id;
+            account.fetched_at = 0;
+            account
+        })
+        .collect())
 }
 
 #[tauri::command]
-pub async fn workbuddy_cancel_login(state: tauri::State<'_, WorkbuddyState>, login_state: String) -> Result<Option<String>, QueryError> {
+pub async fn workbuddy_cancel_login(
+    state: tauri::State<'_, WorkbuddyState>,
+    login_state: String,
+) -> Result<Option<String>, QueryError> {
     // The flow lock also covers credential commit. If commit already won, tell the
     // frontend which account completed instead of reporting a misleading cancellation.
     let mut flows = state.flows.lock().await;
@@ -157,9 +201,7 @@ pub async fn workbuddy_cancel_login(state: tauri::State<'_, WorkbuddyState>, log
 /// Decodes the middle segment of a JWT; tolerant of missing base64 padding.
 fn jwt_payload(token: &str) -> Option<Value> {
     let segment = token.split('.').nth(1)?;
-    let decoded = data_url::IGNORED
-        .decode(segment)
-        .ok()?;
+    let decoded = data_url::IGNORED.decode(segment).ok()?;
     serde_json::from_slice(&decoded).ok()
 }
 
@@ -224,11 +266,19 @@ fn jwt_identity(token: &str) -> (String, String, String) {
 }
 
 fn region_of(domain: &str) -> &'static str {
-    if domain.to_lowercase().contains("workbuddy.ai") { "global" } else { "cn" }
+    if domain.to_lowercase().contains("workbuddy.ai") {
+        "global"
+    } else {
+        "cn"
+    }
 }
 
 fn billing_base(domain: &str) -> &'static str {
-    if region_of(domain) == "global" { BILLING_GLOBAL } else { BILLING_CN }
+    if region_of(domain) == "global" {
+        BILLING_GLOBAL
+    } else {
+        BILLING_CN
+    }
 }
 
 fn number(value: &Value) -> u64 {
@@ -239,9 +289,16 @@ fn number(value: &Value) -> u64 {
 }
 
 fn epoch_text(value: u64) -> String {
-    let secs = if value > 10_000_000_000 { value / 1000 } else { value };
+    let secs = if value > 10_000_000_000 {
+        value / 1000
+    } else {
+        value
+    };
     match chrono::DateTime::from_timestamp(secs as i64, 0) {
-        Some(moment) => moment.with_timezone(&chrono::Local).format("%Y-%m-%d %H:%M:%S").to_string(),
+        Some(moment) => moment
+            .with_timezone(&chrono::Local)
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string(),
         None => String::new(),
     }
 }
@@ -250,7 +307,15 @@ fn epoch_text(value: u64) -> String {
 /// Real responses carry the cycle window (`CycleEndTime`, matching the site's
 /// 到期时间) plus a far-future deduction cutoff in millis (`DeductionEndTime`).
 fn package_end_time(pkg: &Value) -> Option<String> {
-    for key in ["CycleEndTime", "DeductionEndTime", "PackageEndTime", "EndTime", "ExpireTime", "PackageExpireTime", "ExpiredTime"] {
+    for key in [
+        "CycleEndTime",
+        "DeductionEndTime",
+        "PackageEndTime",
+        "EndTime",
+        "ExpireTime",
+        "PackageExpireTime",
+        "ExpiredTime",
+    ] {
         let value = &pkg[key];
         let text = match value {
             Value::String(text) => text.clone(),
@@ -273,14 +338,20 @@ fn precise(primary: &Value, fallback: &Value) -> f64 {
         Value::String(s) => s.trim().parse::<f64>().ok(),
         _ => None,
     };
-    parsed(primary).filter(|v| v.is_finite()).unwrap_or_else(|| parsed(fallback).filter(|v| v.is_finite()).unwrap_or(0.0))
+    parsed(primary)
+        .filter(|v| v.is_finite())
+        .unwrap_or_else(|| parsed(fallback).filter(|v| v.is_finite()).unwrap_or(0.0))
 }
 
 /// Mirrors the billing client's cycle-first capacity extraction, precise decimals first.
 fn package_remain_used(pkg: &Value) -> (f64, f64, f64) {
     let cycle_size = precise(&pkg["CycleCapacitySizePrecise"], &pkg["CycleCapacitySize"]);
     if cycle_size > 0.0 {
-        let mut remain = precise(&pkg["CycleCapacityRemainPrecise"], &pkg["CycleCapacityRemain"]).min(cycle_size);
+        let mut remain = precise(
+            &pkg["CycleCapacityRemainPrecise"],
+            &pkg["CycleCapacityRemain"],
+        )
+        .min(cycle_size);
         let mut used = cycle_size - remain;
         let explicit = precise(&pkg["CycleCapacityUsedPrecise"], &pkg["CycleCapacityUsed"]);
         if explicit > used {
@@ -291,7 +362,10 @@ fn package_remain_used(pkg: &Value) -> (f64, f64, f64) {
         }
         return (remain, used, cycle_size);
     }
-    let cycle_remain = precise(&pkg["CycleCapacityRemainPrecise"], &pkg["CycleCapacityRemain"]);
+    let cycle_remain = precise(
+        &pkg["CycleCapacityRemainPrecise"],
+        &pkg["CycleCapacityRemain"],
+    );
     let cycle_used = precise(&pkg["CycleCapacityUsedPrecise"], &pkg["CycleCapacityUsed"]);
     if cycle_remain > 0.0 || cycle_used > 0.0 {
         let mut size = cycle_remain + cycle_used;
@@ -339,7 +413,11 @@ fn snapshot(data: &Value, stored: &StoredAuth) -> WorkbuddyAccount {
         total_used += used;
         total_size += size;
         packages.push(WorkbuddyPackage {
-            name: pkg["PackageName"].as_str().or_else(|| pkg["packageName"].as_str()).unwrap_or("Credit package").to_owned(),
+            name: pkg["PackageName"]
+                .as_str()
+                .or_else(|| pkg["packageName"].as_str())
+                .unwrap_or("Credit package")
+                .to_owned(),
             remain,
             used,
             size,
@@ -353,9 +431,15 @@ fn snapshot(data: &Value, stored: &StoredAuth) -> WorkbuddyAccount {
             total_used = derived.min(total_size);
         }
     }
-    let dosage = precise(&data["Response"]["Data"]["TotalDosagePrecise"], &data["Response"]["Data"]["TotalDosage"])
-        .max(precise(&data["Data"]["TotalDosagePrecise"], &data["Data"]["TotalDosage"]))
-        .max(precise(&data["TotalDosagePrecise"], &data["TotalDosage"]));
+    let dosage = precise(
+        &data["Response"]["Data"]["TotalDosagePrecise"],
+        &data["Response"]["Data"]["TotalDosage"],
+    )
+    .max(precise(
+        &data["Data"]["TotalDosagePrecise"],
+        &data["Data"]["TotalDosage"],
+    ))
+    .max(precise(&data["TotalDosagePrecise"], &data["TotalDosage"]));
     let (total_size, total_used) = if dosage > total_size {
         ((dosage), (dosage - total_remain).max(total_used))
     } else {
@@ -365,8 +449,16 @@ fn snapshot(data: &Value, stored: &StoredAuth) -> WorkbuddyAccount {
         id: account_id(stored),
         provider_id: "workbuddy",
         source: "workbuddy-billing",
-        uid: if stored.uid.is_empty() { None } else { Some(stored.uid.clone()) },
-        nickname: if stored.nickname.is_empty() { None } else { Some(stored.nickname.clone()) },
+        uid: if stored.uid.is_empty() {
+            None
+        } else {
+            Some(stored.uid.clone())
+        },
+        nickname: if stored.nickname.is_empty() {
+            None
+        } else {
+            Some(stored.nickname.clone())
+        },
         region: region_of(&stored.domain),
         fetched_at: now_secs(),
         total_remain,
@@ -377,10 +469,7 @@ fn snapshot(data: &Value, stored: &StoredAuth) -> WorkbuddyAccount {
 }
 
 async fn envelope(response: reqwest::Response) -> Result<Value, QueryError> {
-    let value: Value = response
-        .json()
-        .await
-        .map_err(|_| protocol_error())?;
+    let value: Value = response.json().await.map_err(|_| protocol_error())?;
     let code = value["code"].as_i64().unwrap_or(-1);
     if code != 0 {
         let message = value["msg"].as_str().unwrap_or_default().to_lowercase();
@@ -403,7 +492,11 @@ async fn refresh_access_token(
     state: &WorkbuddyState,
     stored: &mut StoredAuth,
 ) -> Result<(), QueryError> {
-    let host = if region_of(&stored.domain) == "global" { BILLING_GLOBAL } else { AUTH_HOST };
+    let host = if region_of(&stored.domain) == "global" {
+        BILLING_GLOBAL
+    } else {
+        AUTH_HOST
+    };
     let response = state
         .http
         .post(format!("{host}/v2/plugin/auth/token/refresh"))
@@ -414,7 +507,12 @@ async fn refresh_access_token(
         .body("{}")
         .send()
         .await
-        .map_err(|_| error("network", "Could not reach WorkBuddy. Check your connection."))?;
+        .map_err(|_| {
+            error(
+                "network",
+                "Could not reach WorkBuddy. Check your connection.",
+            )
+        })?;
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
         return Err(error(
             "not_logged_in",
@@ -435,7 +533,10 @@ async fn refresh_access_token(
             stored.refresh_token = refresh.to_owned();
         }
     }
-    let expires_in = data["expiresIn"].as_u64().or_else(|| data["expires_in"].as_u64()).unwrap_or(30 * 24 * 3600);
+    let expires_in = data["expiresIn"]
+        .as_u64()
+        .or_else(|| data["expires_in"].as_u64())
+        .unwrap_or(30 * 24 * 3600);
     stored.expires_at = now_secs() + expires_in.min(90 * 24 * 3600);
     if let Some(domain) = data["domain"].as_str().filter(|value| !value.is_empty()) {
         stored.domain = domain.to_owned();
@@ -454,7 +555,9 @@ async fn refresh_access_token(
 }
 
 #[tauri::command]
-pub async fn workbuddy_start_login(state: tauri::State<'_, WorkbuddyState>) -> Result<LoginStart, QueryError> {
+pub async fn workbuddy_start_login(
+    state: tauri::State<'_, WorkbuddyState>,
+) -> Result<LoginStart, QueryError> {
     let response = state
         .http
         .post(format!("{AUTH_HOST}/v2/plugin/auth/state"))
@@ -466,14 +569,30 @@ pub async fn workbuddy_start_login(state: tauri::State<'_, WorkbuddyState>) -> R
         .body("{}")
         .send()
         .await
-        .map_err(|_| error("network", "Could not reach the WorkBuddy login service. Check your connection."))?;
+        .map_err(|_| {
+            error(
+                "network",
+                "Could not reach the WorkBuddy login service. Check your connection.",
+            )
+        })?;
     let data = envelope(response).await?;
-    let login_state = data["state"].as_str().ok_or_else(protocol_error)?.to_owned();
-    let auth_url = data["authUrl"].as_str().ok_or_else(protocol_error)?.to_owned();
+    let login_state = data["state"]
+        .as_str()
+        .ok_or_else(protocol_error)?
+        .to_owned();
+    let auth_url = data["authUrl"]
+        .as_str()
+        .ok_or_else(protocol_error)?
+        .to_owned();
     let mut flows = state.flows.lock().await;
-    if flows.len() >= 16 { flows.clear(); }
+    if flows.len() >= 16 {
+        flows.clear();
+    }
     flows.insert(login_state.clone());
-    Ok(LoginStart { state: login_state, auth_url })
+    Ok(LoginStart {
+        state: login_state,
+        auth_url,
+    })
 }
 
 #[tauri::command]
@@ -482,11 +601,20 @@ pub async fn workbuddy_poll_login(
     app: tauri::AppHandle,
     login_state: String,
 ) -> Result<PollOutcome, QueryError> {
-    if login_state.is_empty() || login_state.len() > 256 || !login_state.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if login_state.is_empty()
+        || login_state.len() > 256
+        || !login_state
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         return Err(protocol_error());
     }
     if !state.flows.lock().await.contains(&login_state) {
-        return Ok(PollOutcome { status: "error", message: Some("Sign-in cancelled or expired.".into()), account_id: None });
+        return Ok(PollOutcome {
+            status: "error",
+            message: Some("Sign-in cancelled or expired.".into()),
+            account_id: None,
+        });
     }
     let response = state
         .http
@@ -495,45 +623,82 @@ pub async fn workbuddy_poll_login(
         .header("Accept", "application/json")
         .send()
         .await
-        .map_err(|_| error("network", "Could not reach the WorkBuddy login service. Check your connection."))?;
+        .map_err(|_| {
+            error(
+                "network",
+                "Could not reach the WorkBuddy login service. Check your connection.",
+            )
+        })?;
     let value: Value = response.json().await.map_err(|_| protocol_error())?;
     let code = value["code"].as_i64().unwrap_or(-1);
     if code == 0 {
         let data = &value["data"];
-        let access = data["accessToken"].as_str().or_else(|| data["access_token"].as_str()).ok_or_else(protocol_error)?;
-        let refresh = data["refreshToken"].as_str().or_else(|| data["refresh_token"].as_str()).unwrap_or_default();
-        let expires_in = data["expiresIn"].as_u64().or_else(|| data["expires_in"].as_u64()).unwrap_or(0);
-        let domain = data["domain"].as_str().unwrap_or("www.workbuddy.cn").to_owned();
+        let access = data["accessToken"]
+            .as_str()
+            .or_else(|| data["access_token"].as_str())
+            .ok_or_else(protocol_error)?;
+        let refresh = data["refreshToken"]
+            .as_str()
+            .or_else(|| data["refresh_token"].as_str())
+            .unwrap_or_default();
+        let expires_in = data["expiresIn"]
+            .as_u64()
+            .or_else(|| data["expires_in"].as_u64())
+            .unwrap_or(0);
+        let domain = data["domain"]
+            .as_str()
+            .unwrap_or("www.workbuddy.cn")
+            .to_owned();
         let (uid, nickname, enterprise_id) = jwt_identity(access);
-        if uid.is_empty() { return Err(protocol_error()); }
+        if uid.is_empty() {
+            return Err(protocol_error());
+        }
         let mut flows = state.flows.lock().await;
         if !flows.remove(&login_state) {
-            return Ok(PollOutcome { status: "error", message: Some("Sign-in cancelled.".into()), account_id: None });
+            return Ok(PollOutcome {
+                status: "error",
+                message: Some("Sign-in cancelled.".into()),
+                account_id: None,
+            });
         }
         let _storage = state.storage.lock().await;
         // Import an existing single-account login before adding the next account.
         stored_accounts(&app)?;
         let auth = StoredAuth {
-                access_token: access.to_owned(),
-                refresh_token: refresh.to_owned(),
-                expires_at: now_secs() + expires_in,
-                domain,
-                uid,
-                nickname,
-                enterprise_id,
-            };
+            access_token: access.to_owned(),
+            refresh_token: refresh.to_owned(),
+            expires_at: now_secs() + expires_in,
+            domain,
+            uid,
+            nickname,
+            enterprise_id,
+        };
         store_auth(&app, &auth)?;
         let id = account_id(&auth);
         let mut completed = state.completed.lock().await;
-        if completed.len() >= 16 { completed.clear(); }
+        if completed.len() >= 16 {
+            completed.clear();
+        }
         completed.insert(login_state.clone(), id.clone());
-        return Ok(PollOutcome { status: "success", message: None, account_id: Some(id) });
+        return Ok(PollOutcome {
+            status: "success",
+            message: None,
+            account_id: Some(id),
+        });
     }
     if code == 12153 {
-        return Ok(PollOutcome { status: "error", message: Some("The sign-in session expired. Start again.".into()), account_id: None });
+        return Ok(PollOutcome {
+            status: "error",
+            message: Some("The sign-in session expired. Start again.".into()),
+            account_id: None,
+        });
     }
     // 11217 and any other transient codes simply mean "keep waiting".
-    Ok(PollOutcome { status: "pending", message: None, account_id: None })
+    Ok(PollOutcome {
+        status: "pending",
+        message: None,
+        account_id: None,
+    })
 }
 
 #[tauri::command]
@@ -545,14 +710,19 @@ pub async fn workbuddy_query_quota(
     let _guard = state.lock.lock().await;
     let mut stored = {
         let _storage = state.storage.lock().await;
-        load_auth(&app, account_id.as_deref())?.ok_or_else(|| error("not_connected", "Connect a WorkBuddy account first."))?
+        load_auth(&app, account_id.as_deref())?
+            .ok_or_else(|| error("not_connected", "Connect a WorkBuddy account first."))?
     };
-    if stored.access_token.is_empty() { return Err(error("not_connected", "Reconnect this WorkBuddy account.")); }
+    if stored.access_token.is_empty() {
+        return Err(error("not_connected", "Reconnect this WorkBuddy account."));
+    }
     {
         let mut last = state.last_query.lock().await;
         if let Some(previous) = *last {
             let remaining = MIN_QUERY_INTERVAL.saturating_sub(previous.elapsed());
-            if !remaining.is_zero() { tokio::time::sleep(remaining).await; }
+            if !remaining.is_zero() {
+                tokio::time::sleep(remaining).await;
+            }
         }
         *last = Some(Instant::now());
     }
@@ -589,7 +759,12 @@ pub async fn workbuddy_query_quota(
         )
         .send()
         .await
-        .map_err(|_| error("network", "Could not reach WorkBuddy. Check your connection."))?;
+        .map_err(|_| {
+            error(
+                "network",
+                "Could not reach WorkBuddy. Check your connection.",
+            )
+        })?;
     if response.status() == reqwest::StatusCode::UNAUTHORIZED {
         return Err(error(
             "not_logged_in",
@@ -598,6 +773,50 @@ pub async fn workbuddy_query_quota(
     }
     let data = envelope(response).await?;
     Ok(snapshot(&data, &stored))
+}
+
+/// Used only after the activity engine validates the official destination.
+pub(crate) async fn activity_headers(
+    app: &tauri::AppHandle,
+    id: &str,
+    regions: &[String],
+) -> Result<reqwest::header::HeaderMap, String> {
+    use tauri::Manager;
+    let state = app.state::<WorkbuddyState>();
+    let _guard = state.lock.lock().await;
+    let _storage = state.storage.lock().await;
+    let mut auth = load_auth(app, Some(id))
+        .map_err(|e| e.message)?
+        .ok_or("Connect this WorkBuddy account first.")?;
+    // The check-in endpoints supplied and reviewed for this adapter are CN only.
+    if region_of(&auth.domain) != "cn" || !regions.is_empty() && !regions.iter().any(|r| r == "cn")
+    {
+        return Err("This WorkBuddy activity does not support the account region.".into());
+    }
+    if auth.expires_at <= now_secs() + TOKEN_REFRESH_MARGIN && !auth.refresh_token.is_empty() {
+        refresh_access_token(&state, &mut auth)
+            .await
+            .map_err(|e| e.message)?;
+        store_auth(app, &auth).map_err(|e| e.message)?;
+    }
+    if auth.access_token.is_empty() || auth.uid.is_empty() {
+        return Err("Reconnect this WorkBuddy account.".into());
+    }
+    let mut headers = reqwest::header::HeaderMap::new();
+    for (name, value) in [
+        ("authorization", format!("Bearer {}", auth.access_token)),
+        ("x-user-id", auth.uid),
+        ("x-domain", auth.domain),
+        ("user-agent", CLIENT_UA.into()),
+    ] {
+        headers.insert(
+            reqwest::header::HeaderName::from_static(name),
+            value
+                .parse()
+                .map_err(|_| "Invalid saved activity authorization.")?,
+        );
+    }
+    Ok(headers)
 }
 
 #[cfg(test)]
