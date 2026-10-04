@@ -27,6 +27,8 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
     assert.equal(fixedViewport,false,'Native sample activities must retain automatic window fitting');
   }
   let expanded = false;
+  let uiZoom = 1;
+  let renderedOverflow = 0;
   let position = { x: 3684, y: 80 };
   let nativeWidth = 156;
   let nativeHeight = 600;
@@ -39,12 +41,15 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
   let blockNextRead = false;
   let releasePositionRead;
   const rail = { offsetWidth: 62, offsetHeight: 280, clientHeight: 280, scrollHeight: 280, offsetTop: 0,
+    getBoundingClientRect() { return { right: (this.offsetLeft + this.offsetWidth) * uiZoom + renderedOverflow }; },
     get offsetLeft() { return expanded && node.dataset.side === 'left' ? 352 : 0; } };
   const panel = { offsetWidth: 340, offsetHeight: 300, clientHeight: 300, scrollHeight: 300, offsetTop: 64,
+    getBoundingClientRect() { return { right: (this.offsetLeft + this.offsetWidth) * uiZoom + renderedOverflow }; },
     get offsetLeft() { return node.dataset.side === 'left' ? 0 : 74; } };
   const properties = new Map();
   const shell = {};
   const node = { dataset: {}, style: { getPropertyValue: key => properties.get(key), setProperty: (key, value) => properties.set(key, value) },
+    getBoundingClientRect: () => ({ left: 0 }),
     closest: () => shell, querySelector: () => rail, querySelectorAll: () => [],
     get children() { return expanded ? [rail, panel] : [rail]; } };
   const appWindow = {
@@ -74,7 +79,7 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
       calls.push('bounds');
       position = { x: bounds.x, y: bounds.y }; nativeWidth = bounds.width;
       nativeHeight = bounds.height; visibleHeight = bounds.visibleHeight;
-      assert.equal(bounds.visibleWidth, expanded ? 860 : 156);
+      assert.equal(bounds.visibleWidth, Math.ceil((expanded ? 430 : 78) * uiZoom + renderedOverflow) * 2);
       if (assertRightEdge) assert.equal(bounds.clipLeft + bounds.visibleWidth, 948, 'visible region stays against the same right edge');
       assert.ok(position.x + nativeWidth <= 3840, 'combined bounds must remain on the current monitor');
       listeners.moved?.({ payload: position }); listeners.resize?.();
@@ -94,7 +99,7 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
       addEventListener: (name, callback) => { listeners[name] = callback; }, removeEventListener() {} },
     ResizeObserver: Observer, MutationObserver: Observer,
     requestAnimationFrame: callback => { frames.push(callback); return frames.length; }, cancelAnimationFrame() {},
-    getComputedStyle: () => ({ paddingTop: '8', paddingBottom: '8', paddingLeft: '8', paddingRight: '8', display: 'flex',
+    getComputedStyle: () => ({ zoom: String(uiZoom), paddingTop: '8', paddingBottom: '8', paddingLeft: '8', paddingRight: '8', display: 'flex',
       columnGap: '12', getPropertyValue: () => '384' }),
   };
   vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/hooks/useFittedWindowHeight.ts', 'utf8'), {
@@ -160,5 +165,26 @@ for (const mode of ['baseline', 'fixed', 'stable', 'activity-preview']) test(mod
   assert.equal(position.x, 900);
   listeners.drag({ payload: false }); await flush();
   assert.equal(position.x, 900, 'release must never restore the obsolete position');
+  if (mode === 'stable') {
+    for (const zoom of [0.75, 1.5, 1]) {
+      calls.length = 0;
+      uiZoom = zoom;
+      listeners['interface-scale-changed'](); await flush();
+      assert.deepEqual(calls, ['bounds'], 'scale changes schedule native fitting without a browser resize');
+      assert.equal(nativeWidth, Math.round(474 * zoom * 2), 'UI zoom and monitor DPI multiply independently');
+      assert.equal(visibleHeight, Math.ceil(296 * zoom + 4) * 2, 'visible region follows scaled content');
+      assert.equal(nativeHeight, 2000, 'screen ceiling stays in monitor units');
+      assert.equal(Number.parseFloat(properties.get('--window-max-height')), 1000 / zoom, 'CSS height ceiling compensates for UI zoom');
+    }
+    calls.length = 0;
+    renderedOverflow = 0.8;
+    listeners['interface-scale-changed'](); await flush();
+    assert.deepEqual(calls, ['bounds'], 'rendered fractional overflow must expand the visible region');
+    renderedOverflow = 0;
+    position = { x: position.x, y: 1900 };
+    uiZoom = 1.5;
+    listeners['interface-scale-changed'](); await flush();
+    assert.ok(position.y + visibleHeight <= 2160, 'enlarging near the bottom keeps the entire visible region on screen');
+  }
   cleanup();
 });

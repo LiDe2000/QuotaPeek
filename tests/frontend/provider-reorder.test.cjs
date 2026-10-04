@@ -6,7 +6,7 @@ const ts = require('typescript');
 
 // Drive the hook's actual handlers with a deterministic clock and layout.
 // Browser geometry and pointer capture are the boundary doubles, not the reorder logic.
-function setup(axis = 'y') {
+function setup(axis = 'y', zoom = 1) {
   const timers = new Map(), frames = new Map(), listeners = new Map(), moves = [];
   let serial = 0, state = null;
   const buttons = ['workbuddy', 'codex', 'deepseek'].map((provider, index) => ({
@@ -14,7 +14,7 @@ function setup(axis = 'y') {
     setPointerCapture() { this.captured = true; }, hasPointerCapture() { return this.captured; }, releasePointerCapture() { this.captured = false; },
   }));
   const root = { scrollTop: 0, scrollLeft: 0, scrollHeight: 150, clientHeight: 150, scrollWidth: 240, clientWidth: 240,
-    getBoundingClientRect: () => ({ top: 0, bottom: 150, left: 0, right: 240 }), querySelectorAll: () => buttons };
+    getBoundingClientRect: () => ({ top: 0, bottom: 150 * zoom, left: 0, right: 240 * zoom }), querySelectorAll: () => buttons };
   const hooks = { useRef: value => ({ current: value }), useState: () => [null, value => { state = typeof value === 'function' ? value(state) : value; }], useEffect: effect => effect() };
   const context = { exports: {}, require: name => { assert.equal(name, 'react'); return hooks; },
     setTimeout: fn => { timers.set(++serial, fn); return serial; }, clearTimeout: id => timers.delete(id),
@@ -31,6 +31,13 @@ function setup(axis = 'y') {
     hold: () => { const tasks = [...timers.values()]; timers.clear(); tasks.forEach(fn => fn()); },
     blocked: () => { let blocked = false; props.onClickCapture({ detail: 1, preventDefault() { blocked = true; }, stopPropagation() {} }); return blocked; } };
 }
+
+test('scaled provider dragging converts screen coordinates to layout coordinates', () => {
+  const h = setup('x', 1.5);
+  h.props.onPointerDown(h.event(60, 37.5)); h.hold();
+  h.props.onPointerUp(h.event(180, 37.5));
+  assert.deepEqual(h.moves, [['workbuddy', 'codex']]);
+});
 
 test('short clicks remain clicks; early movement cancels long press without sorting or refreshing', () => {
   const h = setup();

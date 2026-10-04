@@ -40,7 +40,7 @@ function App() {
   const [providerSelection, setProviderSelection] = useState<ProviderSelection>(() => {
     return readProviderSelection(storage.getSetting(PROVIDER_SELECTION_KEY));
   });
-  const { theme, setTheme } = useAppearance();
+  const { theme, setTheme, scale, setScale } = useAppearance();
   const [providerOrder, setProviderOrder] = useState(() => readProviderOrder(storage.getSetting(PROVIDER_ORDER_KEY)));
   const storageError = useStorageStatus();
   const [popup, setPopup] = useState<Popup>(activityPreview ? "activities" : null);
@@ -280,7 +280,7 @@ function App() {
             {popup === "activities" && <ActivityPanel accounts={accounts} controller={activities}
               onClose={() => { setPopup("home"); requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>(".activities-trigger")?.focus()); }} />}
             {activityPreview && popup === "home" && <p className="activity-preview-notice">Interactive preview · Sample accounts and rewards.</p>}
-            {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={() => setPopup("home")} />}
+            {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} scale={scale} onScaleChange={setScale} onClose={() => setPopup("home")} />}
             <AddAccount hidden={popup !== "add"} codexConnected={accounts.some(account => account.providerId === "codex")}
               onConnectCodex={() => connectAccount("codex")}
               onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}

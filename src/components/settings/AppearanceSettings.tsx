@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import type { Theme } from "../../hooks/useAppearance";
 import { useStripScroll } from "../../hooks/useStripScroll";
-const INTERFACE_SCALE = { min: 75, max: 150, step: 5, default: 100 };
+import { INTERFACE_SCALE } from "../../lib/appearance/interfaceScale";
 import "./AppearanceSettings.css";
 
 const themes: { id: Theme; name: string; description: string }[] = [
@@ -16,11 +16,12 @@ const themes: { id: Theme; name: string; description: string }[] = [
 interface AppearanceSettingsProps {
   theme: Theme;
   onThemeChange: (theme: Theme) => void;
+  scale: number;
+  onScaleChange: (scale: number) => void;
   onClose: () => void;
 }
 
-export default function AppearanceSettings({ theme, onThemeChange, onClose }: AppearanceSettingsProps) {
-  const [scale, onScaleChange] = useState<number>(INTERFACE_SCALE.default);
+export default function AppearanceSettings({ theme, onThemeChange, scale, onScaleChange, onClose }: AppearanceSettingsProps) {
   const themeOptions = useRef<HTMLFieldSetElement>(null);
   const position = (scale - INTERFACE_SCALE.min) / (INTERFACE_SCALE.max - INTERFACE_SCALE.min);
 

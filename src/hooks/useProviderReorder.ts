@@ -24,6 +24,8 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
     const g = gesture.current, root = container.current;
     if (!g?.active || !root) return;
     const bounds = root.getBoundingClientRect();
+    const zoom = axis === "x" ? (bounds.right - bounds.left) / (root.offsetWidth || root.clientWidth)
+      : (bounds.bottom - bounds.top) / (root.offsetHeight || root.clientHeight);
     const low = axis === "x" ? bounds.left : bounds.top;
     const high = axis === "x" ? bounds.right : bounds.bottom;
     const crossLow = axis === "x" ? bounds.top : bounds.left;
@@ -39,10 +41,10 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
     const scroll = axis === "x" ? root.scrollLeft : root.scrollTop;
     let target: Provider | null = null, distance = Infinity;
     if (inside) for (const button of root.querySelectorAll<HTMLElement>("[data-provider]")) {
-      const center = low - scroll + (axis === "x" ? button.offsetLeft + button.offsetWidth / 2 : button.offsetTop + button.offsetHeight / 2);
+      const center = low + ((axis === "x" ? button.offsetLeft + button.offsetWidth / 2 : button.offsetTop + button.offsetHeight / 2) - scroll) * zoom;
       if (Math.abs(center - g.point) < distance) { distance = Math.abs(center - g.point); target = button.dataset.provider as Provider; }
     }
-    const next = { source: g.source, target, delta: g.point - g.start + scroll - g.scroll };
+    const next = { source: g.source, target, delta: (g.point - g.start) / zoom + scroll - g.scroll };
     currentDrag.current = next;
     setDrag(previous => previous?.target === next.target && previous.delta === next.delta ? previous : next);
     frame.current = requestAnimationFrame(update);

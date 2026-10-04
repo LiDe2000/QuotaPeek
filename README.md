@@ -38,6 +38,7 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 - Hover to preview cached data, click to refresh, or refresh all accounts.
 - Keep the last result on query failure and show the error and last successful update time.
 - Adapt card height and expansion direction, with three themes and system tray controls.
+- Adjust the whole interface from 75% to 150% in Appearance; the saved scale applies to the sidebar, cards, and native window bounds. Reset restores 100%.
 
 ## Screenshots
 

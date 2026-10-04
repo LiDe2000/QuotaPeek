@@ -1,5 +1,5 @@
 /* Only the rail and card paint backgrounds. The fit includes this fixed inset. */
-.app-shell { overflow: hidden; padding: var(--window-inset); }
+.app-shell { overflow: hidden; padding: var(--window-inset); zoom: var(--interface-scale, 1); }
 /* Keep the rail against the viewport edge while content and native bounds update.
    max-content may already be wide while WebView still has the collapsed viewport. */
 .app-shell:has(.window-body[data-side="left"]) { display: flex; justify-content: flex-end; }
