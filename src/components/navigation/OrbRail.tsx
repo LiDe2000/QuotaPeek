@@ -5,6 +5,7 @@ import type { ProviderGroup, Provider } from "../../lib/providers/providerGroups
 import { accountLabel } from "../../types/quota";
 import { providerIcon } from "../../lib/providers/providerIcons";
 import { orbMeter } from "../../lib/providers/orb";
+import { quotaLevel } from "../../lib/quota/level";
 import { providerName } from "../../lib/providers/providerGroups";
 import { useProviderReorder } from "../../hooks/useProviderReorder";
 import "./OrbRail.css";
@@ -59,8 +60,7 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
         const meter = orbMeter(account);
         const active = cardOpen && selectedProvider === group.providerId;
         const refreshing = refreshingIds.includes(account.id);
-        // Green while there is room, amber as it thins, red near the ceiling — like Pulse.
-        const level = meter.percent === null ? "is-idle" : meter.percent <= 15 ? "is-hot" : meter.percent <= 40 ? "is-warn" : "is-ok";
+        const level = quotaLevel(meter.percent);
         const circumference = 2 * Math.PI * 19;
         return <button
           key={group.providerId}
@@ -72,7 +72,8 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
           aria-busy={refreshing}
           aria-description="Click to refresh. Hover to preview. Hold and drag to reorder, or use Alt+Up/Down."
           aria-controls={`panel-${account.id}`}
-          className={`orb-ring ${level}${active ? " is-active" : ""}${refreshing ? " is-refreshing" : ""}`}
+          className={`orb-ring${active ? " is-active" : ""}${refreshing ? " is-refreshing" : ""}`}
+          data-quota={level}
             aria-label={`${names[account.providerId]}${accountLabel(account) ? ` · ${accountLabel(account)}` : ""}`}
           onMouseEnter={() => { if (!reorder.isPressed()) onHover(group.providerId); }}
           onMouseLeave={onLeave}

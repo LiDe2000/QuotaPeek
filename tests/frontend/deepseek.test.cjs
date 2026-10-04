@@ -55,7 +55,7 @@ test('money displays exact cent rounding, trailing zeros and no negative zero', 
 });
 test('cumulative spending is always visible and missing spending never becomes zero', () => {
   const html = render({ ...account, balances: [{ ...account.balances[0], total_cost: '1.005' }] });
-  assert.match(html, /<dt title="Total spent">Spent<\/dt><dd>¥1\.01<\/dd>/);
+  assert.match(html, /<dt title="Total spent">Spent<\/dt><dd[^>]*>¥1\.01<\/dd>/);
   assert.match(render(account), /Total spending is not available for this account/);
 });
 

@@ -3,9 +3,11 @@ import type { Theme } from "../../hooks/useAppearance";
 import "./AppearanceSettings.css";
 
 const themes: { id: Theme; name: string; description: string }[] = [
-  { id: "classic", name: "Original", description: "原稿深色 · 清晰边框" },
-  { id: "dark", name: "Midnight", description: "精致深色 · 柔和层次" },
-  { id: "light", name: "Pearl", description: "精致浅色 · 干净通透" },
+  { id: "dark", name: "Dark", description: "纯黑底色 · 硬朗边框" },
+  { id: "light", name: "Light", description: "纯白底色 · 极简通透" },
+  { id: "dimmed", name: "Dimmed", description: "石墨中灰 · 柔和低对比" },
+  { id: "warm", name: "Warm", description: "暖米色调 · 纸张护眼" },
+  { id: "navy", name: "Navy", description: "深海蓝调 · 沉稳夜航" },
 ];
 
 interface AppearanceSettingsProps {

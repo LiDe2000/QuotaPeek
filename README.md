@@ -109,7 +109,7 @@ DeepSeek uses a platform account login by default and does not require an API ke
 | Main panel refresh button | Refresh all accounts |
 | Hold a provider icon or tab for about half a second, then drag | Reorder providers; both views stay synchronized and save the order. Esc cancels |
 | Focus a provider icon or tab, then press Alt + an arrow key | Reorder providers |
-| Theme settings | Switch between Original, Midnight, and Pearl |
+| Theme settings | Switch between Dark, Light, Dimmed, Warm, and Navy |
 | Left-click / right-click the tray icon | Show the panel / open the show, hide, always-on-top, and quit menu |
 
 Closing the window hides it to the tray. Use **Quit** in the tray menu to exit completely. Removing an account does not sign out of the provider website or local Codex; you can connect it again.

@@ -8,15 +8,15 @@
 .account-identity { min-width: 0; flex: 1; }
 .account-identity h2 { font-size: var(--font-size-title); font-weight: 600; letter-spacing: -0.35px; }
 .account-identity p { color: var(--color-text-muted); font-size: var(--font-size-small); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
-.connection-status { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--color-status); }
+.connection-status { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--color-positive); }
 .limit + .limit { border-top: 1px solid var(--color-border); margin-top: var(--space-card); padding-top: var(--space-large); }
 .limit-summary { justify-content: space-between; gap: var(--space-small); margin-bottom: var(--space-medium); }
 .limit-summary h3 { font-size: var(--font-size-body); color: var(--color-text-muted); font-weight: 500; }
 .quota-value { text-align: right; }
-.quota-value strong { display: block; font-size: var(--font-size-quota); font-weight: 600; letter-spacing: -1px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.quota-value strong { display: block; color: var(--quota-color, var(--provider-color)); font-size: var(--font-size-quota); font-weight: 600; letter-spacing: -1px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .quota-value strong span { font-size: 0.7em; padding-left: 2px; }
-.account-card progress { display: block; appearance: none; border: 0; width: 100%; height: var(--progress-height); border-radius: var(--progress-height); overflow: hidden; background: var(--color-track); color: var(--provider-color); }
+.account-card progress { display: block; appearance: none; border: 0; width: 100%; height: var(--progress-height); border-radius: var(--progress-height); overflow: hidden; background: var(--color-track); color: var(--quota-color, var(--provider-color)); }
 .account-card progress::-webkit-progress-bar { border-radius: var(--progress-height); background: var(--color-track); }
-.account-card progress::-webkit-progress-value { border-radius: var(--progress-height); background: var(--provider-color); }
-.account-card progress::-moz-progress-bar { border-radius: var(--progress-height); background: var(--provider-color); }
+.account-card progress::-webkit-progress-value { border-radius: var(--progress-height); background: var(--quota-color, var(--provider-color)); }
+.account-card progress::-moz-progress-bar { border-radius: var(--progress-height); background: var(--quota-color, var(--provider-color)); }
 .reset-details { justify-content: space-between; gap: var(--space-small); margin-top: var(--space-small); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }

@@ -17,13 +17,13 @@ export default function DeepseekAccountCard({ account, active, stale, loading, p
       <span className={`connection-status${stale ? " is-stale" : ""}${account.isAvailable ? "" : " ds-unavailable"}`} role="img" aria-label={status} title={status} />
       {actions}
     </div>
-    {account.balances.map((balance, index) => <section className="ds-deck" aria-label={`${balance.currency} balance`} key={`${balance.currency}-${index}`}>
+    {account.balances.map((balance, index) => <section className="ds-deck" data-quota={account.isAvailable ? "ok" : "hot"} aria-label={`${balance.currency} balance`} key={`${balance.currency}-${index}`}>
       <div className="ds-balance-heading"><span>Available balance</span><span>{balance.currency}</span></div>
       <div className="ds-balance"><strong>{formatMoney(balance.total_balance, balance.currency)}</strong></div>
       <dl className="ds-wallets">
         <div><dt title="Topped-up balance">Top-up</dt><dd>{formatMoney(balance.topped_up_balance, balance.currency)}</dd></div>
-        <div><dt title="Total spent">Spent</dt><dd>{balance.total_cost != null ? formatMoney(balance.total_cost, balance.currency) : <span className="ds-unknown" title="Total spending is not available for this account">—</span>}</dd></div>
-        <div><dt title="Granted balance">Bonus</dt><dd>{formatMoney(balance.granted_balance, balance.currency)}</dd></div>
+        <div><dt title="Total spent">Spent</dt><dd className="ds-spent">{balance.total_cost != null ? formatMoney(balance.total_cost, balance.currency) : <span className="ds-unknown" title="Total spending is not available for this account">—</span>}</dd></div>
+        <div><dt title="Granted balance">Bonus</dt><dd className="ds-bonus">{formatMoney(balance.granted_balance, balance.currency)}</dd></div>
       </dl>
     </section>)}
     {!account.isAvailable && <p className="ds-billing-note">No available balance · Top up to continue</p>}

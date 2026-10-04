@@ -11,7 +11,7 @@
 @keyframes wb-shine { 0% { background-position: 120% 0; } 55%, 100% { background-position: -60% 0; } }
 @media (prefers-reduced-motion: reduce) { .wb-balance-shine { animation: none; opacity: 0; } }
 .wb-balance-label { display: block; color: var(--color-text-muted); font-size: var(--font-size-small); letter-spacing: 0.6px; }
-.wb-balance-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--provider-color); font-variant-numeric: tabular-nums; }
+.wb-balance-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--quota-color, var(--provider-color)); font-variant-numeric: tabular-nums; }
 .wb-balance-value span { font-size: 0.45em; font-weight: 600; letter-spacing: 0; color: var(--color-text-subtle); padding-left: 3px; }
 .wb-balance-hint { position: absolute; top: 0; right: 0; color: var(--color-text-subtle); font-size: var(--font-size-caption); }
 .wb-deck.is-expanded .wb-balance-hint { color: var(--provider-color); }
@@ -26,7 +26,7 @@
 /* The name is the only shrinkable cell: a long CJK package title ellipsizes instead of pushing the usage out of the card. */
 .wb-package-summary { display: flex; align-items: baseline; gap: var(--space-small); min-width: 0; margin-bottom: var(--space-small); }
 .wb-package-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--font-size-body); font-weight: 550; }
-.wb-package-badge { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: var(--color-claude-soft); color: var(--color-claude); font-size: var(--font-size-caption); white-space: nowrap; }
+.wb-package-badge { flex-shrink: 0; padding: 1px 7px; border-radius: 999px; background: color-mix(in srgb, var(--color-caution) 12%, transparent); color: var(--color-caution); font-size: var(--font-size-caption); white-space: nowrap; }
 .wb-package-badge.is-expired { background: var(--color-control); color: var(--color-text-muted); }
 .wb-package-usage { flex-shrink: 0; margin-left: auto; color: var(--color-text-muted); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wb-package-expiry { display: flex; align-items: center; justify-content: space-between; gap: var(--space-small); margin-top: var(--space-xs); color: var(--color-text-subtle); font-size: var(--font-size-small); font-variant-numeric: tabular-nums; }

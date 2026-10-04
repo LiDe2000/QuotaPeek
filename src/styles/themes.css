@@ -1,39 +1,6 @@
-/* Three themes. Dark is the default; data-theme on <html> selects a theme. */
+/* Themes. Dark (near-black) is the default; data-theme on <html> selects a theme. */
 :root,
 :root[data-theme="dark"] {
-  color-scheme: dark;
-  --color-background: #0b0c0e;
-  --color-window: #131418;
-  --color-surface: #1b1d22;
-  --color-surface-active: #2a2d34;
-  --color-control: #ffffff06;
-  --color-control-border: transparent;
-  --color-text: #f4f4f6;
-  --color-text-muted: #a1a4af;
-  --color-text-subtle: #90949f;
-  --color-border: #ffffff12;
-  --color-window-border: #ffffff1c;
-  --color-panel-border: #ffffff29;
-  --color-track: #ffffff0d;
-  --color-token-surface: #ffffff06;
-  --color-accent: #8aa4ff;
-  --color-error: #f18a88;
-  --color-codex: #88a0ff;
-  --color-codex-soft: #283351;
-  --color-claude: #dfa982;
-  --color-claude-soft: #41352f;
-  --color-workbuddy: #58b7ff;
-  --color-workbuddy-soft: #1d3550;
-  /* Violet keeps ZCode distinct from the Codex indigo and WorkBuddy azure. */
-  --color-zcode: #a78bfa;
-  --color-zcode-soft: #392f5c;
-  --color-status: #62d6a0;
-  --color-dot-active: #ffffff;
-  --color-dot: #ffffff3d;
-  --shadow-window: 0 24px 64px #00000050, 0 3px 10px #00000030, inset 0 1px 0 #ffffff05;
-}
-
-:root[data-theme="classic"] {
   color-scheme: dark;
   --color-background: #202020;
   --color-window: #0c0d0f;
@@ -50,15 +17,16 @@
   --color-track: #272c35;
   --color-token-surface: #1a1d23;
   --color-accent: #819fff;
+  --color-error: #f18a88;
   --color-codex: #809dff;
   --color-codex-soft: #243253;
-  --color-claude: #dda077;
-  --color-claude-soft: #402c23;
   --color-workbuddy: #55a8f0;
   --color-workbuddy-soft: #20364e;
   --color-zcode: #9d86e8;
   --color-zcode-soft: #322a52;
-  --color-status: #5fd5a0;
+  --color-positive: #5fd5a0;
+  --color-caution: #e2b34c;
+  --color-critical: #e2604f;
   --color-dot-active: #ffffff;
   --color-dot: #ffffff3d;
   --shadow-window: 0 20px 48px #00000045;
@@ -66,42 +34,147 @@
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --color-background: #e9ebef;
-  --color-window: #f6f7f9;
+  --color-background: #ffffff;
+  --color-window: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-active: #e4e6ec;
+  --color-surface-active: #f0f2f5;
   --color-control: #00000004;
-  --color-control-border: transparent;
-  --color-text: #21232a;
-  --color-text-muted: #626672;
-  --color-text-subtle: #696e7a;
-  --color-border: #171d2f0e;
-  --color-window-border: #ffffffc0;
-  --color-panel-border: #171d2f29;
-  --color-track: #1a23400c;
-  --color-token-surface: #f6f7fa;
-  --color-accent: #4e65c9;
+  --color-control-border: #e2e5ea;
+  --color-text: #16181d;
+  --color-text-muted: #5c616d;
+  --color-text-subtle: #6a6f7c;
+  --color-border: #171d2f1a;
+  --color-window-border: #e8eaef;
+  --color-panel-border: #171d2f2e;
+  --color-track: #1a23400f;
+  --color-token-surface: #f7f8fa;
+  --color-accent: #3d5bd9;
   --color-error: #bd4141;
-  --color-codex: #607bdc;
+  --color-codex: #5468d4;
   --color-codex-soft: #e9edfd;
-  --color-claude: #a5653c;
-  --color-claude-soft: #f7ece3;
-  --color-workbuddy: #2b7cd3;
-  --color-workbuddy-soft: #e7f1fc;
-  --color-zcode: #7a4fd0;
+  --color-workbuddy: #1f74cc;
+  --color-workbuddy-soft: #e6f1fc;
+  --color-zcode: #7048c8;
   --color-zcode-soft: #efe9fb;
-  --color-status: #27835c;
-  --color-dot-active: #303747;
-  --color-dot: #30374738;
-  --shadow-window: 0 24px 64px #25304b18, 0 3px 10px #25304b0a, inset 0 1px 0 #ffffff;
+  --color-positive: #1f7f58;
+  --color-caution: #9d6b10;
+  --color-critical: #b7402f;
+  --color-dot-active: #262a33;
+  --color-dot: #262a3338;
+  --shadow-window: 0 24px 64px #1a234014, 0 3px 10px #1a23400a, inset 0 1px 0 #ffffff;
+}
+
+:root[data-theme="dimmed"] {
+  color-scheme: dark;
+  --color-background: #191b1f;
+  --color-window: #202327;
+  --color-surface: #26292e;
+  --color-surface-active: #33373d;
+  --color-control: #ffffff08;
+  --color-control-border: #3b4046;
+  --color-text: #edeff2;
+  --color-text-muted: #a3a8b1;
+  --color-text-subtle: #939aa3;
+  --color-border: #ffffff14;
+  --color-window-border: #ffffff20;
+  --color-panel-border: #ffffff2f;
+  --color-track: #ffffff10;
+  --color-token-surface: #ffffff08;
+  --color-accent: #97aefc;
+  --color-error: #ef8b87;
+  --color-codex: #8fa4ff;
+  --color-codex-soft: #313a55;
+  --color-workbuddy: #63b6f6;
+  --color-workbuddy-soft: #24384f;
+  --color-zcode: #ad95f5;
+  --color-zcode-soft: #3a3459;
+  --color-positive: #6ad9a6;
+  --color-caution: #e5b95e;
+  --color-critical: #e56a58;
+  --color-dot-active: #ffffff;
+  --color-dot: #ffffff40;
+  --shadow-window: 0 24px 64px #00000042, 0 3px 10px #00000028, inset 0 1px 0 #ffffff06;
+}
+
+:root[data-theme="warm"] {
+  color-scheme: light;
+  --color-background: #f1ece2;
+  --color-window: #faf7f0;
+  --color-surface: #fffdf8;
+  --color-surface-active: #ece5d7;
+  --color-control: #00000004;
+  --color-control-border: #ddd4c3;
+  --color-text: #2a251f;
+  --color-text-muted: #6a6153;
+  --color-text-subtle: #756c5e;
+  --color-border: #3a2f1f14;
+  --color-window-border: #e5dccb;
+  --color-panel-border: #3a2f1f2b;
+  --color-track: #3a2f1f14;
+  --color-token-surface: #f6f1e8;
+  --color-accent: #9a5a2b;
+  --color-error: #b0432f;
+  --color-codex: #5a6fc4;
+  --color-codex-soft: #e8e9f8;
+  --color-workbuddy: #2a72b8;
+  --color-workbuddy-soft: #e5eef8;
+  --color-zcode: #7d4bb8;
+  --color-zcode-soft: #efe6f6;
+  --color-positive: #4a7c3f;
+  --color-caution: #9c6c12;
+  --color-critical: #b4452f;
+  --color-dot-active: #332c22;
+  --color-dot: #332c2238;
+  --shadow-window: 0 24px 64px #3a2f1f1a, 0 3px 10px #3a2f1f0d, inset 0 1px 0 #ffffff;
+}
+
+:root[data-theme="navy"] {
+  color-scheme: dark;
+  --color-background: #0e1620;
+  --color-window: #131d29;
+  --color-surface: #1a2634;
+  --color-surface-active: #263545;
+  --color-control: #ffffff08;
+  --color-control-border: #2c3c4c;
+  --color-text: #e7eef6;
+  --color-text-muted: #98a8b8;
+  --color-text-subtle: #8898a8;
+  --color-border: #ffffff12;
+  --color-window-border: #ffffff1c;
+  --color-panel-border: #ffffff2b;
+  --color-track: #ffffff0f;
+  --color-token-surface: #ffffff08;
+  --color-accent: #7fa9e8;
+  --color-error: #ef8a86;
+  --color-codex: #86a3ff;
+  --color-codex-soft: #22304d;
+  --color-workbuddy: #59b6f5;
+  --color-workbuddy-soft: #163448;
+  --color-zcode: #a78bfa;
+  --color-zcode-soft: #2e2a52;
+  --color-positive: #5fd3a2;
+  --color-caution: #e2b34c;
+  --color-critical: #e2604f;
+  --color-dot-active: #ffffff;
+  --color-dot: #ffffff3d;
+  --shadow-window: 0 24px 64px #03070d66, 0 3px 10px #03070d40, inset 0 1px 0 #ffffff06;
 }
 
 .provider-codex { --provider-color: var(--color-codex); --provider-soft: var(--color-codex-soft); }
-.provider-claude { --provider-color: var(--color-claude); --provider-soft: var(--color-claude-soft); }
 .provider-workbuddy { --provider-color: var(--color-workbuddy); --provider-soft: var(--color-workbuddy-soft); }
 .provider-zcode { --provider-color: var(--color-zcode); --provider-soft: var(--color-zcode-soft); }
 .provider-deepseek { --provider-color: #7d9cff; --provider-soft: #25365c; }
-:root[data-theme="light"] .provider-deepseek { --provider-color: #4168d8; --provider-soft: #e6edff; }
-.swatch-classic { --swatch-bg: #0c0d0f; --swatch-card: #12151a; --swatch-border: #303641; --swatch-bar: #809dff; }
-.swatch-dark { --swatch-bg: #1b1d22; --swatch-card: #282a30; --swatch-border: #ffffff12; --swatch-bar: #88a0ff; }
-.swatch-light { --swatch-bg: #f6f7f9; --swatch-card: #ffffff; --swatch-border: #dfe2ea; --swatch-bar: #607bdc; }
+:root[data-theme="light"] .provider-deepseek,
+:root[data-theme="warm"] .provider-deepseek { --provider-color: #4168d8; --provider-soft: #e6edff; }
+
+/* Quota level → colour, shared by the rail rings and the account cards. */
+[data-quota="idle"] { --quota-color: var(--provider-color); }
+[data-quota="ok"] { --quota-color: var(--color-positive); }
+[data-quota="warn"] { --quota-color: var(--color-caution); }
+[data-quota="hot"] { --quota-color: var(--color-critical); }
+
+.swatch-dark { --swatch-bg: #0c0d0f; --swatch-card: #12151a; --swatch-border: #303641; --swatch-bar: #809dff; }
+.swatch-light { --swatch-bg: #ffffff; --swatch-card: #ffffff; --swatch-border: #d9dde5; --swatch-bar: #5468d4; }
+.swatch-dimmed { --swatch-bg: #202327; --swatch-card: #26292e; --swatch-border: #3b4046; --swatch-bar: #8fa4ff; }
+.swatch-warm { --swatch-bg: #faf7f0; --swatch-card: #fffdf8; --swatch-border: #e5dccb; --swatch-bar: #5a6fc4; }
+.swatch-navy { --swatch-bg: #131d29; --swatch-card: #1a2634; --swatch-border: #2c3c4c; --swatch-bar: #86a3ff; }

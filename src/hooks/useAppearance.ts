@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { storage, saveSetting } from "../services/storage";
 
-export type Theme = "classic" | "dark" | "light";
+export type Theme = "dark" | "light" | "dimmed" | "warm" | "navy";
 
 const THEME_STORAGE_KEY = "quotapeek-theme";
 
 function readTheme(): Theme {
   try {
     const saved = storage.getSetting(THEME_STORAGE_KEY);
-    return saved === "classic" || saved === "light" ? saved : "dark";
+    return saved === "light" || saved === "dimmed" || saved === "warm" || saved === "navy" ? saved : "dark";
   } catch {
     return "dark";
   }

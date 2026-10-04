@@ -31,3 +31,6 @@ data/
 *.db-wal
 *.db-shm
 *.db.v*.bak
+
+# Python
+**/__pycache__/

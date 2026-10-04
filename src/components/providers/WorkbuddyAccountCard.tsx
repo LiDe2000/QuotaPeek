@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import workbuddyAvatar from "../../assets/models/workbuddy/avatar.svg";
 import type { WorkbuddyAccount, WorkbuddyPackage } from "../../types/providers/workbuddy";
+import { quotaLevel } from "../../lib/quota/level";
 import "../accounts/AccountCard.css";
 import "./WorkbuddyAccountCard.css";
 
@@ -35,8 +36,9 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed" : "Last query succeeded";
   const region = account.region === "global" ? "Global" : "CN";
   const usedPercent = account.totalSize > 0 ? Math.min(100, account.totalUsed / account.totalSize * 100) : 0;
+  const remainingPercent = account.totalSize > 0 ? 100 - usedPercent : null;
   // No reported allowance means no percentage to claim, rather than a made-up 100%.
-  const remainPercent = account.totalSize > 0 ? percent(100 - usedPercent) : null;
+  const remainPercent = remainingPercent === null ? null : percent(remainingPercent);
   const identity = account.nickname || account.uid || "WorkBuddy account";
   return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-workbuddy" aria-busy={loading}>
     <div className="account-header">
@@ -48,7 +50,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
 
     {/* One card holds the balance and the overall bar; a click anywhere on it — mouse on the
         deck, keyboard on the button — expands the breakdown. */}
-    <div className={`wb-deck${expanded ? " is-expanded" : ""}`} onClick={() => setExpanded(open => !open)}>
+    <div className={`wb-deck${expanded ? " is-expanded" : ""}`} data-quota={quotaLevel(remainingPercent)} onClick={() => setExpanded(open => !open)}>
       <button type="button" className="wb-balance" aria-expanded={expanded} aria-controls={`workbuddy-packages-${panelId ?? account.id}`}>
         <span className="wb-balance-shine" aria-hidden="true" />
         <span className="wb-balance-label">Credits balance</span>
@@ -60,7 +62,7 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
         <span>{account.packages.length} {account.packages.length === 1 ? "package" : "packages"}</span>
         <span>{credits.format(account.totalUsed)}/{credits.format(account.totalSize)}</span>
       </div>
-      <progress max={100} value={usedPercent} aria-label="WorkBuddy credits used">{usedPercent}%</progress>
+      <progress max={100} value={remainingPercent ?? 0} aria-label="WorkBuddy credits remaining">{remainingPercent ?? 0}%</progress>
       {remainPercent !== null && <div className="wb-remaining">Remaining: {remainPercent}%</div>}
     </div>
 
@@ -68,12 +70,13 @@ export default function WorkbuddyAccountCard({ account, active, stale, loading, 
       {account.packages.map((pkg, index) => {
         const badge = expiryBadge(pkg, now);
         const used = pkg.size > 0 ? Math.min(100, pkg.used / pkg.size * 100) : 0;
-        return <li className="wb-package" key={index}>
+        const remain = pkg.size > 0 ? 100 - used : null;
+        return <li className="wb-package" key={index} data-quota={quotaLevel(remain)}>
           <div className="wb-package-summary">
             <span className="wb-package-name" title={pkg.name}>{pkg.name}</span>
             <span className="wb-package-usage">{credits.format(pkg.used)}/{credits.format(pkg.size)}</span>
           </div>
-          <progress max={100} value={used} aria-label={`${pkg.name} used`}>{used}%</progress>
+          <progress max={100} value={remain ?? 0} aria-label={`${pkg.name} remaining`}>{remain ?? 0}%</progress>
           {/* The urgency flag rides with the expiry stamp: it says the same thing as the row's own line, so it must not compete with the package name for width. */}
           <p className="wb-package-expiry">
             <span>{expiryText(pkg)}</span>

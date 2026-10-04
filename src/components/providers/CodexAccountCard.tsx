@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import gptAvatar from "../../assets/models/gpt/avatar.png";
 import type { CodexAccount, CodexRateLimitWindow } from "../../types/providers/codex";
+import { quotaLevel } from "../../lib/quota/level";
 import "../accounts/AccountCard.css";
 import "./CodexAccountCard.css";
 
@@ -26,7 +27,7 @@ function QuotaWindow({ value, fallback, now }: { value: CodexRateLimitWindow; fa
   const label = windowLabel(value.windowDurationMins, fallback);
   const remaining = Math.max(0, Math.min(100, 100 - value.usedPercent));
   const [reset, time] = resetTime(value.resetsAt, now);
-  return <section className="limit" aria-label={label}>
+  return <section className="limit" data-quota={quotaLevel(remaining)} aria-label={label}>
     <div className="limit-summary"><h3>{label}</h3><div className="quota-value"><strong>{Number(remaining.toFixed(1))}<span>%</span></strong></div></div>
     <progress max={100} value={remaining} aria-label={`Codex ${label} remaining`}>{remaining}%</progress>
     <div className="reset-details"><span>{reset}</span><span>{time}</span></div>

@@ -15,7 +15,7 @@
 @keyframes zc-shine { 0% { background-position: 120% 0; } 55%, 100% { background-position: -60% 0; } }
 @media (prefers-reduced-motion: reduce) { .zc-balance-shine { animation: none; opacity: 0; } }
 .zc-balance-label { display: block; color: var(--color-text-muted); font-size: var(--font-size-small); letter-spacing: 0.6px; }
-.zc-balance-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--provider-color); font-variant-numeric: tabular-nums; }
+.zc-balance-value { display: block; margin-top: 2px; font-size: var(--font-size-quota); font-weight: 650; letter-spacing: -1px; line-height: 1.1; color: var(--quota-color, var(--provider-color)); font-variant-numeric: tabular-nums; }
 .zc-balance-value span { font-size: 0.45em; font-weight: 600; letter-spacing: 0; color: var(--color-text-subtle); padding-left: 3px; }
 .zc-balance-hint { position: absolute; top: 0; right: 0; color: var(--color-text-subtle); font-size: var(--font-size-caption); }
 .zc-deck.is-expanded .zc-balance-hint { color: var(--provider-color); }
