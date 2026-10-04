@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { Theme } from "../../hooks/useAppearance";
 import "./AppearanceSettings.css";
 
@@ -20,6 +20,43 @@ export default function AppearanceSettings({ theme, onThemeChange, onClose }: Ap
   const themeOptions = useRef<HTMLFieldSetElement>(null);
 
   useEffect(() => { themeOptions.current?.querySelector<HTMLInputElement>("input:checked")?.focus(); }, []);
+
+  // Keep the active theme inside the strip, which scrolls sideways once the five
+  // options outgrow the panel — the same behaviour as the provider and account strips.
+  useLayoutEffect(() => {
+    const element = themeOptions.current;
+    if (!element) return;
+    function revealSelected() {
+      const option = element!.querySelector<HTMLInputElement>("input:checked")?.closest("label");
+      if (!option) return;
+      const viewport = element!.getBoundingClientRect();
+      const bounds = option.getBoundingClientRect();
+      if (bounds.left < viewport.left) element!.scrollLeft += bounds.left - viewport.left;
+      else if (bounds.right > viewport.right) element!.scrollLeft += bounds.right - viewport.right;
+    }
+    revealSelected();
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [theme]);
+
+  useEffect(() => {
+    const element = themeOptions.current;
+    if (!element) return;
+    function scroll(event: WheelEvent) {
+      // Touchpad horizontal gestures already scroll natively. Map a mouse wheel
+      // only when this strip can consume it, leaving panel scrolling at its edges.
+      if (event.ctrlKey || event.shiftKey || event.deltaX || !event.deltaY) return;
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? element!.clientWidth : 1;
+      const delta = event.deltaY * unit;
+      const maximum = element!.scrollWidth - element!.clientWidth;
+      if ((delta < 0 && element!.scrollLeft <= 0) || (delta > 0 && element!.scrollLeft >= maximum)) return;
+      event.preventDefault();
+      element!.scrollLeft += delta;
+    }
+    element.addEventListener("wheel", scroll, { passive: false });
+    return () => element.removeEventListener("wheel", scroll);
+  }, []);
 
   return (
     <section id="appearance-settings" className="panel settings-panel" aria-labelledby="settings-title" onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
