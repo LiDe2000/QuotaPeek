@@ -180,6 +180,16 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 Both builds overwrite the same release exe. Collect each distribution's output separately before publishing. Installer generation may download additional tools; see [Troubleshooting](docs/troubleshooting.md).
 
+To build all three Windows x64 release assets together, double-click `build-release.cmd` in the project root, or run:
+
+```powershell
+.\build-release.ps1
+```
+
+The script reads the project version and collects the portable ZIP, NSIS `.exe` installer, and MSI installer in `release/<version>/`. It archives the portable exe before building the installed variant and excludes local account data. Existing assets for the same version are overwritten. The Windows development prerequisites above are required; if JavaScript dependencies are missing, the script runs `npm ci`. Installer tools may be downloaded by Tauri on the first build.
+
+Use `.\build-release.ps1 -DryRun` to preview the commands without building, or `-OutputDirectory <path>` to choose another output folder.
+
 ## Documentation
 
 The detailed guides are currently in Chinese.
