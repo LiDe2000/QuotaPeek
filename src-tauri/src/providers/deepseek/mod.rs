@@ -47,8 +47,7 @@ pub(super) fn platform_snapshot(
     fetched_at: i64,
 ) -> Account {
     let is_available = balances.iter().any(|balance| {
-        wallet::Decimal::parse(&balance.total_balance)
-            .is_some_and(|amount| amount.positive())
+        wallet::Decimal::parse(&balance.total_balance).is_some_and(|amount| amount.positive())
     });
     Account {
         id,
@@ -171,21 +170,22 @@ pub async fn deepseek_list_accounts(
     app: tauri::AppHandle,
 ) -> Result<Vec<Account>, Error> {
     let _guard = state.0.lock().await;
-    let mut accounts: Vec<Account> = crate::storage::accounts::read::<Credential>(&app, "deepseek-api")
-        .map_err(|message| error(&message))?
-        .into_iter()
-        .map(|entry| {
-            snapshot(
-                entry.id,
-                entry.auth.label,
-                Response {
-                    is_available: false,
-                    balance_infos: vec![],
-                },
-                0,
-            )
-        })
-        .collect();
+    let mut accounts: Vec<Account> =
+        crate::storage::accounts::read::<Credential>(&app, "deepseek-api")
+            .map_err(|message| error(&message))?
+            .into_iter()
+            .map(|entry| {
+                snapshot(
+                    entry.id,
+                    entry.auth.label,
+                    Response {
+                        is_available: false,
+                        balance_infos: vec![],
+                    },
+                    0,
+                )
+            })
+            .collect();
     accounts.extend(login::list_accounts(&app)?);
     Ok(accounts)
 }

@@ -14,10 +14,8 @@ fn mock_catalog() -> Catalog {
 
 #[test]
 fn zcode_claim_adapter_allows_only_official_claim_and_requires_one_plan() {
-    let mut live: serde_json::Value = serde_json::from_slice(include_bytes!(
-        "../../activity-service/activities.json"
-    ))
-    .unwrap();
+    let mut live: serde_json::Value =
+        serde_json::from_slice(include_bytes!("../../activity-service/activities.json")).unwrap();
     live["activities"][1]["adapterId"] = json!("zcode-plan-v1");
     live["activities"][1]["claim"] = json!({"request":{"url":"https://zcode.z.ai/api/v1/zcode-plan/billing/claim","method":"POST","body":{}},"response":{"rules":[]}});
     assert!(catalog::parse(&serde_json::to_vec(&live).unwrap()).is_ok());
@@ -67,12 +65,10 @@ fn zcode_claim_receipt_requires_a_changed_active_plan_in_readback() {
 #[test]
 fn configs_share_schema_and_reject_unknown_destinations_or_auth_fields() {
     assert_eq!(mock_catalog().schema_version, 2);
-    catalog::parse(include_bytes!(
-        "../../activity-service/activities.json"
-    ))
-    .unwrap();
+    catalog::parse(include_bytes!("../../activity-service/activities.json")).unwrap();
     let base: serde_json::Value =
-        serde_json::from_slice(include_bytes!("../../tests/activity_mock/activities.json")).unwrap();
+        serde_json::from_slice(include_bytes!("../../tests/activity_mock/activities.json"))
+            .unwrap();
     for url in [
         "https://evil.example/mock/workbuddy/status",
         "http://127.0.0.1:1432@evil.example/mock/workbuddy/status",
@@ -129,10 +125,7 @@ fn missing_fields_do_not_match_null_and_unconfirmed_claims_stay_pending() {
 }
 #[test]
 fn workbuddy_requires_all_eligibility_fields_and_zcode_does_not_enable_claims() {
-    let live = catalog::parse(include_bytes!(
-        "../../activity-service/activities.json"
-    ))
-    .unwrap();
+    let live = catalog::parse(include_bytes!("../../activity-service/activities.json")).unwrap();
     let mapping = &live.activities[0].query.response;
     assert_eq!(
         engine::normalize(

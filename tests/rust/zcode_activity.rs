@@ -6,7 +6,9 @@ async fn confirmed_claim_survives_empty_preview_after_catalog_reload() {
     let mut session = Session::default();
     let mut receipt = Submission::new("trust".into(), json!({"code":0,"data":{"plans":[]}}));
     receipt.outcome = Outcome::new("claimed", "Rewards confirmed.");
-    session.submissions.insert(("account".into(), "trust".into()), receipt);
+    session
+        .submissions
+        .insert(("account".into(), "trust".into()), receipt);
     // Catalog reloads preserve submissions, while clearing the ordinary status cache.
     session.states.clear();
     let empty = json!({"code":0,"data":{"plans":[]}});
@@ -15,9 +17,23 @@ async fn confirmed_claim_survives_empty_preview_after_catalog_reload() {
     // Confirmed receipts do not issue another network request, even with no credentials.
     assert_eq!(check(previous, &HeaderMap::new()).await.status, "claimed");
     assert!(previous_submission(&mut session, "other-account", &empty).is_none());
-    assert!(previous_submission(&mut session, "account", &json!({"code":400,"data":{"plans":[]}})).is_none());
-    assert!(previous_submission(&mut session, "account", &json!({"code":0,"data":{"plans":[{"plan_id":"new-reward"}]}})).is_none());
-    assert_eq!(preview(&empty, true).status, "unknown", "empty preview alone is not proof of a claim");
+    assert!(previous_submission(
+        &mut session,
+        "account",
+        &json!({"code":400,"data":{"plans":[]}})
+    )
+    .is_none());
+    assert!(previous_submission(
+        &mut session,
+        "account",
+        &json!({"code":0,"data":{"plans":[{"plan_id":"new-reward"}]}})
+    )
+    .is_none());
+    assert_eq!(
+        preview(&empty, true).status,
+        "unknown",
+        "empty preview alone is not proof of a claim"
+    );
 }
 
 #[tokio::test]

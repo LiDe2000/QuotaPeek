@@ -32,8 +32,7 @@ fn accepts_zero_balance_and_preserves_currencies_and_precision() {
     let value = validate(value).ok().unwrap();
     assert!(!value.is_available);
     assert_eq!(value.balance_infos[1].total_balance, "1.123456");
-    let json =
-        serde_json::to_string(&snapshot("id".into(), "Personal".into(), value, 1)).unwrap();
+    let json = serde_json::to_string(&snapshot("id".into(), "Personal".into(), value, 1)).unwrap();
     assert!(!json.contains("apiKey"));
 }
 #[test]

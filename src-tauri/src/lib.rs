@@ -99,7 +99,7 @@ pub fn run() {
             }
         });
 }
+mod activities;
 mod desktop;
 mod providers;
 mod storage;
-mod activities;

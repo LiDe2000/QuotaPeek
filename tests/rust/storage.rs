@@ -8,12 +8,10 @@ fn activity_service_url_survives_reopen() {
     {
         let db = Database::open(&path).unwrap();
         db.save_settings(
-            &[
-                (
-                    "quotapeek-activity-service-url".into(),
-                    "https://activities.example/v1/activities".into(),
-                ),
-            ]
+            &[(
+                "quotapeek-activity-service-url".into(),
+                "https://activities.example/v1/activities".into(),
+            )]
             .into(),
         )
         .unwrap();
@@ -39,10 +37,14 @@ fn provider_order_survives_reopening_database() {
     let order = "[\"deepseek\",\"codex\",\"workbuddy\",\"zcode\"]";
     {
         let db = Database::open(&path).unwrap();
-        db.save_settings(&[("quotapeek-provider-order-v1".into(), order.into())].into()).unwrap();
+        db.save_settings(&[("quotapeek-provider-order-v1".into(), order.into())].into())
+            .unwrap();
     }
     let db = Database::open(&path).unwrap();
-    assert_eq!(db.load_state().unwrap().settings["quotapeek-provider-order-v1"], order);
+    assert_eq!(
+        db.load_state().unwrap().settings["quotapeek-provider-order-v1"],
+        order
+    );
     drop(db);
     std::fs::remove_dir_all(root).unwrap();
 }

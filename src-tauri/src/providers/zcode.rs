@@ -64,16 +64,28 @@ pub struct QueryError {
     message: String,
 }
 fn error(code: &'static str, message: impl Into<String>) -> QueryError {
-    QueryError { code, message: message.into() }
+    QueryError {
+        code,
+        message: message.into(),
+    }
 }
 fn protocol_error() -> QueryError {
-    error("protocol", "ZCode returned an unsupported response. Retry later.")
+    error(
+        "protocol",
+        "ZCode returned an unsupported response. Retry later.",
+    )
 }
 fn not_connected() -> QueryError {
-    error("not_connected", "Connect a ZCode account from the account panel first.")
+    error(
+        "not_connected",
+        "Connect a ZCode account from the account panel first.",
+    )
 }
 fn expired_login() -> QueryError {
-    error("not_logged_in", "ZCode sign-in expired. Reconnect the account from the account panel.")
+    error(
+        "not_logged_in",
+        "ZCode sign-in expired. Reconnect the account from the account panel.",
+    )
 }
 
 pub struct ZcodeState {
@@ -88,7 +100,14 @@ pub struct ZcodeState {
 }
 impl Default for ZcodeState {
     fn default() -> Self {
-        Self { lock: Mutex::default(), last_query: Mutex::default(), storage: Mutex::default(), completed: Mutex::default(), flows: Mutex::default(), http: Self::client() }
+        Self {
+            lock: Mutex::default(),
+            last_query: Mutex::default(),
+            storage: Mutex::default(),
+            completed: Mutex::default(),
+            flows: Mutex::default(),
+            http: Self::client(),
+        }
     }
 }
 impl ZcodeState {
@@ -142,13 +161,25 @@ struct StoredAuth {
 }
 impl StoredAuth {
     fn jwt(&self) -> &str {
-        if self.zcode_jwt_token.is_empty() { &self.access_token } else { &self.zcode_jwt_token }
+        if self.zcode_jwt_token.is_empty() {
+            &self.access_token
+        } else {
+            &self.zcode_jwt_token
+        }
     }
     fn site(&self) -> &str {
-        if self.provider.is_empty() { &self.site } else { &self.provider }
+        if self.provider.is_empty() {
+            &self.site
+        } else {
+            &self.provider
+        }
     }
     fn who(&self) -> &str {
-        if self.label.is_empty() { &self.email } else { &self.label }
+        if self.label.is_empty() {
+            &self.email
+        } else {
+            &self.label
+        }
     }
 }
 
@@ -187,7 +218,10 @@ pub struct ZcodeAccount {
 }
 
 fn now_secs() -> u64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs()
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
 }
 
 /// `16 * parts` hex characters. `RandomState` is seeded from the OS, which is enough
@@ -199,7 +233,11 @@ fn random_hex(parts: usize) -> String {
     for round in 0..parts {
         let mut hasher = std::collections::hash_map::RandomState::new().build_hasher();
         round.hash(&mut hasher);
-        SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos().hash(&mut hasher);
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos()
+            .hash(&mut hasher);
         hex.push_str(&format!("{:016x}", hasher.finish()));
     }
     hex
@@ -208,7 +246,14 @@ fn random_hex(parts: usize) -> String {
 /// 32 hex characters shaped like a UUID, used for the device id and request id.
 fn random_id() -> String {
     let hex = random_hex(2);
-    format!("{}-{}-{}-{}-{}", &hex[..8], &hex[8..12], &hex[12..16], &hex[16..20], &hex[20..32])
+    format!(
+        "{}-{}-{}-{}-{}",
+        &hex[..8],
+        &hex[8..12],
+        &hex[12..16],
+        &hex[16..20],
+        &hex[20..32]
+    )
 }
 
 /// The OAuth poll expects a 64 hex character bearer token of its own.
@@ -217,35 +262,62 @@ fn random_poll_token() -> String {
 }
 
 fn account_id(auth: &StoredAuth) -> String {
-    let identity = if auth.identity.is_empty() { auth.who() } else { &auth.identity };
-    crate::storage::accounts::key("zcode", &format!("{}:{}", normalize_site(auth.site()), identity))
+    let identity = if auth.identity.is_empty() {
+        auth.who()
+    } else {
+        &auth.identity
+    };
+    crate::storage::accounts::key(
+        "zcode",
+        &format!("{}:{}", normalize_site(auth.site()), identity),
+    )
 }
 
-fn stored_accounts(app: &tauri::AppHandle) -> Result<Vec<crate::storage::accounts::Entry<StoredAuth>>, QueryError> {
+fn stored_accounts(
+    app: &tauri::AppHandle,
+) -> Result<Vec<crate::storage::accounts::Entry<StoredAuth>>, QueryError> {
     crate::storage::accounts::read(app, "zcode").map_err(|message| error("storage", message))
 }
 
 fn store_auth(app: &tauri::AppHandle, auth: &StoredAuth) -> Result<(), QueryError> {
-    crate::storage::accounts::upsert(app, "zcode", account_id(auth), auth.clone()).map_err(|message| error("storage", message))
+    crate::storage::accounts::upsert(app, "zcode", account_id(auth), auth.clone())
+        .map_err(|message| error("storage", message))
 }
 
-fn load_auth(app: &tauri::AppHandle, requested: Option<&str>) -> Result<Option<StoredAuth>, QueryError> {
-    Ok(crate::storage::accounts::load::<StoredAuth>(app, "zcode", requested).map_err(|message| error("storage", message))?.map(|entry| entry.auth))
+fn load_auth(
+    app: &tauri::AppHandle,
+    requested: Option<&str>,
+) -> Result<Option<StoredAuth>, QueryError> {
+    Ok(
+        crate::storage::accounts::load::<StoredAuth>(app, "zcode", requested)
+            .map_err(|message| error("storage", message))?
+            .map(|entry| entry.auth),
+    )
 }
 
 #[tauri::command]
-pub async fn zcode_list_accounts(state: tauri::State<'_, ZcodeState>, app: tauri::AppHandle) -> Result<Vec<ZcodeAccount>, QueryError> {
+pub async fn zcode_list_accounts(
+    state: tauri::State<'_, ZcodeState>,
+    app: tauri::AppHandle,
+) -> Result<Vec<ZcodeAccount>, QueryError> {
     let _storage = state.storage.lock().await;
-    stored_accounts(&app)?.into_iter().map(|entry| {
-        let mut account = parse_account(&serde_json::json!({"code": 0, "data": {}}), &entry.auth)?;
-        account.id = entry.id;
-        account.fetched_at = 0;
-        Ok(account)
-    }).collect()
+    stored_accounts(&app)?
+        .into_iter()
+        .map(|entry| {
+            let mut account =
+                parse_account(&serde_json::json!({"code": 0, "data": {}}), &entry.auth)?;
+            account.id = entry.id;
+            account.fetched_at = 0;
+            Ok(account)
+        })
+        .collect()
 }
 
 #[tauri::command]
-pub async fn zcode_cancel_login(state: tauri::State<'_, ZcodeState>, login_state: String) -> Result<Option<String>, QueryError> {
+pub async fn zcode_cancel_login(
+    state: tauri::State<'_, ZcodeState>,
+    login_state: String,
+) -> Result<Option<String>, QueryError> {
     // The flow lock also covers credential commit. If commit already won, tell the
     // frontend which account completed instead of reporting a misleading cancellation.
     let mut flows = state.flows.lock().await;
@@ -269,14 +341,24 @@ fn client_device_id(home: &Path) -> Option<String> {
 
 /// Falls back to one id of our own, minted once and then reused for the life of the app.
 fn own_device_id(app: &tauri::AppHandle) -> Result<String, QueryError> {
-    let mid = app.state::<crate::storage::Database>().setting_or_insert("device.zcode", &random_id())
+    let mid = app
+        .state::<crate::storage::Database>()
+        .setting_or_insert("device.zcode", &random_id())
         .map_err(|message| error("storage", message))?;
-    if !valid_device_id(&mid) { return Err(error("storage", "Saved ZCode device identity is unreadable.")); }
+    if !valid_device_id(&mid) {
+        return Err(error(
+            "storage",
+            "Saved ZCode device identity is unreadable.",
+        ));
+    }
     Ok(mid)
 }
 
 fn device_id(app: &tauri::AppHandle, home: &Path) -> Result<String, QueryError> {
-    match client_device_id(home) { Some(mid) => Ok(mid), None => own_device_id(app) }
+    match client_device_id(home) {
+        Some(mid) => Ok(mid),
+        None => own_device_id(app),
+    }
 }
 
 fn home_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
@@ -286,8 +368,15 @@ fn home_dir(app: &tauri::AppHandle) -> Option<PathBuf> {
 /// Reads the credential the poll hands back. The JWT is required; the provider token
 /// and display name are best effort, so a shape change there cannot break sign-in.
 fn credential_from_poll(data: &Value, site: &str) -> Option<StoredAuth> {
-    let jwt = data["token"].as_str().map(str::trim).filter(|value| !value.is_empty())?;
-    let nested = if site == SITE_BIGMODEL { &data[SITE_BIGMODEL] } else { &data[SITE_ZAI] };
+    let jwt = data["token"]
+        .as_str()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())?;
+    let nested = if site == SITE_BIGMODEL {
+        &data[SITE_BIGMODEL]
+    } else {
+        &data[SITE_ZAI]
+    };
     let access_token = nested["access_token"]
         .as_str()
         .or_else(|| nested["accessToken"].as_str())
@@ -301,9 +390,11 @@ fn credential_from_poll(data: &Value, site: &str) -> Option<StoredAuth> {
         .map(str::trim)
         .filter(|value| !value.is_empty())
         .unwrap_or_default();
-    let identity = ["user_id", "id", "email"].into_iter()
+    let identity = ["user_id", "id", "email"]
+        .into_iter()
         .find_map(|key| user[key].as_str().filter(|value| !value.trim().is_empty()))
-        .map(str::to_owned).unwrap_or_else(random_id);
+        .map(str::to_owned)
+        .unwrap_or_else(random_id);
     Some(StoredAuth {
         identity,
         zcode_jwt_token: jwt.to_owned(),
@@ -316,7 +407,10 @@ fn credential_from_poll(data: &Value, site: &str) -> Option<StoredAuth> {
 }
 
 #[tauri::command]
-pub async fn zcode_start_login(state: tauri::State<'_, ZcodeState>, site: String) -> Result<LoginStart, QueryError> {
+pub async fn zcode_start_login(
+    state: tauri::State<'_, ZcodeState>,
+    site: String,
+) -> Result<LoginStart, QueryError> {
     let site = normalize_site(&site);
     let poll_token = random_poll_token();
     let response = state
@@ -328,14 +422,28 @@ pub async fn zcode_start_login(state: tauri::State<'_, ZcodeState>, site: String
         .body(format!(r#"{{"provider":"{site}"}}"#))
         .send()
         .await
-        .map_err(|_| error("network", "Could not reach the ZCode login service. Check your connection."))?;
+        .map_err(|_| {
+            error(
+                "network",
+                "Could not reach the ZCode login service. Check your connection.",
+            )
+        })?;
     let value: Value = response.json().await.map_err(|_| protocol_error())?;
     let data = &value["data"];
     if value["code"].as_i64().unwrap_or(-1) != 0 {
-        return Err(error("login_failed", "ZCode could not start the sign-in. Try again."));
+        return Err(error(
+            "login_failed",
+            "ZCode could not start the sign-in. Try again.",
+        ));
     }
-    let flow = data["flow_id"].as_str().or_else(|| data["flowId"].as_str()).ok_or_else(protocol_error)?;
-    let auth_url = data["authorize_url"].as_str().or_else(|| data["authorizeUrl"].as_str()).ok_or_else(protocol_error)?;
+    let flow = data["flow_id"]
+        .as_str()
+        .or_else(|| data["flowId"].as_str())
+        .ok_or_else(protocol_error)?;
+    let auth_url = data["authorize_url"]
+        .as_str()
+        .or_else(|| data["authorizeUrl"].as_str())
+        .ok_or_else(protocol_error)?;
     if flow.is_empty() || flow.len() > 128 || auth_url.is_empty() {
         return Err(protocol_error());
     }
@@ -348,7 +456,10 @@ pub async fn zcode_start_login(state: tauri::State<'_, ZcodeState>, site: String
     // The site travels with the flow so the poll knows which nested credential to read.
     flows.insert(flow.to_owned(), format!("{poll_token}|{site}"));
     drop(flows);
-    Ok(LoginStart { state: flow.to_owned(), auth_url: auth_url.to_owned() })
+    Ok(LoginStart {
+        state: flow.to_owned(),
+        auth_url: auth_url.to_owned(),
+    })
 }
 
 #[tauri::command]
@@ -362,12 +473,23 @@ pub async fn zcode_poll_login(
         flows.get(&login_state).cloned()
     };
     let Some(flow_entry) = flow_entry else {
-        return Ok(PollOutcome { status: "error", message: Some("The sign-in session expired. Start again.".into()), account_id: None });
+        return Ok(PollOutcome {
+            status: "error",
+            message: Some("The sign-in session expired. Start again.".into()),
+            account_id: None,
+        });
     };
     // "poll_token|site" as stored by zcode_start_login.
-    let (poll_token, site) = flow_entry.split_once('|').unwrap_or((flow_entry.as_str(), SITE_ZAI));
+    let (poll_token, site) = flow_entry
+        .split_once('|')
+        .unwrap_or((flow_entry.as_str(), SITE_ZAI));
     let site = normalize_site(site);
-    if login_state.is_empty() || login_state.len() > 128 || !login_state.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_') {
+    if login_state.is_empty()
+        || login_state.len() > 128
+        || !login_state
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_')
+    {
         return Err(protocol_error());
     }
     let response = match state
@@ -380,40 +502,79 @@ pub async fn zcode_poll_login(
     {
         Ok(response) => response,
         // A blip is still "keep waiting".
-        Err(_) => return Ok(PollOutcome { status: "pending", message: None, account_id: None }),
+        Err(_) => {
+            return Ok(PollOutcome {
+                status: "pending",
+                message: None,
+                account_id: None,
+            })
+        }
     };
     if !response.status().is_success() {
-        return Ok(PollOutcome { status: "pending", message: None, account_id: None });
+        return Ok(PollOutcome {
+            status: "pending",
+            message: None,
+            account_id: None,
+        });
     }
     let value: Value = response.json().await.map_err(|_| protocol_error())?;
     let data = &value["data"];
     match data["status"].as_str().unwrap_or_default() {
         "failed" => {
             state.flows.lock().await.remove(&login_state);
-            let message = data["message"].as_str().or_else(|| data["reason"].as_str()).unwrap_or_default();
-            let message = if message.is_empty() { "Authorization was denied or failed." } else { message };
-            Ok(PollOutcome { status: "error", message: Some(message.to_owned()), account_id: None })
+            let message = data["message"]
+                .as_str()
+                .or_else(|| data["reason"].as_str())
+                .unwrap_or_default();
+            let message = if message.is_empty() {
+                "Authorization was denied or failed."
+            } else {
+                message
+            };
+            Ok(PollOutcome {
+                status: "error",
+                message: Some(message.to_owned()),
+                account_id: None,
+            })
         }
         "ready" => {
             let mut flows = state.flows.lock().await;
             if flows.remove(&login_state).is_none() {
-                return Ok(PollOutcome { status: "error", message: Some("Sign-in cancelled.".into()), account_id: None });
+                return Ok(PollOutcome {
+                    status: "error",
+                    message: Some("Sign-in cancelled.".into()),
+                    account_id: None,
+                });
             }
             // The site comes from the stored flow, not the payload: the payload nests the
             // provider token under a key named after the site.
             let Some(auth) = credential_from_poll(data, site) else {
-                return Ok(PollOutcome { status: "error", message: Some("No credentials came back. Start again.".into()), account_id: None });
+                return Ok(PollOutcome {
+                    status: "error",
+                    message: Some("No credentials came back. Start again.".into()),
+                    account_id: None,
+                });
             };
             let _storage = state.storage.lock().await;
             stored_accounts(&app)?;
             store_auth(&app, &auth)?;
             let id = account_id(&auth);
             let mut completed = state.completed.lock().await;
-            if completed.len() >= 16 { completed.clear(); }
+            if completed.len() >= 16 {
+                completed.clear();
+            }
             completed.insert(login_state.clone(), id.clone());
-            Ok(PollOutcome { status: "success", message: None, account_id: Some(id) })
+            Ok(PollOutcome {
+                status: "success",
+                message: None,
+                account_id: Some(id),
+            })
         }
-        _ => Ok(PollOutcome { status: "pending", message: None, account_id: None }),
+        _ => Ok(PollOutcome {
+            status: "pending",
+            message: None,
+            account_id: None,
+        }),
     }
 }
 
@@ -428,7 +589,9 @@ fn number(value: &Value) -> Option<f64> {
 
 /// Unix seconds to milliseconds; absent and sentinel-zero stamps become `None`.
 fn milliseconds(seconds: Option<u64>) -> Option<u64> {
-    seconds.filter(|value| *value > 0).map(|value| value.saturating_mul(1000))
+    seconds
+        .filter(|value| *value > 0)
+        .map(|value| value.saturating_mul(1000))
 }
 
 /// Sorts the billing payload into the card's rows: one row per balance bucket, plus the
@@ -445,10 +608,18 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
     }
     let data = &payload["data"];
     let plans = data["plans"].as_array().cloned().unwrap_or_default();
-    let plan = plans.iter().find(|plan| plan["status"].as_str() == Some("active")).or_else(|| plans.first());
+    let plan = plans
+        .iter()
+        .find(|plan| plan["status"].as_str() == Some("active"))
+        .or_else(|| plans.first());
     // A one-time grant expires rather than resets, so collect which entitlements those are.
     let mut one_time: HashSet<&str> = HashSet::new();
-    for entitlement in plans.iter().flat_map(|plan| plan["entitlements"].as_array().map(Vec::as_slice).unwrap_or_default()) {
+    for entitlement in plans.iter().flat_map(|plan| {
+        plan["entitlements"]
+            .as_array()
+            .map(Vec::as_slice)
+            .unwrap_or_default()
+    }) {
         if entitlement["period"].as_str() == Some("one_time") {
             if let Some(id) = entitlement["entitlement_id"].as_str() {
                 one_time.insert(id);
@@ -464,9 +635,12 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
                 .map(|(index, item)| {
                     let total = number(&item["total_units"]);
                     let used = number(&item["used_units"]);
-                    let remain = number(&item["remaining_units"]).or_else(|| number(&item["available_units"]));
+                    let remain = number(&item["remaining_units"])
+                        .or_else(|| number(&item["available_units"]));
                     let used_percent = match (used, total) {
-                        (Some(used), Some(total)) if total > 0.0 => (used / total * 100.0).clamp(0.0, 100.0),
+                        (Some(used), Some(total)) if total > 0.0 => {
+                            (used / total * 100.0).clamp(0.0, 100.0)
+                        }
                         _ => 0.0,
                     };
                     let key = item["bucket_id"]
@@ -487,7 +661,9 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
                         remain,
                         total,
                         resets_at: milliseconds(
-                            item["period_end"].as_u64().or_else(|| item["expires_at"].as_u64()),
+                            item["period_end"]
+                                .as_u64()
+                                .or_else(|| item["expires_at"].as_u64()),
                         ),
                         one_time: item["entitlement_id"]
                             .as_str()
@@ -504,7 +680,9 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
         provider_id: "zcode",
         source: "zcode-billing",
         email: (!who.is_empty()).then(|| who.to_owned()),
-        plan_name: plan.and_then(|plan| plan["name"].as_str()).map(str::to_owned),
+        plan_name: plan
+            .and_then(|plan| plan["name"].as_str())
+            .map(str::to_owned),
         plan_description: plan
             .and_then(|plan| plan["description"].as_str())
             .map(str::trim)
@@ -517,18 +695,26 @@ fn parse_account(payload: &Value, auth: &StoredAuth) -> Result<ZcodeAccount, Que
 }
 
 #[tauri::command]
-pub async fn zcode_query_quota(state: tauri::State<'_, ZcodeState>, app: tauri::AppHandle, account_id: Option<String>) -> Result<ZcodeAccount, QueryError> {
+pub async fn zcode_query_quota(
+    state: tauri::State<'_, ZcodeState>,
+    app: tauri::AppHandle,
+    account_id: Option<String>,
+) -> Result<ZcodeAccount, QueryError> {
     let _guard = state.lock.lock().await;
     let auth = {
         let _storage = state.storage.lock().await;
         load_auth(&app, account_id.as_deref())?.ok_or_else(not_connected)?
     };
-    if auth.jwt().is_empty() { return Err(not_connected()); }
+    if auth.jwt().is_empty() {
+        return Err(not_connected());
+    }
     {
         let mut last = state.last_query.lock().await;
         if let Some(previous) = *last {
             let remaining = MIN_QUERY_INTERVAL.saturating_sub(previous.elapsed());
-            if !remaining.is_zero() { tokio::time::sleep(remaining).await; }
+            if !remaining.is_zero() {
+                tokio::time::sleep(remaining).await;
+            }
         }
         *last = Some(Instant::now());
     }
@@ -560,10 +746,16 @@ pub async fn zcode_query_quota(state: tauri::State<'_, ZcodeState>, app: tauri::
         return Err(expired_login());
     }
     if status == 429 {
-        return Err(error("rate_limited", "ZCode is rate limiting requests. Wait a minute before refreshing."));
+        return Err(error(
+            "rate_limited",
+            "ZCode is rate limiting requests. Wait a minute before refreshing.",
+        ));
     }
     if !response.status().is_success() {
-        return Err(error("query_failed", "ZCode rejected the quota request. Wait a moment and retry."));
+        return Err(error(
+            "query_failed",
+            "ZCode rejected the quota request. Wait a moment and retry.",
+        ));
     }
     let payload: Value = response.json().await.map_err(|_| protocol_error())?;
     parse_account(&payload, &auth)
@@ -590,34 +782,68 @@ fn os_category() -> &'static str {
 /// The client sends its OS build here. The exact string is cosmetic to the route, so an
 /// environment-derived value is preferred over a guessed one.
 fn os_version() -> String {
-    std::env::var("OS").ok().filter(|value| !value.trim().is_empty()).unwrap_or_else(|| std::env::consts::OS.to_owned())
+    std::env::var("OS")
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| std::env::consts::OS.to_owned())
 }
 
 pub(crate) fn activity_query_parameters(query: &mut std::collections::BTreeMap<String, String>) {
     query.insert("app_version".into(), APP_VERSION.into());
-    query.insert("platform".into(), format!("{}-{}", platform_name(), arch_name()));
+    query.insert(
+        "platform".into(),
+        format!("{}-{}", platform_name(), arch_name()),
+    );
 }
 
 /// Credentials stay inside Rust and may be used only by the validated preview endpoint.
-pub(crate) async fn activity_headers(app: &tauri::AppHandle, id: &str, regions: &[String]) -> Result<reqwest::header::HeaderMap, String> {
+pub(crate) async fn activity_headers(
+    app: &tauri::AppHandle,
+    id: &str,
+    regions: &[String],
+) -> Result<reqwest::header::HeaderMap, String> {
     let state = app.state::<ZcodeState>();
     let _guard = state.lock.lock().await;
     let auth = {
         let _storage = state.storage.lock().await;
-        load_auth(app, Some(id)).map_err(|e| e.message)?.ok_or("Connect this ZCode account first.")?
+        load_auth(app, Some(id))
+            .map_err(|e| e.message)?
+            .ok_or("Connect this ZCode account first.")?
     };
-    if auth.jwt().is_empty() { return Err("Reconnect this ZCode account.".into()); }
+    if auth.jwt().is_empty() {
+        return Err("Reconnect this ZCode account.".into());
+    }
     if !regions.is_empty() && !regions.iter().any(|r| r == region_of(auth.site())) {
         return Err("This ZCode activity does not support the account region.".into());
     }
     let device = match home_dir(app) {
-        Some(home) => device_id(app, &home), None => own_device_id(app),
-    }.map_err(|e| e.message)?;
+        Some(home) => device_id(app, &home),
+        None => own_device_id(app),
+    }
+    .map_err(|e| e.message)?;
     let mut headers = reqwest::header::HeaderMap::new();
-    headers.insert("authorization", format!("Bearer {}", auth.jwt()).parse().map_err(|_| "Invalid saved activity authorization.")?);
-    headers.insert("x-device-mid", device.parse().map_err(|_| "Invalid local device identity.")?);
-    headers.insert("x-zcode-app-version", APP_VERSION.parse().map_err(|_| "Invalid client version.")?);
-    headers.insert("x-platform", format!("{}-{}", platform_name(), arch_name()).parse().map_err(|_| "Invalid client platform.")?);
+    headers.insert(
+        "authorization",
+        format!("Bearer {}", auth.jwt())
+            .parse()
+            .map_err(|_| "Invalid saved activity authorization.")?,
+    );
+    headers.insert(
+        "x-device-mid",
+        device
+            .parse()
+            .map_err(|_| "Invalid local device identity.")?,
+    );
+    headers.insert(
+        "x-zcode-app-version",
+        APP_VERSION.parse().map_err(|_| "Invalid client version.")?,
+    );
+    headers.insert(
+        "x-platform",
+        format!("{}-{}", platform_name(), arch_name())
+            .parse()
+            .map_err(|_| "Invalid client platform.")?,
+    );
     Ok(headers)
 }
 
