@@ -38,6 +38,7 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 - Hover to preview cached data, click to refresh, or refresh all accounts.
 - Keep the last result on query failure and show the error and last successful update time.
 - Adapt card height and expansion direction, with three themes and system tray controls.
+- Adjust the whole interface from 75% to 150% in Appearance; the saved scale applies to the sidebar, cards, and native window bounds. Reset restores 100%.
 
 ## Screenshots
 
@@ -186,6 +187,7 @@ The detailed guides are currently in Chinese.
 | Document | Contents |
 | --- | --- |
 | [Development guide](docs/development.md) | Directory responsibilities, state flows, window implementation, testing, and extensions |
+| [Interface scale design](docs/interface-scale.md) | Slider interaction, scale transitions, and native window stability |
 | [Activity configuration](docs/activity-service.md) | Server-first configuration, local fallback, on-device execution, and mock testing |
 | [Data storage](docs/storage.md) | Data paths, credential protection, database upgrades, and portable verification |
 | [Troubleshooting](docs/troubleshooting.md) | Runtime, editor, build, and rendering issues |

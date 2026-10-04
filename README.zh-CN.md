@@ -34,6 +34,7 @@
 
 - 集中查看 Codex、WorkBuddy、ZCode 和 DeepSeek 的额度或余额。
 - 按供应商切换多个账户，保存账户选择和平台顺序。
+- 在外观设置中调整整体界面缩放（75%–150%），同步缩放侧栏、卡片和原生窗口，自动保存；Reset 恢复 100%。
 - 点击供应商名称旁的箭头打开应用：Windows 优先启动已安装的桌面客户端（DeepSeek 对应 DeepSeek Harness），不可用时打开官方网页。Codex 后备为 ChatGPT，DeepSeek 为聊天页，WorkBuddy 为网页工作台，ZCode 为下载页。目标应用沿用自身登录状态，不自动切换账户；其他平台直接打开网页。
 - 悬停预览缓存，单击刷新，支持刷新全部账户。
 - 查询失败时保留上次结果，显示错误和最后成功时间。
@@ -184,6 +185,7 @@ cargo test --manifest-path src-tauri/Cargo.toml
 | 文档 | 内容 |
 | --- | --- |
 | [开发文档](docs/development.md) | 目录职责、状态流程、窗口实现、测试和扩展 |
+| [整体界面缩放设计](docs/interface-scale.md) | 滑块交互、缩放过渡与原生窗口稳定性 |
 | [数据存储](docs/storage.md) | 数据位置、凭据保护、数据库升级和便携验证 |
 | [常见问题](docs/troubleshooting.md) | 运行、编辑器、构建和渲染问题 |
 

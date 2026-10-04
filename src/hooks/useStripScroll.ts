@@ -6,8 +6,9 @@ function revealActive(element: HTMLElement, activeSelector: string) {
   if (!active) return;
   const viewport = element.getBoundingClientRect();
   const bounds = active.getBoundingClientRect();
-  if (bounds.left < viewport.left) element.scrollLeft += bounds.left - viewport.left;
-  else if (bounds.right > viewport.right) element.scrollLeft += bounds.right - viewport.right;
+  const zoom = viewport.width / element.offsetWidth || 1;
+  if (bounds.left < viewport.left) element.scrollLeft += (bounds.left - viewport.left) / zoom;
+  else if (bounds.right > viewport.right) element.scrollLeft += (bounds.right - viewport.right) / zoom;
 }
 
 /** Keeps the active item of a horizontal strip in view, and maps a mouse wheel
