@@ -286,7 +286,7 @@ function App() {
               onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}
               onConnectDeepseek={id => connectAccount("deepseek", id)}
               onClose={() => setPopup("home")} />
-            {popup !== "activities" && groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} onReorder={reorderProviders} />}
+            {popup !== "activities" && groups.length > 0 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} onReorder={reorderProviders} />}
             {popup !== "activities" && currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
             {popup !== "activities" && accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
               <div className="carousel-viewport" onPointerDown={event => {
