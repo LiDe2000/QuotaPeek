@@ -60,13 +60,13 @@ export default function ZcodeAccountCard({ account, active, stale, loading, defa
   const remainingPercent = aggregate ? 100 - usedPercent : null;
   // Nothing to break down means the deck stops pretending to be a toggle.
   const expandable = account.windows.length > 0;
-  const identity = account.email ?? "ZCode account";
   const region = account.region === "global" ? "Global" : "CN";
+  const identity = `${account.email ?? "ZCode account"} · ${region}`;
   const plan = [account.planName ?? "Plan unavailable", account.planDescription].filter(Boolean).join(" · ");
   return <article id={panelId ?? `panel-${account.id}`} role="region" aria-label={`${account.providerId} · ${account.id} quota`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-zcode" aria-busy={loading}>
     <div className="account-header">
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={glmAvatar} alt="" draggable={false} /></span>
-      <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity} · {region}</p></div>
+      <div className="account-identity"><h2>ZCode</h2><p title={identity}>{identity}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}`} role="img" aria-label={status} title={status} />
       {actions}
     </div>

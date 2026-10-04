@@ -10,10 +10,11 @@ export default function DeepseekAccountCard({ account, active, stale, loading, p
 }) {
   const status = loading ? "Refreshing" : stale ? "Last known data · Refresh failed"
     : account.isAvailable ? "Balance available" : "No available balance";
+  const identity = `${account.label}${account.contact ? ` · ${account.contact}` : account.source === "deepseek-api" ? " · API" : ""}`;
   return <article id={panelId} role="region" aria-label={`DeepSeek · ${account.label} balance`} aria-hidden={!active} inert={!active} tabIndex={active ? 0 : -1} className="account-card provider-deepseek" aria-busy={loading}>
     <div className="account-header">
       <span className="provider-mark provider-portrait" aria-hidden="true"><img src={deepseekAvatar} alt="" draggable={false} /></span>
-      <div className="account-identity"><h2>DeepSeek</h2><p title={account.contact ? `${account.label} · ${account.contact}` : account.label}>{account.label}{account.contact ? ` · ${account.contact}` : account.source === "deepseek-api" ? " · API" : ""}</p></div>
+      <div className="account-identity"><h2>DeepSeek</h2><p title={identity}>{identity}</p></div>
       <span className={`connection-status${stale ? " is-stale" : ""}${account.isAvailable ? "" : " ds-unavailable"}`} role="img" aria-label={status} title={status} />
       {actions}
     </div>

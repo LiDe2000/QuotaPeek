@@ -39,11 +39,11 @@ function TokenStats({ usage }: { usage: CodexAccount["tokenUsage"] }) {
   const showingLatest = usage?.todayTokens == null && usage?.latestDailyTokens != null && latestDate !== null;
   const dailyLabel = showingLatest && latestDate ? `Latest · ${latestDate.slice(5)}` : "Today";
   const dailyTokens = showingLatest ? usage?.latestDailyTokens : usage?.todayTokens;
-  return <section className="codex-tokens" aria-label="Codex account token usage" title="Reported by Codex account/usage/read. Today matches the calendar date in US Pacific time.">
+  return <section className="codex-tokens" aria-label="Codex account token usage">
     <div className="codex-tokens-heading"><h3>TOKEN USAGE</h3><span>US Pacific day</span></div>
     <div className="codex-tokens-values">
       <div><span>Total</span><strong>{number(usage?.lifetimeTokens)}</strong></div>
-      <div title={showingLatest ? `Latest daily usage: ${latestDate}` : undefined}><span>{dailyLabel}</span><strong>{number(dailyTokens)}</strong></div>
+      <div><span>{dailyLabel}</span><strong>{number(dailyTokens)}</strong></div>
     </div>
     {usage?.todayTokens === null && <p className="codex-tokens-unavailable">{showingLatest ? `Today's usage pending · Showing ${latestDate}` : "Today's daily usage has not been reported"}</p>}
     {!usage && <p className="codex-tokens-unavailable">Token usage unavailable from Codex</p>}

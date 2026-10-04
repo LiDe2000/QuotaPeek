@@ -50,7 +50,7 @@ export default function OrbRail({ groups, selectedProvider, cardOpen, refreshing
     aria-label="Provider rings"
     onKeyDown={navigate}
   >
-    <button type="button" className="orb-ring is-main" aria-expanded={cardOpen} aria-label={cardOpen ? "Collapse QuotaPeek" : "Expand QuotaPeek"} title={cardOpen ? "Collapse" : "Expand QuotaPeek"} onClick={onToggleHome}>
+    <button type="button" className="orb-ring is-main" aria-expanded={cardOpen} aria-label={cardOpen ? "Collapse QuotaPeek" : "Expand QuotaPeek"} title={cardOpen ? "Collapse QuotaPeek" : "Expand QuotaPeek"} onClick={onToggleHome}>
       <img className="orb-logo" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} />
     </button>
     <div className="orb-section-divider" aria-hidden="true" />

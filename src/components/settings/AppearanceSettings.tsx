@@ -4,11 +4,11 @@ import { useStripScroll } from "../../hooks/useStripScroll";
 import "./AppearanceSettings.css";
 
 const themes: { id: Theme; name: string; description: string }[] = [
-  { id: "dark", name: "Dark", description: "纯黑底色 · 硬朗边框" },
-  { id: "light", name: "Light", description: "纯白底色 · 极简通透" },
-  { id: "dimmed", name: "Dimmed", description: "石墨中灰 · 柔和低对比" },
-  { id: "warm", name: "Warm", description: "暖米色调 · 纸张护眼" },
-  { id: "navy", name: "Navy", description: "深海蓝调 · 沉稳夜航" },
+  { id: "dark", name: "Dark", description: "Pure black · crisp borders" },
+  { id: "light", name: "Light", description: "Pure white · minimal and airy" },
+  { id: "dimmed", name: "Dimmed", description: "Graphite gray · soft contrast" },
+  { id: "warm", name: "Warm", description: "Warm paper · easy on the eyes" },
+  { id: "navy", name: "Navy", description: "Deep blue · calm and composed" },
 ];
 
 interface AppearanceSettingsProps {

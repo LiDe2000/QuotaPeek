@@ -247,10 +247,10 @@ function App() {
             <header className="window-header">
               <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><img className="app-icon" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} /><h1>QuotaPeek</h1></div>
               <div className="window-actions">
-                <button className="icon-button refresh-button" aria-label="Refresh quota" title="Refresh all accounts" disabled={accounts.length === 0 || loading || restoring} onClick={() => void refreshAll()}>
+                <button className="icon-button refresh-button" aria-label="Refresh all accounts" title="Refresh all accounts" disabled={accounts.length === 0 || loading || restoring} onClick={() => void refreshAll()}>
                   <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
                 </button>
-                <button className="icon-button" aria-label="Add account" aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
+                <button className="icon-button" aria-label="Add account" aria-expanded={popup === "add"} aria-controls="add-account" title="Add account" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
                 <button className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} title="Appearance" onClick={() => setPopup(open => open === "appearance" ? "home" : "appearance")}><Icon name="theme" /></button>
               </div>
             </header>
