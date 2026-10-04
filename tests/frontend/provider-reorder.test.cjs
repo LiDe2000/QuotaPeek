@@ -81,3 +81,9 @@ test('dragging at an overflowing edge cannot extend its own scroll range indefin
   assert.equal(h.root.scrollLeft, 80);
   h.props.onPointerCancel(h.event());
 });
+
+test('Alt+Right reorders the provider wrapper when the focused button is nested inside it', () => {
+  const h = setup('x');
+  h.props.onKeyDown({ altKey: true, key: 'ArrowRight', currentTarget: { closest: () => h.buttons[0] }, preventDefault() {}, stopPropagation() {} });
+  assert.deepEqual(h.moves, [['workbuddy', 'codex']]);
+});

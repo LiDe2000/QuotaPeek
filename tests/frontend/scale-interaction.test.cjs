@@ -28,7 +28,7 @@ function harness() {
   const context = { exports: {}, require: id => {
     if (id === 'react') return react;
     if (id === 'react/jsx-runtime') return { jsx, jsxs: jsx };
-    if (id.endsWith('useStripScroll')) return { useStripScroll() {} };
+    if (id.endsWith('CenteredCarousel')) return { default: () => null };
     if (id.endsWith('interfaceScale')) return { INTERFACE_SCALE: { min: 75, max: 150, step: 5, default: 100 } };
     if (id.endsWith('.css')) return {};
     throw new Error(id);

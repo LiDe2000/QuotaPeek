@@ -37,7 +37,7 @@ test('provider segments pair separate selection and launch buttons without nesti
     groups, selected: 'workbuddy', onSelect: () => {}, onReorder: () => {},
   }));
   assert.equal((html.match(/class="provider-open-trigger"/g) ?? []).length, 4);
-  assert.equal((html.match(/class="provider-segment /g) ?? []).length, 4);
+  assert.equal((html.match(/provider-segment provider-/g) ?? []).length, 4);
   assert.doesNotMatch(html, /<button[^>]*>(?:(?!<\/button>)[\s\S])*<button/);
 });
 

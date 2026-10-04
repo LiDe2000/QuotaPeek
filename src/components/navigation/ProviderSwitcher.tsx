@@ -1,5 +1,5 @@
 import { useProviderReorder } from "../../hooks/useProviderReorder";
-import { useStripScroll } from "../../hooks/useStripScroll";
+import CenteredCarousel from "../shared/CenteredCarousel";
 import type { Provider, ProviderGroup } from "../../lib/providers/providerGroups";
 import { providerName } from "../../lib/providers/providerGroups";
 import { providerIcon } from "../../lib/providers/providerIcons";
@@ -14,23 +14,22 @@ export default function ProviderSwitcher({ groups, selected, onSelect, onReorder
 }) {
   const reorder = useProviderReorder("x", onReorder);
   const strip = reorder.container;
-  useStripScroll(strip, '.provider-segment[data-selected="true"]', `${selected ?? ""}:${groups.length}`);
-
-  return <nav ref={strip} className="provider-switcher" aria-label="Select provider">
-    {groups.map(group => {
+  return <CenteredCarousel items={groups} selected={selected} itemKey={group => group.providerId}
+    onSelect={group => onSelect(group.selected.id)} label="Select provider" className="provider-switcher"
+    containerRef={strip} isInteracting={reorder.isPressed} renderItem={(group, slot) => {
       const { style, "data-provider": provider, "data-reordering": dragging, "data-drop-target": target, ...handlers } = reorder.itemProps(group.providerId);
-      return <div key={group.providerId} className={`provider-segment provider-${group.providerId}`} data-provider={provider}
-        data-selected={selected === group.providerId} data-reordering={dragging} data-drop-target={target} style={style}>
+      return <div {...slot} key={group.providerId} className={`${slot.className} provider-segment provider-${group.providerId}`} data-provider={provider}
+        data-selected={selected === group.providerId} data-reordering={dragging} data-drop-target={target} style={{ ...slot.style, ...style }}>
       <button type="button" {...handlers}
       title="Hold and drag to reorder"
       aria-description="Hold and drag to reorder, or use Alt+Left/Right."
       className="provider-choice"
+      tabIndex={selected === group.providerId ? 0 : -1}
       aria-pressed={selected === group.providerId} onClick={() => onSelect(group.selected.id)}>
       <img src={providerIcon(group.providerId) ?? undefined} alt="" draggable={false} />
       <span>{providerName[group.providerId]}</span>
       </button>
-      <ProviderOpenButton provider={group.providerId} disabled={launchDisabled} />
+      <ProviderOpenButton provider={group.providerId} disabled={launchDisabled} tabIndex={selected === group.providerId ? 0 : -1} />
     </div>;
-    })}
-  </nav>;
+    }} />;
 }

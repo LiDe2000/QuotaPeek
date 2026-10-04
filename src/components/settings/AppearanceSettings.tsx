@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import type { Theme } from "../../hooks/useAppearance";
-import { useStripScroll } from "../../hooks/useStripScroll";
+import CenteredCarousel from "../shared/CenteredCarousel";
 import { INTERFACE_SCALE } from "../../lib/appearance/interfaceScale";
 import "./AppearanceSettings.css";
 
@@ -22,7 +22,7 @@ interface AppearanceSettingsProps {
 }
 
 export default function AppearanceSettings({ theme, onThemeChange, scale, onScaleChange, onClose }: AppearanceSettingsProps) {
-  const themeOptions = useRef<HTMLFieldSetElement>(null);
+  const themeOptions = useRef<HTMLElement>(null);
   const [draftScale, setDraftScale] = useState(scale);
   const draft = useRef(scale);
   const pointer = useRef<number | null>(null);
@@ -44,15 +44,15 @@ export default function AppearanceSettings({ theme, onThemeChange, scale, onScal
   useEffect(() => { preview(scale); }, [scale]);
 
   useEffect(() => { themeOptions.current?.querySelector<HTMLInputElement>("input:checked")?.focus(); }, []);
-  useStripScroll(themeOptions, "input:checked", theme);
 
   return (
     <section id="appearance-settings" className="panel settings-panel" aria-labelledby="settings-title" onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
       <div className="settings-heading"><h2 id="settings-title">Appearance</h2></div>
-      <fieldset ref={themeOptions} className="theme-options"><legend className="sr-only">Color theme</legend>{themes.map(option => <label key={option.id} title={option.description}>
-        <input type="radio" name="theme" value={option.id} checked={theme === option.id} onChange={() => onThemeChange(option.id)} />
+      <CenteredCarousel items={themes} selected={theme} itemKey={option => option.id} onSelect={option => onThemeChange(option.id)}
+        containerRef={themeOptions} className="theme-options" label="Color theme" renderItem={(option, slot) => <label {...slot} key={option.id} title={option.description}>
+        <input type="radio" name="theme" value={option.id} tabIndex={theme === option.id ? 0 : -1} checked={theme === option.id} onChange={() => onThemeChange(option.id)} />
         <span className="theme-option"><span className={`theme-swatch swatch-${option.id}`} aria-hidden="true"><span /></span><span>{option.name}</span></span>
-      </label>)}</fieldset>
+      </label>} />
       <div className="scale-setting" style={{ "--scale-fill": `${position * 100}%`, "--scale-position": position } as CSSProperties}>
         <div className="scale-heading">
           <label htmlFor="interface-scale">Interface scale</label>

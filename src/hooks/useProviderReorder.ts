@@ -128,7 +128,7 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
         if (!direction) return;
         event.preventDefault(); event.stopPropagation();
         const buttons = Array.from(container.current!.querySelectorAll<HTMLButtonElement>("[data-provider]"));
-        const index = buttons.indexOf(event.currentTarget);
+        const index = buttons.indexOf((event.currentTarget.closest?.("[data-provider]") ?? event.currentTarget) as HTMLButtonElement);
         const target = buttons[index + direction]?.dataset.provider as Provider | undefined;
         if (target) latest.current.onReorder(provider, target);
       },

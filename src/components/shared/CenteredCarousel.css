@@ -1,0 +1,7 @@
+.centered-carousel { --carousel-item-width: 124px; --carousel-height: 40px; position: relative; display: flex; justify-content: center; gap: var(--space-xs); min-width: 0; padding: 4px; overflow: clip; }
+.centered-carousel > .centered-carousel-item { flex: 0 1 var(--carousel-item-width); min-width: 0; }
+.centered-carousel[data-looping="true"] { height: var(--carousel-height); box-sizing: content-box; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); }
+.centered-carousel[data-looping="true"] > .centered-carousel-item { position: absolute; top: 4px; width: var(--carousel-item-width); left: calc(50% - var(--carousel-item-width) / 2 + var(--carousel-offset) * (var(--carousel-item-width) + var(--space-xs))); opacity: 0.7; transition: left 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms; }
+.centered-carousel[data-looping="true"] > [data-offset="0"], .centered-carousel-item:hover, .centered-carousel-item:focus-within { opacity: 1; }
+.centered-carousel[data-looping="true"] > [data-wrap="true"] { transition: none; }
+@media (prefers-reduced-motion: reduce) { .centered-carousel[data-looping="true"] > .centered-carousel-item { transition: none; } }
