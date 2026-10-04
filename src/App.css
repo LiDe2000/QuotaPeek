@@ -58,6 +58,8 @@
 .provider-choice, .orb-ring[data-provider] { touch-action: none; user-select: none; }
 [data-reordering="true"] { z-index: 2; cursor: grabbing; transition: none; outline: 2px solid var(--color-accent); outline-offset: -2px; opacity: 0.85; }
 [data-drop-target="true"] { outline: 2px dashed var(--color-accent); outline-offset: -2px; }
+[data-sort-preview="true"]:not([data-reordering="true"]) { transition: transform 180ms var(--ease-page); }
+@media (prefers-reduced-motion: reduce) { [data-sort-preview="true"]:not([data-reordering="true"]) { transition: none; } }
 .account-switcher { position: relative; z-index: 1; display: flex; min-width: 0; margin-bottom: calc(-1 * var(--space-small) - 1px); }
 .account-choices { display: flex; align-items: flex-end; gap: 5px; flex: 1; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; padding: 3px 0 0; }
 .account-choices::-webkit-scrollbar { display: none; }

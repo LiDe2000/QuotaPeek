@@ -87,3 +87,26 @@ test('Alt+Right reorders the provider wrapper when the focused button is nested 
   h.props.onKeyDown({ altKey: true, key: 'ArrowRight', currentTarget: { closest: () => h.buttons[0] }, preventDefault() {}, stopPropagation() {} });
   assert.deepEqual(h.moves, [['workbuddy', 'codex']]);
 });
+
+test('neighbors make room before release in both axes, then cancellation restores the order', () => {
+  for (const axis of ['x', 'y']) {
+    const h = setup(axis);
+    h.props.onPointerDown(h.event()); h.hold();
+    h.props.onPointerMove(axis === 'x' ? h.event(200, 25) : h.event(40, 125));
+    const tasks = [...h.frames.values()]; h.frames.clear(); tasks.forEach(fn => fn());
+    assert.equal(h.state().shifts.codex, axis === 'x' ? -80 : -50);
+    assert.equal(h.state().shifts.deepseek, axis === 'x' ? -80 : -50);
+    assert.deepEqual(h.moves, [], 'preview must not save an order');
+    h.props.onPointerCancel();
+    assert.equal(h.state(), null); assert.deepEqual(h.moves, []);
+  }
+});
+
+test('circular dragging across the visual seam commits the previewed neighbors', () => {
+  const h = setup('x');
+  h.root.dataset = { looping: 'true' };
+  h.buttons[0].offsetLeft = 80; h.buttons[1].offsetLeft = 160; h.buttons[2].offsetLeft = 0;
+  h.props.onPointerDown(h.event(120, 25)); h.hold();
+  h.props.onPointerUp(h.event(40, 25));
+  assert.deepEqual(h.moves, [['workbuddy', 'codex']]);
+});

@@ -17,9 +17,9 @@ export default function ProviderSwitcher({ groups, selected, onSelect, onReorder
   return <CenteredCarousel items={groups} selected={selected} itemKey={group => group.providerId}
     onSelect={group => onSelect(group.selected.id)} label="Select provider" className="provider-switcher"
     containerRef={strip} isInteracting={reorder.isPressed} renderItem={(group, slot) => {
-      const { style, "data-provider": provider, "data-reordering": dragging, "data-drop-target": target, ...handlers } = reorder.itemProps(group.providerId);
+      const { style, "data-provider": provider, "data-reordering": dragging, "data-drop-target": target, "data-sort-preview": sorting, ...handlers } = reorder.itemProps(group.providerId);
       return <div {...slot} key={group.providerId} className={`${slot.className} provider-segment provider-${group.providerId}`} data-provider={provider}
-        data-selected={selected === group.providerId} data-reordering={dragging} data-drop-target={target} style={{ ...slot.style, ...style }}>
+        data-selected={selected === group.providerId} data-reordering={dragging} data-drop-target={target} data-sort-preview={sorting} style={{ ...slot.style, ...style }}>
       <button type="button" {...handlers}
       title="Hold and drag to reorder"
       aria-description="Hold and drag to reorder, or use Alt+Left/Right."

@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent, MouseEvent, KeyboardEvent } from "react";
 import type { Provider } from "../lib/providers/providerGroups";
 
-type Drag = { source: Provider; target: Provider | null; delta: number };
+type Slot = { provider: Provider; position: number; size: number };
+type Drag = { source: Provider; target: Provider | null; delta: number; shifts: Partial<Record<Provider, number>> };
 type Gesture = {
   id: number; source: Provider; button: HTMLElement; start: number; point: number; cross: number;
   scroll: number; maxScroll: number; x: number; y: number; active: boolean;
+  slots: Slot[]; order: Provider[]; circular: boolean;
 };
 
 /** Both provider surfaces use the same long press, drop and cancellation rules. */
@@ -40,11 +42,21 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
     }
     const scroll = axis === "x" ? root.scrollLeft : root.scrollTop;
     let target: Provider | null = null, distance = Infinity;
-    if (inside) for (const button of root.querySelectorAll<HTMLElement>("[data-provider]")) {
-      const center = low + ((axis === "x" ? button.offsetLeft + button.offsetWidth / 2 : button.offsetTop + button.offsetHeight / 2) - scroll) * zoom;
-      if (Math.abs(center - g.point) < distance) { distance = Math.abs(center - g.point); target = button.dataset.provider as Provider; }
+    if (inside) for (const slot of g.slots) {
+      // Hit-test the original slots, so animated neighbors cannot cause oscillation.
+      const center = low + (slot.position + slot.size / 2 - scroll) * zoom;
+      if (Math.abs(center - g.point) < distance) { distance = Math.abs(center - g.point); target = slot.provider; }
     }
-    const next = { source: g.source, target, delta: (g.point - g.start) / zoom + scroll - g.scroll };
+    const shifts: Partial<Record<Provider, number>> = {};
+    const from = g.slots.findIndex(slot => slot.provider === g.source);
+    const to = g.slots.findIndex(slot => slot.provider === target);
+    if (from >= 0 && to >= 0 && from !== to) {
+      const direction = to > from ? 1 : -1;
+      for (let index = from + direction; direction > 0 ? index <= to : index >= to; index += direction) {
+        shifts[g.slots[index].provider] = g.slots[index - direction].position - g.slots[index].position;
+      }
+    }
+    const next = { source: g.source, target, shifts, delta: (g.point - g.start) / zoom + scroll - g.scroll };
     currentDrag.current = next;
     setDrag(previous => previous?.target === next.target && previous.delta === next.delta ? previous : next);
     frame.current = requestAnimationFrame(update);
@@ -59,7 +71,20 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
     gesture.current = null; currentDrag.current = null;
     if (g?.button.hasPointerCapture(g.id)) g.button.releasePointerCapture(g.id);
     setDrag(null);
-    if (commit && g?.active && result?.target && result.source !== result.target) latest.current.onReorder(result.source, result.target);
+    if (commit && g?.active && result?.target && result.source !== result.target) {
+      let target = result.target;
+      if (g.circular) {
+        // Visual order can cross the carousel seam. Insert before the preview's
+        // next neighbor rather than treating a cyclic move as a list rotation.
+        const visual = g.slots.map(slot => slot.provider);
+        const from = visual.indexOf(result.source), to = visual.indexOf(target);
+        visual.splice(from, 1); visual.splice(to, 0, result.source);
+        const after = visual[(to + 1) % visual.length];
+        const sourceIndex = g.order.indexOf(result.source), afterIndex = g.order.indexOf(after);
+        target = g.order[afterIndex - (sourceIndex < afterIndex ? 1 : 0)];
+      }
+      if (target !== result.source) latest.current.onReorder(result.source, target);
+    }
   }
 
   useEffect(() => {
@@ -79,11 +104,18 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
       point: axis === "x" ? event.clientX : event.clientY, cross: axis === "x" ? event.clientY : event.clientX,
       scroll: axis === "x" ? root.scrollLeft : root.scrollTop,
       maxScroll: axis === "x" ? root.scrollWidth - root.clientWidth : root.scrollHeight - root.clientHeight,
-      x: event.clientX, y: event.clientY, active: false };
+      x: event.clientX, y: event.clientY, active: false, slots: [], order: [], circular: root.dataset?.looping === "true" };
     event.currentTarget.setPointerCapture(event.pointerId);
     timer.current = setTimeout(() => {
       timer.current = null;
       if (!gesture.current) return;
+      const slots = Array.from(root.querySelectorAll<HTMLElement>("[data-provider]")).map(item => ({
+        provider: item.dataset.provider as Provider,
+        position: axis === "x" ? item.offsetLeft : item.offsetTop,
+        size: axis === "x" ? item.offsetWidth : item.offsetHeight,
+      }));
+      gesture.current.order = slots.map(slot => slot.provider);
+      gesture.current.slots = slots.sort((a, b) => a.position - b.position);
       gesture.current.active = true;
       blockedClick.current = true;
       update();
@@ -97,7 +129,10 @@ export function useProviderReorder(axis: "x" | "y", onReorder: (source: Provider
       "data-provider": provider,
       "data-reordering": drag?.source === provider || undefined,
       "data-drop-target": drag?.target === provider && drag.source !== provider || undefined,
-      style: drag?.source === provider ? { transform: `translate${axis.toUpperCase()}(${drag.delta}px) scale(1.06)` } as CSSProperties : undefined,
+      style: drag?.source === provider
+        ? { transform: `translate${axis.toUpperCase()}(${drag.delta}px) scale(1.06)`, transition: "none" } as CSSProperties
+        : drag ? { transform: `translate${axis.toUpperCase()}(${drag.shifts[provider] ?? 0}px)` } as CSSProperties : undefined,
+      "data-sort-preview": !!drag || undefined,
       onPointerDown: (event: PointerEvent<HTMLButtonElement>) => pointerDown(event, provider),
       onPointerMove: (event: PointerEvent<HTMLButtonElement>) => {
         const g = gesture.current;
