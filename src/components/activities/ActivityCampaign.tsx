@@ -7,7 +7,7 @@ import glmAvatar from "../../assets/models/glm/avatar.png";
 const accountAvatars = { workbuddy: workbuddyAvatar, zcode: glmAvatar };
 
 const statusLabel: Record<ActivityStatus, string> = {
-  unknown: "Status unknown", available: "Not claimed", claiming: "Claiming…", claimed: "Claimed",
+  unknown: "Status unknown", available: "Available to claim", claiming: "Claiming…", claimed: "Claimed",
   verification: "Verification needed", failed: "Failed", pending: "Unconfirmed",
 };
 
@@ -18,7 +18,7 @@ export default function ActivityCampaign({ activity, accounts, claim, batchRunni
   batchRunning: boolean;
 }) {
   return <section aria-label={activity.title} className="activity-campaign">
-    <header className="activity-campaign-header"><h3 title={[activity.reward, activity.description].filter(Boolean).join(" · ")}>{activity.title}</h3></header>
+    <header className="activity-campaign-header"><h3 title={[activity.reward, activity.description].filter(Boolean).join("\n")}>{activity.title}</h3></header>
     <ul className="activity-accounts">
       {activity.entries.map(entry => {
         const account = accounts.find(item => item.id === entry.accountId);
@@ -35,7 +35,7 @@ export default function ActivityCampaign({ activity, accounts, claim, batchRunni
             <span aria-hidden="true" />
           </span>
           <button type="button" className={available ? "activity-claim" : "activity-row-action"} disabled={!available || batchRunning}
-            title={explanation} aria-label={`${claimed ? "Claimed" : "Claim"} rewards for ${name}`}
+            title={claimed ? undefined : available ? `Claim rewards for ${name}` : explanation} aria-label={`${claimed ? "Claimed" : "Claim"} rewards for ${name}`}
             onClick={() => void claim(activity.id, entry.accountId)}>
             {claimed ? "Claimed" : entry.status === "claiming" ? "Claiming…" : "Claim"}
           </button>

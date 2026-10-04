@@ -36,7 +36,7 @@ export default function ActivityPanel({ accounts, controller, onClose }: {
     {refreshing && <p className="activity-preview-notice" role="status">Checking activities…</p>}
     {message && <p className="activity-feedback" role="status">{message}</p>}
     <div className="activity-controls">
-      {controller.configSource && <span className="activity-config-source" title={controller.configSource === "server" ? "Server configuration" : "Local configuration"}>
+      {controller.configSource && <span className="activity-config-source">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
           <rect x="4" y="3" width="16" height="7" rx="2" />
           <rect x="4" y="14" width="16" height="7" rx="2" />
@@ -45,7 +45,7 @@ export default function ActivityPanel({ accounts, controller, onClose }: {
         <span>{controller.configSource === "server" ? "Server configuration" : "Local configuration"}</span>
       </span>}
       <div className="activities-toolbar">
-        <button type="button" className="activity-bulk" aria-label="Claim all available rewards across all providers" title="Claim all available rewards across all providers" disabled={!available || batchRunning || claimRunning || refreshing} onClick={() => void claimAll()}>
+        <button type="button" className="activity-bulk" aria-label="Claim all available rewards across all providers" title="Claim all available rewards" disabled={!available || batchRunning || claimRunning || refreshing} onClick={() => void claimAll()}>
           {batchRunning ? "Claiming…" : "Claim all"}
         </button>
         <button type="button" ref={back} className="activities-back" onClick={onClose} aria-label="Back to accounts" title="Back to accounts"><Chevron /></button>
@@ -74,7 +74,7 @@ export default function ActivityPanel({ accounts, controller, onClose }: {
             claim={claim} batchRunning={batchRunning} />)}
         </div>
       </article>}
-      {activities.length === 0 && <div className="activities-empty"><span aria-hidden="true">✦</span><strong>No activities to show</strong><p>Rewards for your supported accounts will appear here.</p></div>}
+      {!refreshing && activities.length === 0 && <div className="activities-empty"><span aria-hidden="true">✦</span><strong>No activities to show</strong><p>Rewards for your supported accounts will appear here.</p></div>}
     </div>
     </div>
     {demo && <p className="activity-preview-notice activity-preview-footer">Preview · No real claims</p>}

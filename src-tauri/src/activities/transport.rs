@@ -64,7 +64,7 @@ pub async fn load(source: &str, path: &Path) -> Loaded {
             .timeout(Duration::from_secs(5))
             .send()
             .await
-            .map_err(|_| "Configuration service is unavailable.")?;
+            .map_err(|_| "Configuration service is unreachable.")?;
         if !response.status().is_success() {
             let mut endpoint = response.url().clone();
             endpoint.set_query(None);
@@ -91,10 +91,10 @@ pub async fn load(source: &str, path: &Path) -> Loaded {
     let local = (|| {
         let mut bytes = Vec::new();
         std::fs::File::open(path)
-            .map_err(|_| "No readable activities.json beside the application.")?
+            .map_err(|_| "Local activities.json is missing or unreadable.")?
             .take((LIMIT + 1) as u64)
             .read_to_end(&mut bytes)
-            .map_err(|_| "Could not read activities.json.")?;
+            .map_err(|_| "Local activities.json is unreadable.")?;
         catalog::parse(&bytes)
     })();
     match local {
@@ -112,7 +112,7 @@ pub async fn load(source: &str, path: &Path) -> Loaded {
             catalog: None,
             source: None,
             notice: Some(format!(
-                "No usable activity configuration. {remote_error} {error}"
+                "Activity configuration is unavailable.\n{remote_error}\n{error}"
             )),
             session: String::new(),
         },

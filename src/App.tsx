@@ -265,14 +265,14 @@ function App() {
             <header className="window-header">
               <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><img className="app-icon" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} /><h1>QuotaPeek</h1></div>
               <div className="window-actions">
-                <button className="icon-button refresh-button" aria-label={popup === "activities" ? "Refresh activities" : "Refresh quota"} title={popup === "activities" ? "Refresh activities and claim status" : "Refresh all accounts"}
+                <button className="icon-button refresh-button" aria-label={popup === "activities" ? "Refresh activities" : "Refresh quota"} title={popup === "activities" ? "Refresh activities and status" : "Refresh all accounts"}
                   disabled={popup === "activities" ? activities.refreshing || activities.batchRunning || activities.claimRunning : activityPreview || accounts.length === 0 || loading || restoring}
                   onClick={() => void (popup === "activities" ? activities.refresh() : refreshAll())}>
                   <span className={(popup === "activities" ? activities.refreshing : loading) ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
                 </button>
                 <button className="icon-button" aria-label="Add account" disabled={activityPreview} aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
                 <button className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} title="Appearance" onClick={() => setPopup(open => open === "appearance" ? "home" : "appearance")}><Icon name="theme" /></button>
-                <button type="button" className="icon-button activities-trigger" aria-label={`Activities${readyRewards ? ` · ${readyRewards} rewards ready to claim` : ""}`} aria-expanded={popup === "activities"} aria-controls="activities-panel" title="Activities" onClick={() => { preview.hide(); setPopup(open => open === "activities" ? "home" : "activities"); }}>
+                <button type="button" className="icon-button activities-trigger" aria-label={`Activities${readyRewards ? ` · ${readyRewards} rewards ready to claim` : ""}`} aria-expanded={popup === "activities"} aria-controls="activities-panel" title={readyRewards ? `Activities · ${readyRewards} ${readyRewards === 1 ? "reward" : "rewards"} available` : "Activities"} onClick={() => { preview.hide(); setPopup(open => open === "activities" ? "home" : "activities"); }}>
                   <Icon name="gift" />
                   {readyRewards > 0 && <span className="activities-trigger-count" aria-hidden="true">{readyRewards}</span>}
                 </button>
