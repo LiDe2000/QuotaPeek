@@ -58,6 +58,7 @@ pub fn run() {
             storage::commands::storage_save_cache,
             storage::commands::storage_remove_account,
             desktop::bounds::fit_window_bounds,
+            desktop::provider_apps::open_provider_app,
             codex::query_codex_quota,
             workbuddy::workbuddy_list_accounts,
             workbuddy::workbuddy_cancel_login,

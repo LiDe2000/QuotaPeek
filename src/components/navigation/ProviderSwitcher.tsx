@@ -5,11 +5,12 @@ import { providerName } from "../../lib/providers/providerGroups";
 import { providerIcon } from "../../lib/providers/providerIcons";
 import ProviderOpenButton from "./ProviderOpenButton";
 
-export default function ProviderSwitcher({ groups, selected, onSelect, onReorder }: {
+export default function ProviderSwitcher({ groups, selected, onSelect, onReorder, launchDisabled = false }: {
   groups: readonly ProviderGroup[];
   selected?: Provider;
   onSelect: (accountId: string) => void;
   onReorder: (source: Provider, target: Provider) => void;
+  launchDisabled?: boolean;
 }) {
   const reorder = useProviderReorder("x", onReorder);
   const strip = reorder.container;
@@ -28,7 +29,7 @@ export default function ProviderSwitcher({ groups, selected, onSelect, onReorder
       <img src={providerIcon(group.providerId) ?? undefined} alt="" draggable={false} />
       <span>{providerName[group.providerId]}</span>
       </button>
-      <ProviderOpenButton provider={group.providerId} />
+      <ProviderOpenButton provider={group.providerId} disabled={launchDisabled} />
     </div>;
     })}
   </nav>;

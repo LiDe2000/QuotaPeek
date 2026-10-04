@@ -20,9 +20,14 @@ test('each provider launcher has an accessible target', () => {
     assert.match(html, /class="provider-open-trigger"/);
     assert.match(html, /aria-label="Open /);
     assert.match(html, /class="ui-icon"/);
-    assert.match(html, /disabled=""/, 'the interface placeholder cannot launch anything yet');
+    assert.doesNotMatch(html, /disabled=""/, 'launching is available outside sample previews');
     if (providerId === 'deepseek') assert.match(html, /Open DeepSeek Harness/);
   }
+});
+
+test('sample previews cannot launch real applications', () => {
+  const html = renderToStaticMarkup(React.createElement(ProviderOpenButton, { provider: 'codex', disabled: true }));
+  assert.match(html, /disabled=""/);
 });
 
 test('provider segments pair separate selection and launch buttons without nesting buttons', () => {

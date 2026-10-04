@@ -34,6 +34,7 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 
 - View quotas or balances for Codex, WorkBuddy, ZCode, and DeepSeek.
 - Switch between accounts grouped by provider and save account selections and provider order.
+- Open a provider from the arrow next to its name: on Windows, launch the installed desktop app first (DeepSeek Harness for DeepSeek), then use the official web page if unavailable. Codex falls back to ChatGPT, DeepSeek to chat, WorkBuddy to its web workspace, and ZCode to downloads. This uses the target app's current login; it does not switch accounts. Other platforms use the web page.
 - Hover to preview cached data, click to refresh, or refresh all accounts.
 - Keep the last result on query failure and show the error and last successful update time.
 - Adapt card height and expansion direction, with three themes and system tray controls.
