@@ -10,7 +10,7 @@
 //! the browser opens.
 //!
 //! Safety rails, because this route is undocumented and rate sensitive:
-//! - read-only GETs only; no plan claims, no activation, no API-key creation
+//! - quota and activity preview use read-only GETs; captcha claims remain in the official app
 //! - the request carries the client's own fingerprint headers, including the device
 //!   identity the ZCode client already uses on this machine, so it does not look like
 //!   an unfamiliar device
@@ -591,6 +591,34 @@ fn os_category() -> &'static str {
 /// environment-derived value is preferred over a guessed one.
 fn os_version() -> String {
     std::env::var("OS").ok().filter(|value| !value.trim().is_empty()).unwrap_or_else(|| std::env::consts::OS.to_owned())
+}
+
+pub(crate) fn activity_query_parameters(query: &mut std::collections::BTreeMap<String, String>) {
+    query.insert("app_version".into(), APP_VERSION.into());
+    query.insert("platform".into(), format!("{}-{}", platform_name(), arch_name()));
+}
+
+/// Credentials stay inside Rust and may be used only by the validated preview endpoint.
+pub(crate) async fn activity_headers(app: &tauri::AppHandle, id: &str, regions: &[String]) -> Result<reqwest::header::HeaderMap, String> {
+    let state = app.state::<ZcodeState>();
+    let _guard = state.lock.lock().await;
+    let auth = {
+        let _storage = state.storage.lock().await;
+        load_auth(app, Some(id)).map_err(|e| e.message)?.ok_or("Connect this ZCode account first.")?
+    };
+    if auth.jwt().is_empty() { return Err("Reconnect this ZCode account.".into()); }
+    if !regions.is_empty() && !regions.iter().any(|r| r == region_of(auth.site())) {
+        return Err("This ZCode activity does not support the account region.".into());
+    }
+    let device = match home_dir(app) {
+        Some(home) => device_id(app, &home), None => own_device_id(app),
+    }.map_err(|e| e.message)?;
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("authorization", format!("Bearer {}", auth.jwt()).parse().map_err(|_| "Invalid saved activity authorization.")?);
+    headers.insert("x-device-mid", device.parse().map_err(|_| "Invalid local device identity.")?);
+    headers.insert("x-zcode-app-version", APP_VERSION.parse().map_err(|_| "Invalid client version.")?);
+    headers.insert("x-platform", format!("{}-{}", platform_name(), arch_name()).parse().map_err(|_| "Invalid client platform.")?);
+    Ok(headers)
 }
 
 #[cfg(test)]

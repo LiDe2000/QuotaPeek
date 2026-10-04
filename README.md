@@ -185,6 +185,7 @@ The detailed guides are currently in Chinese.
 | Document | Contents |
 | --- | --- |
 | [Development guide](docs/development.md) | Directory responsibilities, state flows, window implementation, testing, and extensions |
+| [Activity configuration](docs/activity-service.md) | Server-first configuration, local fallback, on-device execution, and mock testing |
 | [Data storage](docs/storage.md) | Data paths, credential protection, database upgrades, and portable verification |
 | [Troubleshooting](docs/troubleshooting.md) | Runtime, editor, build, and rendering issues |
 

@@ -1,6 +1,33 @@
 use super::*;
 use serde_json::json;
 
+#[test]
+fn activity_service_url_survives_reopen() {
+    let directory = temp_root();
+    let path = directory.join("quotapeek.db");
+    {
+        let db = Database::open(&path).unwrap();
+        db.save_settings(
+            &[
+                (
+                    "quotapeek-activity-service-url".into(),
+                    "https://activities.example/v1/activities".into(),
+                ),
+            ]
+            .into(),
+        )
+        .unwrap();
+    }
+    let db = Database::open(&path).unwrap();
+    let state = db.load_state().unwrap();
+    assert_eq!(
+        state.settings["quotapeek-activity-service-url"],
+        "https://activities.example/v1/activities"
+    );
+    drop(db);
+    std::fs::remove_dir_all(directory).unwrap();
+}
+
 fn temp_root() -> PathBuf {
     std::env::temp_dir().join(format!("quotapeek-sqlite-{}", uuid::Uuid::new_v4()))
 }

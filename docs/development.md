@@ -153,6 +153,8 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 真实服务测试默认跳过，按需单独执行：
 
+活动功能使用独立的配置服务和模拟官方服务进行本机联调，步骤见 [活动测试](../tests/activity_mock/README.md)。配置与凭据流向见 [活动协议](activity-service.md)。
+
 ```sh
 # 需本机 Codex 已使用 ChatGPT 登录及网络可用
 cargo test --manifest-path src-tauri/Cargo.toml live_codex_query -- --ignored --nocapture

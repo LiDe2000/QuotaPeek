@@ -20,16 +20,22 @@ import Icon from "./components/shared/Icon";
 import { formatRefreshTime } from "./lib/format/refreshTime";
 import { storage, saveSettings } from "./services/storage";
 import { useStorageStatus } from "./hooks/useStorageStatus";
+import { useActivities } from "./hooks/useActivities";
+import ActivityPanel from "./components/activities/ActivityPanel";
+import { activityPreviewAccounts } from "./lib/activities/preview";
+import { claimableEntries } from "./lib/activities/activityState";
 import "./App.css";
 
-type Popup = null | "home" | "add" | "appearance";
+type Popup = null | "home" | "add" | "appearance" | "activities";
 function readSelected(): string | null {
   return storage.getSetting("quotapeek-selected-account");
 }
 
 function App() {
   const desktop = isTauri();
-  const { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect, removeAccount } = useAccounts();
+  const activityPreview = import.meta.env.DEV && (import.meta.env.VITE_ACTIVITY_PREVIEW === "1" || new URLSearchParams(window.location.search).get("preview") === "activities");
+  const { accounts: connectedAccounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAccount, refreshAll, connect, removeAccount } = useAccounts();
+  const accounts = activityPreview ? activityPreviewAccounts : connectedAccounts;
   const [selectedId, setSelectedId] = useState<string | null>(readSelected);
   const [providerSelection, setProviderSelection] = useState<ProviderSelection>(() => {
     return readProviderSelection(storage.getSetting(PROVIDER_SELECTION_KEY));
@@ -37,7 +43,9 @@ function App() {
   const { theme, setTheme } = useAppearance();
   const [providerOrder, setProviderOrder] = useState(() => readProviderOrder(storage.getSetting(PROVIDER_ORDER_KEY)));
   const storageError = useStorageStatus();
-  const [popup, setPopup] = useState<Popup>(null);
+  const [popup, setPopup] = useState<Popup>(activityPreview ? "activities" : null);
+  const activities = useActivities(accounts, activityPreview, popup === "activities", refreshAccount);
+  const readyRewards = claimableEntries(activities.activities).length;
   const preview = useHoverPreview();
   const drag = useRef<{ x: number; y: number } | null>(null);
   const body = useRef<HTMLDivElement>(null);
@@ -47,7 +55,7 @@ function App() {
   function reorderProviders(source: Provider, target: Provider) {
     const next = moveProvider(groups.map(group => group.providerId), source, target);
     setProviderOrder(next);
-    saveSettings({ [PROVIDER_ORDER_KEY]: JSON.stringify(next) });
+    if (!activityPreview) saveSettings({ [PROVIDER_ORDER_KEY]: JSON.stringify(next) });
   }
   const currentGroup = groups.find(group => group.providerId === currentAccount?.providerId);
   const groupAccounts = currentGroup?.accounts ?? [];
@@ -84,10 +92,20 @@ function App() {
     }
   }, [currentAccount, selectedId]);
   useEffect(() => {
+    if (activityPreview) return;
     const patch: Record<string, string> = { [PROVIDER_SELECTION_KEY]: JSON.stringify(providerSelection) };
     patch["quotapeek-selected-account"] = selectedId ?? "";
     saveSettings(patch);
-  }, [selectedId, providerSelection]);
+  }, [selectedId, providerSelection, activityPreview]);
+
+  useEffect(() => {
+    if (popup !== "activities") return;
+    function closeActivities(event: globalThis.KeyboardEvent) {
+      if (event.key === "Escape") { setPopup("home"); requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>(".activities-trigger")?.focus()); }
+    }
+    window.addEventListener("keydown", closeActivities);
+    return () => window.removeEventListener("keydown", closeActivities);
+  }, [popup]);
 
   useEffect(() => {
     if (popup && panel.current) panel.current.scrollTop = 0;
@@ -204,7 +222,7 @@ function App() {
   function renderCard(account: Account, previewCard = false) {
     const status = statuses[account.id];
     return <AccountCard account={account} active stale={!!status?.error} loading={!!status?.loading} preview={previewCard}
-      removalDisabled={restoring} onRemove={() => removeCurrentAccount(account.id)} />;
+      removalDisabled={restoring} onRemove={activityPreview ? undefined : () => removeCurrentAccount(account.id)} />;
   }
   const currentStatus = currentAccount ? statuses[currentAccount.id] : undefined;
   const fetchedAt = currentStatus?.lastSuccess ?? currentAccount?.fetchedAt;
@@ -221,7 +239,7 @@ function App() {
             onToggleHome={() => { preview.hide(); setPopup(open => open ? null : "home"); }}
             onHover={provider => { if (!popup) preview.enter(provider); }}
             onLeave={preview.leave}
-            onRefresh={id => { const account = accounts.find(account => account.id === id); if (account) void manualRefresh(account.providerId, id); }}
+            onRefresh={id => { const account = accounts.find(account => account.id === id); if (account && !activityPreview) void manualRefresh(account.providerId, id); else if (account) { selectAccount(id); setPopup("home"); } }}
             onAddAccount={() => { preview.hide(); setPopup("add"); }} />
           {hoveredAccount && !popup && <div className="orb-float" aria-label={`${accountLabel(hoveredAccount) ?? hoveredAccount.providerId} quota preview`}
             onMouseEnter={preview.keep} onMouseLeave={preview.leave} onFocus={preview.keep} onBlur={event => {
@@ -247,22 +265,31 @@ function App() {
             <header className="window-header">
               <div className="brand" onMouseDown={event => { if (desktop && event.button === 0) void getCurrentWindow().startDragging(); }}><img className="app-icon" src={`${import.meta.env.BASE_URL}quotapeek.svg`} alt="" draggable={false} /><h1>QuotaPeek</h1></div>
               <div className="window-actions">
-                <button className="icon-button refresh-button" aria-label="Refresh quota" title="Refresh all accounts" disabled={accounts.length === 0 || loading || restoring} onClick={() => void refreshAll()}>
-                  <span className={loading ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
+                <button className="icon-button refresh-button" aria-label={popup === "activities" ? "Refresh activities" : "Refresh quota"} title={popup === "activities" ? "Refresh activities and claim status" : "Refresh all accounts"}
+                  disabled={popup === "activities" ? activities.refreshing || activities.batchRunning || activities.claimRunning : activityPreview || accounts.length === 0 || loading || restoring}
+                  onClick={() => void (popup === "activities" ? activities.refresh() : refreshAll())}>
+                  <span className={(popup === "activities" ? activities.refreshing : loading) ? "refresh-icon is-refreshing" : "refresh-icon"}><Icon name="refresh" /></span>
                 </button>
-                <button className="icon-button" aria-label="Add account" aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
+                <button className="icon-button" aria-label="Add account" disabled={activityPreview} aria-expanded={popup === "add"} aria-controls="add-account" title="Accounts" onClick={() => setPopup(open => open === "add" ? "home" : "add")}><Icon name="account-login" /></button>
                 <button className="icon-button" aria-label="Appearance settings" aria-expanded={settingsOpen} title="Appearance" onClick={() => setPopup(open => open === "appearance" ? "home" : "appearance")}><Icon name="theme" /></button>
+                <button type="button" className="icon-button activities-trigger" aria-label={`Activities${readyRewards ? ` · ${readyRewards} rewards ready to claim` : ""}`} aria-expanded={popup === "activities"} aria-controls="activities-panel" title="Activities" onClick={() => { preview.hide(); setPopup(open => open === "activities" ? "home" : "activities"); }}>
+                  <Icon name="gift" />
+                  {readyRewards > 0 && <span className="activities-trigger-count" aria-hidden="true">{readyRewards}</span>}
+                </button>
               </div>
             </header>
+            {popup === "activities" && <ActivityPanel accounts={accounts} controller={activities}
+              onClose={() => { setPopup("home"); requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>(".activities-trigger")?.focus()); }} />}
+            {activityPreview && popup === "home" && <p className="activity-preview-notice">Interactive preview · Sample accounts and rewards.</p>}
             {settingsOpen && <AppearanceSettings theme={theme} onThemeChange={setTheme} onClose={() => setPopup("home")} />}
             <AddAccount hidden={popup !== "add"} codexConnected={accounts.some(account => account.providerId === "codex")}
               onConnectCodex={() => connectAccount("codex")}
               onConnectWorkbuddy={id => connectAccount("workbuddy", id)} onConnectZcode={id => connectAccount("zcode", id)}
               onConnectDeepseek={id => connectAccount("deepseek", id)}
               onClose={() => setPopup("home")} />
-            {groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} onReorder={reorderProviders} />}
-            {currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
-            {accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
+            {popup !== "activities" && groups.length > 1 && <ProviderSwitcher groups={groups} selected={currentAccount?.providerId} onSelect={selectAccount} onReorder={reorderProviders} />}
+            {popup !== "activities" && currentAccount && accountPicker(groupAccounts, currentAccount.id, "Select account")}
+            {popup !== "activities" && accounts.length > 0 && <div className="carousel" aria-label="AI accounts" onKeyDown={navigate}>
               <div className="carousel-viewport" onPointerDown={event => {
                 if (!event.isPrimary || event.button !== 0 || (event.target as Element | null)?.closest("button, a, input, select, textarea, summary")) return;
                 drag.current = { x: event.clientX, y: event.clientY };
@@ -273,7 +300,7 @@ function App() {
                 </div>)}
               </div>
             </div>}
-            <footer className="window-footer" hidden={!footer && !summary && startupErrors.length === 0}><span role="status" aria-live="polite">{footer}</span>
+            <footer className="window-footer" hidden={popup === "activities" || activityPreview || (!footer && !summary && startupErrors.length === 0)}><span role="status" aria-live="polite">{footer}</span>
               {currentStatus?.error && !!fetchedAt && <span>Last successful query {formatRefreshTime(fetchedAt)}</span>}
               {summary && <span role="status">{summary}</span>}
               {startupErrors.map(message => <span key={message}>{message}</span>)}

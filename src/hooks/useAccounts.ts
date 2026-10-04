@@ -82,6 +82,14 @@ export function useAccounts() {
     }
     return refresh(provider, accountId);
   }
+
+  async function refreshAccount(accountId: string): Promise<Account | null> {
+    // A query started before a claim may contain the old balance. Finish it,
+    // then request fresh quota without the manual-click cooldown.
+    await requests.current.get(accountId);
+    const account = accountsRef.current.find(item => item.id === accountId);
+    return account ? refresh(account.providerId, accountId) : null;
+  }
   useEffect(() => () => {
     for (const timer of noticeTimers.current.values()) window.clearTimeout(timer);
     noticeTimers.current.clear();
@@ -174,5 +182,5 @@ export function useAccounts() {
     })();
   }, []);
 
-  return { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAll, connect, removeAccount };
+  return { accounts, statuses, summary, restoring, startupErrors, manualRefresh, refreshAccount, refreshAll, connect, removeAccount };
 }

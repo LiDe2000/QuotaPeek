@@ -53,6 +53,7 @@ impl Default for WorkbuddyState {
 impl WorkbuddyState {
     fn client() -> reqwest::Client {
         reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
             .user_agent(CLIENT_UA)
             .timeout(Duration::from_secs(20))
             .build()
@@ -598,6 +599,31 @@ pub async fn workbuddy_query_quota(
     }
     let data = envelope(response).await?;
     Ok(snapshot(&data, &stored))
+}
+
+/// Used only after the activity engine validates the official destination.
+pub(crate) async fn activity_headers(app: &tauri::AppHandle, id: &str, regions: &[String]) -> Result<reqwest::header::HeaderMap, String> {
+    use tauri::Manager;
+    let state = app.state::<WorkbuddyState>();
+    let _guard = state.lock.lock().await;
+    let _storage = state.storage.lock().await;
+    let mut auth = load_auth(app, Some(id)).map_err(|e| e.message)?
+        .ok_or("Connect this WorkBuddy account first.")?;
+    // The check-in endpoints supplied and reviewed for this adapter are CN only.
+    if region_of(&auth.domain) != "cn" || !regions.is_empty() && !regions.iter().any(|r| r == "cn") {
+        return Err("This WorkBuddy activity does not support the account region.".into());
+    }
+    if auth.expires_at <= now_secs() + TOKEN_REFRESH_MARGIN && !auth.refresh_token.is_empty() {
+        refresh_access_token(&state, &mut auth).await.map_err(|e| e.message)?;
+        store_auth(app, &auth).map_err(|e| e.message)?;
+    }
+    if auth.access_token.is_empty() || auth.uid.is_empty() { return Err("Reconnect this WorkBuddy account.".into()); }
+    let mut headers = reqwest::header::HeaderMap::new();
+    for (name, value) in [("authorization", format!("Bearer {}", auth.access_token)), ("x-user-id", auth.uid),
+        ("x-domain", auth.domain), ("user-agent", CLIENT_UA.into())] {
+        headers.insert(reqwest::header::HeaderName::from_static(name), value.parse().map_err(|_| "Invalid saved activity authorization.")?);
+    }
+    Ok(headers)
 }
 
 #[cfg(test)]

@@ -1,0 +1,123 @@
+{
+  "schemaVersion": 2,
+  "revision": "official-activities-v1",
+  "activities": [
+    {
+      "id": "workbuddy-daily",
+      "providerId": "workbuddy",
+      "title": "Buddy gas station",
+      "reward": "100 credits / account",
+      "description": "Daily check-in through the official API. Reward and eligibility are determined by WorkBuddy.",
+      "enabled": true,
+      "regions": [
+        "cn"
+      ],
+      "adapterId": "workbuddy-checkin-v1",
+      "query": {
+        "request": {
+          "url": "https://copilot.tencent.com/v2/billing/meter/checkin-activity-status",
+          "method": "POST",
+          "query": {},
+          "body": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": [
+            {
+              "all": [
+                {
+                  "path": "code",
+                  "equals": 0
+                },
+                {
+                  "path": "data.today_checked_in",
+                  "equals": true
+                }
+              ],
+              "status": "claimed"
+            },
+            {
+              "all": [
+                {
+                  "path": "code",
+                  "equals": 0
+                },
+                {
+                  "path": "data.active",
+                  "equals": true
+                },
+                {
+                  "path": "data.today_checked_in",
+                  "equals": false
+                }
+              ],
+              "status": "available"
+            }
+          ]
+        }
+      },
+      "claim": {
+        "request": {
+          "url": "https://copilot.tencent.com/v2/billing/meter/daily-checkin",
+          "method": "POST",
+          "query": {},
+          "body": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": [
+            {
+              "all": [
+                {
+                  "path": "code",
+                  "equals": 10001
+                }
+              ],
+              "status": "claimed"
+            },
+            {
+              "all": [
+                {
+                  "path": "code",
+                  "equals": 0
+                }
+              ],
+              "status": "pending"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "zcode-manual-plans",
+      "providerId": "zcode",
+      "title": "ZCode plan activities",
+      "reward": "See official plan details",
+      "description": "Queries current plans, verifies locally and claims through the official API. Interactive verification falls back to the official app.",
+      "enabled": true,
+      "regions": [],
+      "adapterId": "zcode-plan-v1",
+      "query": {
+        "request": {
+          "url": "https://zcode.z.ai/api/v1/zcode-plan/billing/preview",
+          "method": "GET",
+          "query": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": []
+        }
+      },
+      "claim": {
+        "request": {
+          "url": "https://zcode.z.ai/api/v1/zcode-plan/billing/claim",
+          "method": "POST",
+          "query": {},
+          "body": {},
+          "timeoutMs": 10000
+        },
+        "response": { "rules": [] }
+      }
+    }
+  ]
+}

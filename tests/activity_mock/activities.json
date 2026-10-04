@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 2,
+  "revision": "demo-v2",
+  "activities": [
+    {
+      "id": "workbuddy-daily",
+      "providerId": "workbuddy",
+      "title": "Buddy gas station",
+      "reward": "100 credits / account",
+      "description": "Local simulation; no real rewards.",
+      "enabled": true,
+      "regions": [],
+      "adapterId": "mock-http-v1",
+      "query": {
+        "request": {
+          "url": "http://127.0.0.1:1432/mock/workbuddy/status",
+          "method": "GET",
+          "query": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": [
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "available"
+                }
+              ],
+              "status": "available"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "claimed"
+                }
+              ],
+              "status": "claimed"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "verification"
+                }
+              ],
+              "status": "verification"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "pending"
+                }
+              ],
+              "status": "pending"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "failed"
+                }
+              ],
+              "status": "failed"
+            }
+          ]
+        }
+      },
+      "claim": {
+        "request": {
+          "url": "http://127.0.0.1:1432/mock/workbuddy/claim",
+          "method": "POST",
+          "query": {},
+          "body": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": [
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "claimed"
+                }
+              ],
+              "status": "claimed"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "verification"
+                }
+              ],
+              "status": "verification"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "pending"
+                }
+              ],
+              "status": "pending"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "failed"
+                }
+              ],
+              "status": "failed"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "zcode-login",
+      "providerId": "zcode",
+      "title": "ZCode reward",
+      "reward": "100M tokens / account",
+      "description": "Local simulation; no real rewards.",
+      "enabled": true,
+      "regions": [],
+      "adapterId": "mock-http-v1",
+      "query": {
+        "request": {
+          "url": "http://127.0.0.1:1432/mock/zcode/status",
+          "method": "GET",
+          "query": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": [
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "available"
+                }
+              ],
+              "status": "available"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "claimed"
+                }
+              ],
+              "status": "claimed"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "verification"
+                }
+              ],
+              "status": "verification"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "pending"
+                }
+              ],
+              "status": "pending"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "failed"
+                }
+              ],
+              "status": "failed"
+            }
+          ]
+        }
+      },
+      "claim": {
+        "request": {
+          "url": "http://127.0.0.1:1432/mock/zcode/claim",
+          "method": "POST",
+          "query": {},
+          "body": {},
+          "timeoutMs": 5000
+        },
+        "response": {
+          "rules": [
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "claimed"
+                }
+              ],
+              "status": "claimed"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "verification"
+                }
+              ],
+              "status": "verification"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "pending"
+                }
+              ],
+              "status": "pending"
+            },
+            {
+              "all": [
+                {
+                  "path": "data.state",
+                  "equals": "failed"
+                }
+              ],
+              "status": "failed"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
