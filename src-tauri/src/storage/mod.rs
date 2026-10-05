@@ -87,6 +87,7 @@ fn migrate(conn: &mut Connection, migrations: &[&str]) -> Result<(), String> {
 
 const UI_SETTING_KEYS: &[&str] = &[
     "quotapeek-theme",
+    "quotapeek-interface-scale",
     "quotapeek-selected-account",
     "quotapeek-provider-selection-v1",
     "quotapeek-provider-order-v1",

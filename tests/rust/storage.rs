@@ -31,6 +31,24 @@ fn temp_root() -> PathBuf {
 }
 
 #[test]
+fn interface_scale_survives_reopening_database() {
+    let root = temp_root();
+    let path = root.join("quotapeek.db");
+    {
+        let db = Database::open(&path).unwrap();
+        db.save_settings(&[("quotapeek-interface-scale".into(), "120".into())].into())
+            .unwrap();
+    }
+    let db = Database::open(&path).unwrap();
+    assert_eq!(
+        db.load_state().unwrap().settings["quotapeek-interface-scale"],
+        "120"
+    );
+    drop(db);
+    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
 fn provider_order_survives_reopening_database() {
     let root = temp_root();
     let path = root.join("quotapeek.db");
