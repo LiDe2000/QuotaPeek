@@ -34,23 +34,31 @@
 
 - 集中查看 Codex、WorkBuddy、ZCode 和 DeepSeek 的额度或余额。
 - 按供应商切换多个账户，保存账户选择和平台顺序。
-- 在外观设置中调整整体界面缩放（75%–150%），同步缩放侧栏、卡片和原生窗口，自动保存；Reset 恢复 100%。
-- 点击供应商名称旁的箭头打开应用：Windows 优先启动已安装的桌面客户端（DeepSeek 对应 DeepSeek Harness），不可用时打开官方网页。Codex 后备为 ChatGPT，DeepSeek 为聊天页，WorkBuddy 为网页工作台，ZCode 为下载页。目标应用沿用自身登录状态，不自动切换账户；其他平台直接打开网页。
 - 悬停预览缓存，单击刷新，支持刷新全部账户。
 - 查询失败时保留上次结果，显示错误和最后成功时间。
-- 自适应卡片高度与左右展开方向，支持三种主题和托盘驻留。
+- 点击供应商名称旁的箭头打开应用：Windows 优先启动已安装的桌面客户端（DeepSeek 对应 DeepSeek Harness），不可用时打开官方网页。Codex 后备为 ChatGPT，DeepSeek 为聊天页，WorkBuddy 为网页工作台，ZCode 为下载页。目标应用沿用自身登录状态，不自动切换账户；其他平台直接打开网页。
+- 自适应卡片高度与左右展开方向，支持五种主题（Dark、Light、Dimmed、Warm、Navy）和托盘驻留。
+- 在外观设置中调整整体界面缩放（75%–150%），同步缩放侧栏、卡片和原生窗口，自动保存；Reset 恢复 100%。
 
 ## 界面预览
 
 <table align="center">
   <tr>
-    <td align="center" width="300">
-      <strong>向左展开</strong><br /><br />
-      <img src="docs/images/main-panel-left.png" height="280" alt="主面板向侧栏左侧展开" /><br /><br />
+    <td align="center" width="225">
+      <strong>侧栏</strong><br /><br />
+      <img src="docs/images/sidebar.png" width="67" alt="收起后的侧栏与平台额度环" /><br /><br />
     </td>
-    <td align="center" width="300">
+    <td align="center" width="225">
       <strong>向右展开</strong><br /><br />
-      <img src="docs/images/main-panel-right.png" height="280" alt="主面板向侧栏右侧展开" /><br /><br />
+      <img src="docs/images/main-panel-right.png" width="186" alt="主面板向侧栏右侧展开" /><br /><br />
+    </td>
+    <td align="center" width="225">
+      <strong>向左展开</strong><br /><br />
+      <img src="docs/images/main-panel-left.png" width="187" alt="主面板向侧栏左侧展开" /><br /><br />
+    </td>
+    <td align="center" width="225">
+      <strong>悬停预览</strong><br /><br />
+      <img src="docs/images/hover-preview.png" width="241" alt="悬停平台图标预览额度或余额" /><br /><br />
     </td>
   </tr>
 </table>
@@ -58,12 +66,16 @@
 <table align="center">
   <tr>
     <td align="center" width="300">
-      <strong>侧栏</strong><br /><br />
-      <img src="docs/images/sidebar.png" height="280" alt="收起后的侧栏与平台额度环" /><br /><br />
+      <strong>登录</strong><br /><br />
+      <img src="docs/images/login-panel.png" width="172" alt="连接账户面板与平台选择" /><br /><br />
     </td>
     <td align="center" width="300">
-      <strong>悬停预览</strong><br /><br />
-      <img src="docs/images/hover-preview.png" height="280" alt="悬停平台图标查看 DeepSeek 余额卡片" /><br /><br />
+      <strong>外观设置</strong><br /><br />
+      <img src="docs/images/appearance-panel.png" width="185" alt="主题选择与界面缩放设置" /><br /><br />
+    </td>
+    <td align="center" width="300">
+      <strong>活动领取</strong><br /><br />
+      <img src="docs/images/activities-panel.png" width="362" alt="活动面板与奖励领取状态" /><br /><br />
     </td>
   </tr>
 </table>
@@ -180,12 +192,27 @@ cargo test --manifest-path src-tauri/Cargo.toml
 
 两种构建会覆盖同一个 release exe，发布时分别收集对应产物。安装包生成还可能下载打包工具；排查见 [常见问题](docs/troubleshooting.md)。
 
+### 一键构建发布包
+
+要一次构建全部三种 Windows x64 发布产物，可双击项目根目录的 `build-release.cmd`，或运行：
+
+```powershell
+.\build-release.ps1
+```
+
+脚本读取项目版本，将便携 ZIP、NSIS `.exe` 安装包和 MSI 安装包收集到 `release/<version>/`。它会先归档便携版 exe，再构建安装版，并排除本地账户数据。同一版本的已有产物会被覆盖。运行前需满足上述 Windows 开发环境要求；缺少 JavaScript 依赖时，脚本会运行 `npm ci`。首次构建时，Tauri 可能下载安装包打包工具。
+
+使用 `.\build-release.ps1 -DryRun` 可预览构建命令而不实际构建；使用 `-OutputDirectory <path>` 可指定其他输出目录。
+
 ## 文档
+
+详细指南目前以中文提供。
 
 | 文档 | 内容 |
 | --- | --- |
 | [开发文档](docs/development.md) | 目录职责、状态流程、窗口实现、测试和扩展 |
 | [整体界面缩放设计](docs/interface-scale.md) | 滑块交互、缩放过渡与原生窗口稳定性 |
+| [活动配置](docs/activity-service.md) | 服务端配置优先、本地回退、设备端执行和模拟测试 |
 | [数据存储](docs/storage.md) | 数据位置、凭据保护、数据库升级和便携验证 |
 | [常见问题](docs/troubleshooting.md) | 运行、编辑器、构建和渲染问题 |
 

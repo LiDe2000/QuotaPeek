@@ -34,23 +34,31 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 
 - View quotas or balances for Codex, WorkBuddy, ZCode, and DeepSeek.
 - Switch between accounts grouped by provider and save account selections and provider order.
-- Open a provider from the arrow next to its name: on Windows, launch the installed desktop app first (DeepSeek Harness for DeepSeek), then use the official web page if unavailable. Codex falls back to ChatGPT, DeepSeek to chat, WorkBuddy to its web workspace, and ZCode to downloads. This uses the target app's current login; it does not switch accounts. Other platforms use the web page.
 - Hover to preview cached data, click to refresh, or refresh all accounts.
 - Keep the last result on query failure and show the error and last successful update time.
-- Adapt card height and expansion direction, with three themes and system tray controls.
+- Open a provider from the arrow next to its name: on Windows, launch the installed desktop app first (DeepSeek Harness for DeepSeek), then use the official web page if unavailable. Codex falls back to ChatGPT, DeepSeek to chat, WorkBuddy to its web workspace, and ZCode to downloads. This uses the target app's current login; it does not switch accounts. Other platforms use the web page.
+- Adapt card height and expansion direction, with five themes (Dark, Light, Dimmed, Warm, and Navy) and system tray controls.
 - Adjust the whole interface from 75% to 150% in Appearance; the saved scale applies to the sidebar, cards, and native window bounds. Reset restores 100%.
 
 ## Screenshots
 
 <table align="center">
   <tr>
-    <td align="center" width="300">
-      <strong>Expands to the left</strong><br /><br />
-      <img src="docs/images/main-panel-left.png" height="280" alt="Main panel expanded to the left of the sidebar" /><br /><br />
+    <td align="center" width="225">
+      <strong>Sidebar</strong><br /><br />
+      <img src="docs/images/sidebar.png" width="67" alt="Collapsed sidebar with provider quota rings" /><br /><br />
     </td>
-    <td align="center" width="300">
+    <td align="center" width="225">
       <strong>Expands to the right</strong><br /><br />
-      <img src="docs/images/main-panel-right.png" height="280" alt="Main panel expanded to the right of the sidebar" /><br /><br />
+      <img src="docs/images/main-panel-right.png" width="186" alt="Main panel expanded to the right of the sidebar" /><br /><br />
+    </td>
+    <td align="center" width="225">
+      <strong>Expands to the left</strong><br /><br />
+      <img src="docs/images/main-panel-left.png" width="187" alt="Main panel expanded to the left of the sidebar" /><br /><br />
+    </td>
+    <td align="center" width="225">
+      <strong>Hover preview</strong><br /><br />
+      <img src="docs/images/hover-preview.png" width="241" alt="Quota or balance preview shown on hover" /><br /><br />
     </td>
   </tr>
 </table>
@@ -58,12 +66,16 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 <table align="center">
   <tr>
     <td align="center" width="300">
-      <strong>Sidebar</strong><br /><br />
-      <img src="docs/images/sidebar.png" height="280" alt="Collapsed sidebar with provider quota rings" /><br /><br />
+      <strong>Login</strong><br /><br />
+      <img src="docs/images/login-panel.png" width="172" alt="Connect account panel with provider selection" /><br /><br />
     </td>
     <td align="center" width="300">
-      <strong>Hover preview</strong><br /><br />
-      <img src="docs/images/hover-preview.png" height="280" alt="DeepSeek balance card shown on hover" /><br /><br />
+      <strong>Appearance</strong><br /><br />
+      <img src="docs/images/appearance-panel.png" width="185" alt="Theme selection and interface scale settings" /><br /><br />
+    </td>
+    <td align="center" width="300">
+      <strong>Activities</strong><br /><br />
+      <img src="docs/images/activities-panel.png" width="362" alt="Activity panel with reward claim status" /><br /><br />
     </td>
   </tr>
 </table>
@@ -179,6 +191,8 @@ cargo test --manifest-path src-tauri/Cargo.toml
 | `npm run tauri:build:installed` | NSIS and MSI installers under `src-tauri/target/release/bundle/` with installed data paths |
 
 Both builds overwrite the same release exe. Collect each distribution's output separately before publishing. Installer generation may download additional tools; see [Troubleshooting](docs/troubleshooting.md).
+
+### Build release packages together
 
 To build all three Windows x64 release assets together, double-click `build-release.cmd` in the project root, or run:
 
