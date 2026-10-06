@@ -16,7 +16,7 @@ impl Provider {
             Self::Codex => "https://chatgpt.com/",
             Self::Workbuddy => "https://www.workbuddy.cn/app",
             Self::Zcode => "https://zcode.z.ai/",
-            Self::Deepseek => "https://chat.deepseek.com/",
+            Self::Deepseek => "https://www.deepseek.com/en/harness/",
         }
     }
 

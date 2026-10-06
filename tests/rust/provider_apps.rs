@@ -17,7 +17,7 @@ fn local_success_does_not_open_a_web_page() {
 fn missing_app_and_failed_launch_open_the_correct_fallback() {
     for (provider, expected_url) in [
         (Provider::Codex, "https://chatgpt.com/"),
-        (Provider::Deepseek, "https://chat.deepseek.com/"),
+        (Provider::Deepseek, "https://www.deepseek.com/en/harness/"),
         (Provider::Workbuddy, "https://www.workbuddy.cn/app"),
         (Provider::Zcode, "https://zcode.z.ai/"),
     ] {
