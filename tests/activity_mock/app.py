@@ -19,7 +19,7 @@ class Claim(BaseModel):
 
 
 def create_app():
-    api = FastAPI(title="QuotaPeek fake official activities", version="1.1.0")
+    api = FastAPI(title="QuotaPeek fake official activities", version="1.1.1")
     api.add_middleware(
         CORSMiddleware,
         allow_origins=["http://127.0.0.1:1420", "http://localhost:1420"],
