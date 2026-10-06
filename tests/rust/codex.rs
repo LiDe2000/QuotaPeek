@@ -2,6 +2,96 @@ use super::*;
 fn account() -> Value {
     json!({"account":{"type":"chatgpt","email":"test@example.com","planType":"plus"}})
 }
+
+fn missing_reset_details() -> Value {
+    json!({"accountId":"account-1","rateLimits":{"primary":{"usedPercent":42}},"rateLimitResetCredits":{"availableCount":2,"credits":null}})
+}
+
+#[tokio::test]
+async fn reset_retry_recovers_details_and_uses_the_fresh_count_and_quota() {
+    let fresh = json!({"accountId":"account-1","rateLimits":{"primary":{"usedPercent":45}},"rateLimitResetCredits":{"availableCount":1,"credits":[{"id":"credit-1","resetType":"codexRateLimits","status":"available","expiresAt":2000000000}]}});
+    let result = complete_reset_details(missing_reset_details(), async { Ok(fresh) }).await;
+    let result = snapshot(&account(), result).unwrap();
+    assert_eq!(
+        result.rate_limits["codex"]
+            .primary
+            .as_ref()
+            .unwrap()
+            .used_percent,
+        45.0
+    );
+    let resets = result.rate_limit_reset_credits.unwrap();
+    assert_eq!(resets.available_count, 1);
+    assert_eq!(resets.credits.unwrap()[0].id, "credit-1");
+}
+
+#[tokio::test]
+async fn reset_retry_failure_keeps_the_successful_initial_snapshot() {
+    let first = missing_reset_details();
+    let result = complete_reset_details(first.clone(), async {
+        Err(error("rate_limited", "Too many requests"))
+    })
+    .await;
+    assert_eq!(result, first);
+    assert!(snapshot(&account(), result).is_ok());
+}
+
+#[tokio::test]
+async fn reset_retry_rejects_other_accounts_and_malformed_snapshots() {
+    for fresh in [
+        json!({"accountId":"account-2","rateLimits":{},"rateLimitResetCredits":{"availableCount":0,"credits":[]}}),
+        json!({"accountId":"account-1","rateLimits":{"primary":{}},"rateLimitResetCredits":{"availableCount":0}}),
+    ] {
+        let first = missing_reset_details();
+        assert_eq!(
+            complete_reset_details(first.clone(), async { Ok(fresh) }).await,
+            first
+        );
+    }
+}
+
+#[tokio::test]
+async fn reset_retry_skips_zero_unknown_empty_complete_and_capped_details() {
+    for reset in [
+        Value::Null,
+        json!({"availableCount":0,"credits":null}),
+        json!({"availableCount":2,"credits":[]}),
+        json!({"availableCount":1,"credits":[{"id":"credit-1","resetType":"codexRateLimits","status":"available"}]}),
+        json!({"availableCount":2,"credits":[{"id":"credit-1","resetType":"codexRateLimits","status":"available"}]}),
+    ] {
+        let first = json!({"rateLimits":{},"rateLimitResetCredits":reset});
+        let result =
+            complete_reset_details(first.clone(), async { panic!("unexpected retry") }).await;
+        assert_eq!(result, first);
+    }
+}
+
+#[tokio::test]
+async fn reset_retry_accepts_zero_and_stops_even_if_details_are_still_missing() {
+    for reset in [
+        json!({"availableCount":0,"credits":[]}),
+        json!({"availableCount":1,"credits":null}),
+    ] {
+        let fresh = json!({"accountId":"account-1","rateLimits":{},"rateLimitResetCredits":reset});
+        assert_eq!(
+            complete_reset_details(missing_reset_details(), async { Ok(fresh.clone()) }).await,
+            fresh
+        );
+    }
+}
+
+#[tokio::test]
+async fn reset_retry_timeout_keeps_initial_quota_and_returns_within_its_budget() {
+    let first = missing_reset_details();
+    let result = tokio::time::timeout(
+        Duration::from_secs(7),
+        complete_reset_details(first.clone(), std::future::pending()),
+    )
+    .await
+    .expect("optional retry must not stall the quota query");
+    assert_eq!(result, first);
+}
+
 #[test]
 fn preserves_variable_windows_and_prefers_buckets() {
     let result = snapshot(&account(), json!({"rateLimits":{"primary":{"usedPercent":90}},"rateLimitsByLimitId":{"custom":{"primary":{"usedPercent":25,"windowDurationMins":15},"secondary":null}}})).unwrap();

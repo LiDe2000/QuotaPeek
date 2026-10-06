@@ -36,7 +36,7 @@ Built with React, TypeScript, and Tauri 2. Primarily targets Windows; other plat
 - Switch between accounts grouped by provider and save account selections and provider order.
 - Hover to preview cached data, click to refresh, or refresh all accounts.
 - Keep the last result on query failure and show the error and last successful update time.
-- Open a provider from the arrow next to its name: on Windows, launch the installed desktop app first (DeepSeek Harness for DeepSeek), then use the official web page if unavailable. Codex falls back to ChatGPT, DeepSeek to chat, WorkBuddy to its web workspace, and ZCode to downloads. This uses the target app's current login; it does not switch accounts. Other platforms use the web page.
+- Open a provider from the arrow next to its name: on Windows, launch the installed desktop app first (DeepSeek Harness for DeepSeek), then use the official web page if unavailable. Codex falls back to ChatGPT, DeepSeek to its Harness page, WorkBuddy to its web workspace, and ZCode to downloads. This uses the target app's current login; it does not switch accounts. Other platforms use the web page.
 - Adapt card height and expansion direction, with five themes (Dark, Light, Dimmed, Warm, and Navy) and system tray controls.
 - Adjust the whole interface from 75% to 150% in Appearance; the saved scale applies to the sidebar, cards, and native window bounds. Reset restores 100%.
 

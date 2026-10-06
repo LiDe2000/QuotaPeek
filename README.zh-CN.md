@@ -36,7 +36,7 @@
 - 按供应商切换多个账户，保存账户选择和平台顺序。
 - 悬停预览缓存，单击刷新，支持刷新全部账户。
 - 查询失败时保留上次结果，显示错误和最后成功时间。
-- 点击供应商名称旁的箭头打开应用：Windows 优先启动已安装的桌面客户端（DeepSeek 对应 DeepSeek Harness），不可用时打开官方网页。Codex 后备为 ChatGPT，DeepSeek 为聊天页，WorkBuddy 为网页工作台，ZCode 为下载页。目标应用沿用自身登录状态，不自动切换账户；其他平台直接打开网页。
+- 点击供应商名称旁的箭头打开应用：Windows 优先启动已安装的桌面客户端（DeepSeek 对应 DeepSeek Harness），不可用时打开官方网页。Codex 后备为 ChatGPT，DeepSeek 为 Harness 页面，WorkBuddy 为网页工作台，ZCode 为下载页。目标应用沿用自身登录状态，不自动切换账户；其他平台直接打开网页。
 - 自适应卡片高度与左右展开方向，支持五种主题（Dark、Light、Dimmed、Warm、Navy）和托盘驻留。
 - 在外观设置中调整整体界面缩放（75%–150%），同步缩放侧栏、卡片和原生窗口，自动保存；Reset 恢复 100%。
 
