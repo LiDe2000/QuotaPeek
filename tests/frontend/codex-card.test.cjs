@@ -59,6 +59,36 @@ test('server count stays authoritative when reset details are unavailable or cap
     assert.doesNotMatch(html, /None available/);
   }
 });
+
+test('missing reset details keep the count and offer refresh retry', () => {
+  for (const credits of [null, undefined]) {
+    const html = renderResets({ availableCount: 2, credits });
+    assert.match(html, /2 available/);
+    assert.match(html, /temporarily unavailable/);
+    assert.match(html, /Refresh to retry/);
+    assert.doesNotMatch(html, /No current reset details reported/);
+  }
+});
+
+test('fetched empty or expired details are not reported as a failed request', () => {
+  for (const credits of [[], [{ id: 'expired', status: 'available', resetType: 'codexRateLimits', expiresAt: 1 }]]) {
+    const html = renderResets({ availableCount: 2, credits });
+    assert.match(html, /2 available/);
+    assert.match(html, /No current reset details reported/);
+    assert.doesNotMatch(html, /temporarily unavailable|Refresh to retry/);
+  }
+});
+
+test('partial details remain visible and zero resets do not suggest retry', () => {
+  const partial = renderResets({ availableCount: 2, credits: [{ id: 'credit-1', status: 'available', resetType: 'codexRateLimits', expiresAt: null }] });
+  assert.match(partial, /2 available/);
+  assert.match(partial, /Full reset/);
+  assert.match(partial, /Showing reported reset details/);
+  assert.doesNotMatch(partial, /temporarily unavailable|Refresh to retry/);
+  const zero = renderResets({ availableCount: 0, credits: null });
+  assert.match(zero, /None available/);
+  assert.doesNotMatch(zero, /temporarily unavailable|Refresh to retry/);
+});
 test('labels reflect actual durations instead of assuming five hours', () => {
   assert.equal(windowLabel(300, 'Primary'), '5 Hour Limit');
   assert.equal(windowLabel(10080, 'Secondary'), 'Weekly Limit');

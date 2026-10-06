@@ -69,7 +69,7 @@ function ManualResets({ resets, now }: { resets: CodexAccount["rateLimitResetCre
         <span className="codex-reset-scope">{reset.resetType === "codexRateLimits" ? <>Full reset <span>(Weekly + 5 hr)</span></> : reset.title ?? "Reset"}</span>
         {reset.expiresAt === null ? <span className="codex-reset-expiry">No expiry</span> : <time className="codex-reset-expiry" dateTime={new Date(reset.expiresAt * 1000).toISOString()}>Expires {expiryStamp(reset.expiresAt)}</time>}
       </li>)}</ul>
-      {(available?.length ?? 0) < (count ?? 0) && <p className="codex-resets-description">{available?.length ? "Showing reported reset details" : "Reset details unavailable"}</p>}
+      {(available?.length ?? 0) < (count ?? 0) && <p className="codex-resets-description">{resets?.credits == null ? "Reset details temporarily unavailable · Refresh to retry" : available?.length ? "Showing reported reset details" : "No current reset details reported"}</p>}
     </details> : <div className="codex-resets-heading">{heading}</div>}
   </section>;
 }

@@ -264,6 +264,35 @@ fn executable() -> Result<PathBuf, QueryError> {
     executable::find().map_err(|message| error("codex_not_found", message))
 }
 
+async fn complete_reset_details(
+    mut limits: Value,
+    retry: impl std::future::Future<Output = Result<Value, QueryError>>,
+) -> Value {
+    let resets = &limits["rateLimitResetCredits"];
+    if resets["availableCount"]
+        .as_u64()
+        .is_some_and(|count| count > 0)
+        && resets["credits"].is_null()
+    {
+        // Codex can return a successful quota read with only the reset count
+        // when its separate details request fails. Retry once, within a small
+        // budget, and keep the successful response if the retry fails.
+        let retry = tokio::time::timeout(Duration::from_secs(5), async {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            retry.await
+        })
+        .await;
+        if let Ok(Ok(fresh)) = retry {
+            if fresh["accountId"] == limits["accountId"]
+                && serde_json::from_value::<LimitsResponse>(fresh.clone()).is_ok()
+            {
+                limits = fresh;
+            }
+        }
+    }
+    limits
+}
+
 async fn query(usage_date: &str) -> Result<CodexAccount, QueryError> {
     let mut command = Command::new(executable()?);
     command
@@ -341,6 +370,19 @@ async fn query(usage_date: &str) -> Result<CodexAccount, QueryError> {
                 "Codex account changed during the query. Retry to load the current account.",
             ));
         }
+        // Keep the optional retry last: a timed-out RPC is followed by process
+        // shutdown, so no later RPC can read a partially consumed response.
+        let limits = complete_reset_details(
+            limits,
+            rpc(
+                &mut input,
+                &mut output,
+                6,
+                "account/rateLimits/read",
+                Value::Null,
+            ),
+        )
+        .await;
         let mut result = snapshot(&after, limits)?;
         result.token_usage = usage;
         Ok(result)
